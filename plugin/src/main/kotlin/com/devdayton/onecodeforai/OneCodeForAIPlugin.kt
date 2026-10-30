@@ -39,7 +39,6 @@ class OneCodeForAIPlugin : Plugin {
         private const val CHANNEL_ID = "onecode_progress"
     }
 
-    // 🔥 Bandera para evitar múltiples diálogos
     @Volatile
     private var isDialogShowing = false
 
@@ -66,7 +65,6 @@ class OneCodeForAIPlugin : Plugin {
         ctx: ActionContext,
         logInfo: (String) -> Unit
     ): ActionResult {
-        // 🔥 1. Verificar si ya hay un diálogo abierto
         if (isDialogShowing) {
             return ActionResult.message("⏳ La ventana de configuración ya está abierta.")
         }
@@ -81,11 +79,10 @@ class OneCodeForAIPlugin : Plugin {
 
         val activity = getCurrentActivity()
         if (activity == null) {
-            logInfo("❌ No se pudo obtener la Activity para mostrar la UI.")
-            return ActionResult.message("❌ Error: No se pudo abrir la ventana de configuración.")
+            logInfo("❌ No se pudo obtener la Activity.")
+            return ActionResult.message("❌ Error: no se pudo abrir la ventana.")
         }
 
-        // 🔥 2. Bloquear ANTES de encolar en el UI thread
         isDialogShowing = true
 
         val prefs = activity.getSharedPreferences("onecode_settings", Context.MODE_PRIVATE)
@@ -100,10 +97,7 @@ class OneCodeForAIPlugin : Plugin {
                     onExport = { config, isShare ->
                         executeExport(root, config, isShare, logInfo)
                     },
-                    onDismiss = {
-                        // 🔥 3. Liberar el bloqueo cuando se cierre
-                        isDialogShowing = false
-                    }
+                    onDismiss = { isDialogShowing = false }
                 ).show()
             } catch (e: Exception) {
                 isDialogShowing = false
@@ -132,7 +126,7 @@ class OneCodeForAIPlugin : Plugin {
                 }
 
                 val fileName = generateSmartFileName(root)
-                logInfo("Nombre de archivo asignado: $fileName")
+                logInfo("Nombre de archivo: $fileName")
 
                 val mediaUri = writeToMediaStore(context, fileName) { writer ->
                     val filter = FileFilter(root, config)
@@ -143,7 +137,7 @@ class OneCodeForAIPlugin : Plugin {
                 hideProgressNotification()
 
                 if (mediaUri == null) {
-                    logInfo("❌ Falló la creación del archivo en MediaStore.")
+                    logInfo("❌ Falló la creación del archivo.")
                     showToast(context, "❌ No se pudo crear el archivo.")
                     return@Thread
                 }
@@ -151,7 +145,7 @@ class OneCodeForAIPlugin : Plugin {
                 Handler(Looper.getMainLooper()).post {
                     if (isShare) {
                         shareMediaUri(context, mediaUri, fileName)
-                        logInfo("Compartiendo archivo: $fileName")
+                        logInfo("Compartiendo: $fileName")
                     } else {
                         val msg = "✅ Guardado en Descargas/OneCodeForAI: $fileName"
                         logInfo(msg)
@@ -283,9 +277,7 @@ class OneCodeForAIPlugin : Plugin {
         return try {
             val activityThread = Class.forName("android.app.ActivityThread")
             activityThread.getMethod("currentApplication").invoke(null) as? Context
-        } catch (_: Exception) {
-            null
-        }
+        } catch (_: Exception) { null }
     }
 
     private fun getCurrentActivity(): Activity? {
@@ -302,9 +294,7 @@ class OneCodeForAIPlugin : Plugin {
                 if (activity != null && !activity.isFinishing) return activity
             }
             null
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
     private fun showToast(context: Context, message: String) {
@@ -357,20 +347,18 @@ private class OneCodeForAIPluginSettingsPage : SettingsPage {
     override fun controls(): List<SettingControl> = listOf(
         SettingControl.Toggle("exclude_gitignored", "Respetar .gitignore", "Ignora archivos de .gitignore", true),
         SettingControl.Toggle("exclude_binaries", "Excluir binarios", "Filtra imágenes, vídeos, etc.", true),
-        SettingControl.Toggle("git_enabled", "Integración con Git", "Permite elegir rama o commit en la ventana de exportación", true),
+        SettingControl.Toggle("git_enabled", "Integración con Git", "Permite elegir rama o commit", true),
     )
 
     override fun onChanged(key: String, values: PreferenceReader) {
         try {
             val context = Class.forName("android.app.ActivityThread")
                 .getMethod("currentApplication").invoke(null) as? Context ?: return
-
             val boolValue = readBooleanSafely(values, key)
-
             val prefs = context.getSharedPreferences("onecode_settings", Context.MODE_PRIVATE).edit()
             prefs.putBoolean(key, boolValue)
             prefs.apply()
-        } catch (_: Exception) { /* Silencioso */ }
+        } catch (_: Exception) { }
     }
 
     private fun readBooleanSafely(reader: PreferenceReader, key: String): Boolean {
@@ -391,8 +379,6 @@ private class OneCodeForAIPluginSettingsPage : SettingsPage {
             if (methodGetAny != null) return methodGetAny.invoke(reader, key) as? Boolean ?: true
 
             true
-        } catch (_: Exception) {
-            true
-        }
+        } catch (_: Exception) { true }
     }
 }
