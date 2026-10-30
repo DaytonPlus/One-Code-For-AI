@@ -1,0 +1,17 @@
+# What the IDE reads to decide whether to load this plugin, and how to list it in
+# Settings > Plugins. It is read without running any of the plugin's code, so it has to agree
+# with what the entry point actually registers.
+[plugin]
+id = "com.devdayton.onecodeforai"
+name = "One Code For AI"
+version = "1.0.0"
+minIdeVersion = "3.33"
+mainClass = "com.devdayton.onecodeforai.OneCodeForAIPlugin"
+# Must equal the IDE's PLUGIN_API_VERSION, or the plugin is rejected with that reason.
+apiVersion = 4
+description = "Genera un .txt con el código de una carpeta (estilo code2prompt/gitingest)."
+dependsOn = []
+entryPoints = ["com.devdayton.onecodeforai.OneCodeForAIPlugin"]
+capabilities = ["ui.action", "ui.settingsPage"]
+[permissions]
+capabilities = ["fs.read", "fs.write"]
