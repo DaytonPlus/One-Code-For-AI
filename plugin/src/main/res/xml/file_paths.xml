@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Permite compartir archivos de la subcarpeta "share" dentro del cacheDir -->
+    <cache-path name="shared_files" path="share/" />
+</paths>

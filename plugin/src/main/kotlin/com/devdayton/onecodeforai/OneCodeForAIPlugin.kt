@@ -6,6 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
@@ -25,6 +27,7 @@ import dev.ide.plugin.action.SimpleAction
 import dev.ide.plugin.action.UI_ACTION_EP
 import java.io.File
 import java.io.OutputStreamWriter
+import java.io.Writer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -35,6 +38,10 @@ class OneCodeForAIPlugin : Plugin {
         private const val NOTIFICATION_ID_PROGRESS = 1001
         private const val CHANNEL_ID = "onecode_progress"
     }
+
+    // 🔥 Bandera para evitar múltiples diálogos
+    @Volatile
+    private var isDialogShowing = false
 
     override fun register(reg: PluginRegistration) {
         val log = reg.logger("OneCodeForAIPlugin")
@@ -55,13 +62,15 @@ class OneCodeForAIPlugin : Plugin {
         reg.register(SETTINGS_PAGE_EP, OneCodeForAIPluginSettingsPage())
     }
 
-    /**
-     * Abre la ventana de configuración con los ajustes persistidos.
-     */
     private fun startConfigurationFlow(
         ctx: ActionContext,
         logInfo: (String) -> Unit
     ): ActionResult {
+        // 🔥 1. Verificar si ya hay un diálogo abierto
+        if (isDialogShowing) {
+            return ActionResult.message("⏳ La ventana de configuración ya está abierta.")
+        }
+
         val folderPath = ctx.contextPath
             ?: return ActionResult.message("❌ No hay carpeta seleccionada.")
 
@@ -76,17 +85,28 @@ class OneCodeForAIPlugin : Plugin {
             return ActionResult.message("❌ Error: No se pudo abrir la ventana de configuración.")
         }
 
-        // Leer el ajuste global de Git (sincronizado desde Settings)
+        // 🔥 2. Bloquear ANTES de encolar en el UI thread
+        isDialogShowing = true
+
         val prefs = activity.getSharedPreferences("onecode_settings", Context.MODE_PRIVATE)
         val gitEnabled = prefs.getBoolean("git_enabled", true)
 
         Handler(Looper.getMainLooper()).post {
             try {
-                ConfigurationDialog(activity, root, gitEnabled) { config ->
-                    // Callback cuando el usuario pulsa "Exportar"
-                    executeExport(root, config, logInfo)
-                }.show()
+                ConfigurationDialog(
+                    activity = activity,
+                    projectRoot = root,
+                    gitEnabledGlobally = gitEnabled,
+                    onExport = { config, isShare ->
+                        executeExport(root, config, isShare, logInfo)
+                    },
+                    onDismiss = {
+                        // 🔥 3. Liberar el bloqueo cuando se cierre
+                        isDialogShowing = false
+                    }
+                ).show()
             } catch (e: Exception) {
+                isDialogShowing = false
                 logInfo("❌ Error al mostrar el diálogo: ${e.message}")
             }
         }
@@ -94,53 +114,50 @@ class OneCodeForAIPlugin : Plugin {
         return ActionResult.message("⚙️ Abriendo configuración...")
     }
 
-    /**
-     * Ejecuta la generación en un hilo secundario usando BufferedWriter (vía OutputStreamWriter)
-     * para evitar OutOfMemoryError con proyectos grandes.
-     */
     private fun executeExport(
         root: File,
         config: FilterConfig,
+        isShare: Boolean,
         logInfo: (String) -> Unit
     ) {
         Thread {
             try {
-                logInfo("Iniciando generación con filtros personalizados...")
+                val accion = if (isShare) "Compartir" else "Guardar"
+                logInfo("Iniciando generación ($accion)...")
                 showProgressNotification("Generando volcado de código...")
 
-                val context = getAndroidContext()
-                if (context == null) {
+                val context = getAndroidContext() ?: run {
                     hideProgressNotification()
-                    logInfo("Error: No se pudo obtener el contexto de Android.")
                     return@Thread
                 }
 
                 val fileName = generateSmartFileName(root)
                 logInfo("Nombre de archivo asignado: $fileName")
 
-                // Obtenemos el stream de salida (MediaStore o File)
-                val outputStream = getOutputStream(context, fileName)
-                if (outputStream == null) {
-                    hideProgressNotification()
-                    logInfo("❌ Falló la creación del archivo de salida.")
+                val mediaUri = writeToMediaStore(context, fileName) { writer ->
+                    val filter = FileFilter(root, config)
+                    val gitRef = if (config.useGit) config.gitRef else null
+                    CodeDumpGenerator(root, filter, gitRef).generateTo(writer)
+                }
+
+                hideProgressNotification()
+
+                if (mediaUri == null) {
+                    logInfo("❌ Falló la creación del archivo en MediaStore.")
                     showToast(context, "❌ No se pudo crear el archivo.")
                     return@Thread
                 }
 
-                // Escribimos en streaming directamente al archivo
-                outputStream.use { stream ->
-                    val writer = OutputStreamWriter(stream, Charsets.UTF_8)
-                    val filter = FileFilter(root, config)
-                    val gitRef = if (config.useGit) config.gitRef else null
-                    
-                    CodeDumpGenerator(root, filter, gitRef).generateTo(writer)
-                    writer.flush()
+                Handler(Looper.getMainLooper()).post {
+                    if (isShare) {
+                        shareMediaUri(context, mediaUri, fileName)
+                        logInfo("Compartiendo archivo: $fileName")
+                    } else {
+                        val msg = "✅ Guardado en Descargas/OneCodeForAI: $fileName"
+                        logInfo(msg)
+                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                    }
                 }
-
-                hideProgressNotification()
-                val msg = "✅ Guardado en Descargas: $fileName"
-                logInfo(msg)
-                showToast(context, msg)
 
             } catch (e: Throwable) {
                 hideProgressNotification()
@@ -150,9 +167,62 @@ class OneCodeForAIPlugin : Plugin {
         }.start()
     }
 
-    // ==========================================
-    // GENERACIÓN DE NOMBRE Y METADATOS
-    // ==========================================
+    private fun writeToMediaStore(
+        context: Context,
+        fileName: String,
+        content: (Writer) -> Unit
+    ): Uri? {
+        val resolver = context.contentResolver
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/OneCodeForAI")
+            }
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
+            resolver.openOutputStream(uri)?.use { stream ->
+                val writer = OutputStreamWriter(stream, Charsets.UTF_8)
+                content(writer)
+                writer.flush()
+            }
+            return uri
+        } else {
+            @Suppress("DEPRECATION")
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val targetDir = File(downloadsDir, "OneCodeForAI").apply { mkdirs() }
+            val file = File(targetDir, fileName)
+            file.outputStream().use { stream ->
+                val writer = OutputStreamWriter(stream, Charsets.UTF_8)
+                content(writer)
+                writer.flush()
+            }
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DATA, file.absolutePath)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+            }
+            @Suppress("DEPRECATION")
+            return resolver.insert(MediaStore.Files.getContentUri("external"), values)
+        }
+    }
+
+    private fun shareMediaUri(context: Context, uri: Uri, fileName: String) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, fileName)
+                clipData = android.content.ClipData.newUri(context.contentResolver, fileName, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val chooser = Intent.createChooser(intent, "Compartir volcado con:")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            Toast.makeText(context, "❌ Error al compartir: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     private fun generateSmartFileName(folder: File): String {
         val appId = findAppIdentifier(folder)
@@ -164,19 +234,14 @@ class OneCodeForAIPlugin : Plugin {
         } else {
             "${appId}_${folderName}_${timestamp}"
         }
-
         return "${baseName}.txt"
     }
 
-    /**
-     * Sube hasta 8 niveles en el árbol de directorios buscando el identificador de la app.
-     */
     private fun findAppIdentifier(folder: File): String {
         var current: File? = folder
         var levelsUp = 0
 
         while (current != null && levelsUp < 8) {
-            // 1. AndroidManifest.xml
             val manifest = File(current, "src/main/AndroidManifest.xml")
             val manifestAlt = File(current, "AndroidManifest.xml")
             val targetManifest = if (manifest.exists()) manifest else if (manifestAlt.exists()) manifestAlt else null
@@ -186,14 +251,12 @@ class OneCodeForAIPlugin : Plugin {
                 Regex("""package="([^"]+)"""").find(content)?.let { return it.groupValues[1] }
             }
 
-            // 2. module.toml
             val toml = File(current, "module.toml")
             if (toml.exists()) {
                 val content = toml.readText()
                 Regex("""namespace\s*=\s*"([^"]+)"""").find(content)?.let { return it.groupValues[1] }
             }
 
-            // 3. build.gradle.kts o build.gradle
             val gradleKts = File(current, "build.gradle.kts")
             val gradle = File(current, "build.gradle")
             val targetGradle = if (gradleKts.exists()) gradleKts else if (gradle.exists()) gradle else null
@@ -215,30 +278,6 @@ class OneCodeForAIPlugin : Plugin {
             .replace(Regex("""[\\/:*?"<>|]"""), "")
             .ifBlank { "dump" }
     }
-
-    // ==========================================
-    // MANEJO DE ARCHIVOS (API 26 - 36)
-    // ==========================================
-
-    private fun getOutputStream(context: Context, fileName: String): java.io.OutputStream? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/OneCodeForAI")
-            }
-            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            uri?.let { context.contentResolver.openOutputStream(it) }
-        } else {
-            @Suppress("DEPRECATION")
-            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "OneCodeForAI").apply { mkdirs() }
-            File(dir, fileName).outputStream()
-        }
-    }
-
-    // ==========================================
-    // UTILIDADES Y REFLEXIÓN
-    // ==========================================
 
     private fun getAndroidContext(): Context? {
         return try {
@@ -273,10 +312,6 @@ class OneCodeForAIPlugin : Plugin {
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
         }
     }
-
-    // ==========================================
-    // NOTIFICACIONES
-    // ==========================================
 
     @Suppress("DEPRECATION")
     private fun showProgressNotification(message: String) {
@@ -314,10 +349,6 @@ class OneCodeForAIPlugin : Plugin {
     }
 }
 
-/**
- * Ajustes globales del plugin. Los valores se sincronizan con SharedPreferences
- * para que el diálogo de configuración pueda leerlos en tiempo real.
- */
 private class OneCodeForAIPluginSettingsPage : SettingsPage {
     override val id = "com.devdayton.onecodeforai"
     override val title = "One Code For AI"
@@ -331,54 +362,34 @@ private class OneCodeForAIPluginSettingsPage : SettingsPage {
 
     override fun onChanged(key: String, values: PreferenceReader) {
         try {
-            // 1. Obtener el contexto de Android
             val context = Class.forName("android.app.ActivityThread")
                 .getMethod("currentApplication").invoke(null) as? Context ?: return
-            
-            // 2. Leer el valor booleano usando reflexión (compatible con cualquier versión del SDK)
+
             val boolValue = readBooleanSafely(values, key)
-            
-            // 3. Guardar en SharedPreferences para que el diálogo lo use
+
             val prefs = context.getSharedPreferences("onecode_settings", Context.MODE_PRIVATE).edit()
             prefs.putBoolean(key, boolValue)
             prefs.apply()
-            
-        } catch (_: Exception) {
-            // Silencioso si falla la reflexión
-        }
+        } catch (_: Exception) { /* Silencioso */ }
     }
 
-    /**
-     * Intenta leer un booleano de PreferenceReader usando varios métodos posibles
-     * para garantizar compatibilidad con distintas versiones del SDK.
-     */
     private fun readBooleanSafely(reader: PreferenceReader, key: String): Boolean {
         return try {
-            // Intento 1: método get(key, default: Boolean)
             val methodGet = reader.javaClass.methods.firstOrNull {
                 it.name == "get" && it.parameterTypes.size == 2 && it.parameterTypes[1] == Boolean::class.javaPrimitiveType
             }
-            if (methodGet != null) {
-                return methodGet.invoke(reader, key, true) as? Boolean ?: true
-            }
+            if (methodGet != null) return methodGet.invoke(reader, key, true) as? Boolean ?: true
 
-            // Intento 2: método getBoolean(key)
             val methodGetBool = reader.javaClass.methods.firstOrNull {
                 it.name == "getBoolean" && it.parameterTypes.size == 1
             }
-            if (methodGetBool != null) {
-                return methodGetBool.invoke(reader, key) as? Boolean ?: true
-            }
+            if (methodGetBool != null) return methodGetBool.invoke(reader, key) as? Boolean ?: true
 
-            // Intento 3: método get(key) que devuelve Any?
             val methodGetAny = reader.javaClass.methods.firstOrNull {
                 it.name == "get" && it.parameterTypes.size == 1
             }
-            if (methodGetAny != null) {
-                return methodGetAny.invoke(reader, key) as? Boolean ?: true
-            }
+            if (methodGetAny != null) return methodGetAny.invoke(reader, key) as? Boolean ?: true
 
-            // Fallback: true
             true
         } catch (_: Exception) {
             true

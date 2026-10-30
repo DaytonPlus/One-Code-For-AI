@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageButton
@@ -31,7 +32,8 @@ class ConfigurationDialog(
     private val activity: Activity,
     private val projectRoot: java.io.File,
     private val gitEnabledGlobally: Boolean,
-    private val onExport: (FilterConfig) -> Unit
+    private val onExport: (config: FilterConfig, isShare: Boolean) -> Unit,
+    private val onDismiss: () -> Unit = {} // 🔥 NUEVO: Callback al cerrar
 ) {
     private val presetManager = PresetManager(activity)
     private var currentConfig = FilterConfig()
@@ -94,6 +96,7 @@ class ConfigurationDialog(
             )
         )
 
+        // --- HEADER ---
         val header = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -122,6 +125,7 @@ class ConfigurationDialog(
         root.addView(header)
         root.addView(divider())
 
+        // --- PRESETS ---
         root.addView(activity.sectionTitle("Perfil de exportación"))
         val presetRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -137,7 +141,6 @@ class ConfigurationDialog(
                 CodeAssistTheme.OUTLINE
             )
             dropDownVerticalOffset = CodeAssistTheme.dp(activity, 4)
-            // 🔥 Corrección: Se usa el método set en lugar de asignación directa
             setPopupBackgroundDrawable(ColorDrawable(CodeAssistTheme.SURFACE_RAISED))
             layoutParams = LinearLayout.LayoutParams(0, CodeAssistTheme.dp(activity, 42), 1f)
         }
@@ -154,6 +157,7 @@ class ConfigurationDialog(
         presetRow.addView(btnSavePreset)
         root.addView(presetRow)
 
+        // --- FILTROS BASE ---
         root.addView(activity.sectionTitle("Filtros base"))
         val basePanel = panel()
         cbBinaries = activity.checkBox("Excluir archivos binarios").apply {
@@ -206,18 +210,21 @@ class ConfigurationDialog(
         basePanel.addView(sizeRow)
         root.addView(basePanel)
 
+        // --- TAGS: INCLUSIONES ---
         root.addView(tagSectionHeader("Inclusiones", "＋ Añadir") {
             showAddTagDialog("Añadir inclusión") { addTag(it, true) }
         })
         flowInclusions = createFlow()
         root.addView(flowInclusions)
 
+        // --- TAGS: EXCLUSIONES ---
         root.addView(tagSectionHeader("Exclusiones", "＋ Añadir") {
             showAddTagDialog("Añadir exclusión") { addTag(it, false) }
         })
         flowExclusions = createFlow()
         root.addView(flowExclusions)
 
+        // --- TAGS: GITIGNORE ---
         gitignoreSection = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
         }
@@ -226,6 +233,7 @@ class ConfigurationDialog(
         gitignoreSection.addView(flowGitignore)
         root.addView(gitignoreSection)
 
+        // --- GIT ---
         if (gitEnabledGlobally) {
             root.addView(activity.sectionTitle("Control de versiones"))
             layoutGitBox = panel()
@@ -233,7 +241,8 @@ class ConfigurationDialog(
             setupGitUI()
         }
 
-        val exportButton = android.widget.Button(activity).apply {
+        // --- BOTÓN EXPORTAR ---
+        val exportButton = Button(activity).apply {
             text = "Exportar a Descargas"
             textSize = 13f
             isAllCaps = false
@@ -254,7 +263,7 @@ class ConfigurationDialog(
                     spinnerPresets.selectedItem?.toString() ?: "Personalizado"
                 )
                 dialog.dismiss()
-                onExport(currentConfig)
+                onExport(currentConfig, false) // <-- false = Guardar
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -264,6 +273,40 @@ class ConfigurationDialog(
             }
         }
         root.addView(exportButton)
+
+        // --- BOTÓN COMPARTIR ---
+        val shareButton = Button(activity).apply {
+            text = "Compartir archivo"
+            textSize = 13f
+            isAllCaps = false
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            background = CodeAssistTheme.selectableBg(
+                activity,
+                normalColor = CodeAssistTheme.SURFACE_RAISED,
+                pressedColor = CodeAssistTheme.SURFACE,
+                radiusDp = 9f,
+                strokeColor = CodeAssistTheme.OUTLINE
+            )
+            minHeight = CodeAssistTheme.dp(activity, 46)
+            setOnClickListener {
+                readUIValues()
+                presetManager.saveLastState(
+                    currentConfig,
+                    spinnerPresets.selectedItem?.toString() ?: "Personalizado"
+                )
+                dialog.dismiss()
+                onExport(currentConfig, true) // <-- true = Compartir
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                CodeAssistTheme.dp(activity, 46)
+            ).apply {
+                topMargin = CodeAssistTheme.dp(activity, 8)
+            }
+        }
+        root.addView(shareButton)
+
         root.addView(
             activity.textView(
                 "Se generará un único archivo .txt con los archivos permitidos por los filtros.",
@@ -281,12 +324,18 @@ class ConfigurationDialog(
         )
 
         dialog.setContentView(scroll)
+        
+        // 🔥 NUEVO: try-finally para garantizar que onDismiss() se llame siempre
         dialog.setOnDismissListener {
-            readUIValues()
-            presetManager.saveLastState(
-                currentConfig,
-                spinnerPresets.selectedItem?.toString() ?: "Personalizado"
-            )
+            try {
+                readUIValues()
+                presetManager.saveLastState(
+                    currentConfig,
+                    spinnerPresets.selectedItem?.toString() ?: "Personalizado"
+                )
+            } finally {
+                onDismiss()
+            }
         }
 
         val initialIndex = presetAdapter.getPosition(lastState?.second ?: "Personalizado")
@@ -630,7 +679,7 @@ class ConfigurationDialog(
                 8f,
                 CodeAssistTheme.OUTLINE
             )
-            setPopupBackgroundDrawable(ColorDrawable(CodeAssistTheme.SURFACE_RAISED)) // 🔥 Corrección
+            setPopupBackgroundDrawable(ColorDrawable(CodeAssistTheme.SURFACE_RAISED))
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 CodeAssistTheme.dp(activity, 42)
@@ -683,7 +732,6 @@ class ConfigurationDialog(
             .styleDialog()
     }
 
-    // 🔥 Reconstruido (el tuyo tenía un error de sintaxis por copiar/pegar)
     private fun android.app.AlertDialog.styleDialog() {
         window?.setBackgroundDrawable(
             CodeAssistTheme.roundedBg(activity, CodeAssistTheme.SURFACE_RAISED, 12f, CodeAssistTheme.OUTLINE)
