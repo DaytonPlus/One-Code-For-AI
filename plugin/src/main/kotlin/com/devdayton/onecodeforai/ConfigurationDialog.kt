@@ -5,11 +5,16 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.os.Handler
+import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -33,7 +38,7 @@ class ConfigurationDialog(
     private val projectRoot: java.io.File,
     private val gitEnabledGlobally: Boolean,
     private val onExport: (config: FilterConfig, isShare: Boolean) -> Unit,
-    private val onDismiss: () -> Unit = {} // 🔥 NUEVO: Callback al cerrar
+    private val onDismiss: () -> Unit = {}
 ) {
     private val presetManager = PresetManager(activity)
     private var currentConfig = FilterConfig()
@@ -41,9 +46,13 @@ class ConfigurationDialog(
     private var isUpdatingUI = false
     private var gitignoreTags: List<String> = emptyList()
 
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var refreshScheduled = false
+
     private lateinit var spinnerPresets: Spinner
     private lateinit var presetAdapter: ArrayAdapter<String>
     private lateinit var btnSavePreset: ImageButton
+    private lateinit var btnDeletePreset: ImageButton
     private lateinit var cbBinaries: CheckBox
     private lateinit var cbGitignore: CheckBox
     private lateinit var etMaxSize: EditText
@@ -55,6 +64,13 @@ class ConfigurationDialog(
     private lateinit var cbUseGit: CheckBox
     private lateinit var spinnerBranches: Spinner
     private lateinit var etCommitHash: EditText
+
+    private lateinit var tvStatsTotal: TextView
+    private lateinit var flowStatsExt: FlowLayout
+    private lateinit var treeView: ProjectTreeView
+
+    /** Referencias a los tags visibles para animar add/remove. */
+    private val tagViews = mutableMapOf<String, TextView>()
 
     fun show() {
         gitignoreTags = FileFilter(projectRoot).loadGitignoreRules()
@@ -118,7 +134,7 @@ class ConfigurationDialog(
         header.addView(headerText)
         header.addView(
             activity.iconButton(
-                android.R.drawable.ic_menu_close_clear_cancel,
+                R.drawable.ic_tech_close,
                 "Cerrar"
             ) { dialog.dismiss() }
         )
@@ -145,7 +161,7 @@ class ConfigurationDialog(
             layoutParams = LinearLayout.LayoutParams(0, CodeAssistTheme.dp(activity, 42), 1f)
         }
         btnSavePreset = activity.iconButton(
-            android.R.drawable.ic_menu_save,
+            R.drawable.ic_tech_save,
             "Guardar perfil"
         ) { showSavePresetDialog() }.apply {
             visibility = if (isCustomMode) View.VISIBLE else View.GONE
@@ -153,8 +169,18 @@ class ConfigurationDialog(
                 marginStart = CodeAssistTheme.dp(activity, 8)
             }
         }
+        btnDeletePreset = activity.iconButton(
+            R.drawable.ic_tech_trash,
+            "Eliminar perfil"
+        ) { confirmDeletePreset() }.apply {
+            visibility = View.GONE
+            layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
+                marginStart = CodeAssistTheme.dp(activity, 8)
+            }
+        }
         presetRow.addView(spinnerPresets)
         presetRow.addView(btnSavePreset)
+        presetRow.addView(btnDeletePreset)
         root.addView(presetRow)
 
         // --- FILTROS BASE ---
@@ -171,7 +197,7 @@ class ConfigurationDialog(
             setOnCheckedChangeListener { _, _ ->
                 if (!isUpdatingUI) {
                     markAsCustom()
-                    updateTagsUI()
+                    updateTagsUI(animate = true)
                 }
             }
         }
@@ -210,21 +236,19 @@ class ConfigurationDialog(
         basePanel.addView(sizeRow)
         root.addView(basePanel)
 
-        // --- TAGS: INCLUSIONES ---
+        // --- TAGS ---
         root.addView(tagSectionHeader("Inclusiones", "＋ Añadir") {
             showAddTagDialog("Añadir inclusión") { addTag(it, true) }
         })
         flowInclusions = createFlow()
         root.addView(flowInclusions)
 
-        // --- TAGS: EXCLUSIONES ---
         root.addView(tagSectionHeader("Exclusiones", "＋ Añadir") {
             showAddTagDialog("Añadir exclusión") { addTag(it, false) }
         })
         flowExclusions = createFlow()
         root.addView(flowExclusions)
 
-        // --- TAGS: GITIGNORE ---
         gitignoreSection = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
         }
@@ -240,6 +264,50 @@ class ConfigurationDialog(
             root.addView(layoutGitBox)
             setupGitUI()
         }
+
+        // --- TREE ---
+        val treeHeader = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, CodeAssistTheme.dp(activity, 18), 0, CodeAssistTheme.dp(activity, 4))
+        }
+        treeHeader.addView(
+            activity.textView("Árbol de archivos".uppercase(), 11f, CodeAssistTheme.TEXT_SECONDARY, true)
+                .apply {
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                }
+        )
+        treeHeader.addView(activity.actionText("Expandir") {
+            if (::treeView.isInitialized) treeView.expandAll()
+        })
+        treeHeader.addView(activity.actionText("Colapsar") {
+            if (::treeView.isInitialized) treeView.collapseAll()
+        })
+        root.addView(treeHeader)
+
+        val treeWrapper = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            background = CodeAssistTheme.roundedBg(
+                activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
+            )
+            clipToOutline = true
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                CodeAssistTheme.dp(activity, 280)
+            )
+        }
+        treeView = ProjectTreeView(activity, projectRoot) { excludedPaths ->
+            currentConfig = currentConfig.copy(excludedPaths = excludedPaths)
+            markAsCustom()
+        }
+        treeWrapper.addView(
+            treeView.getView(),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        root.addView(treeWrapper)
 
         // --- BOTÓN EXPORTAR ---
         val exportButton = Button(activity).apply {
@@ -263,7 +331,7 @@ class ConfigurationDialog(
                     spinnerPresets.selectedItem?.toString() ?: "Personalizado"
                 )
                 dialog.dismiss()
-                onExport(currentConfig, false) // <-- false = Guardar
+                onExport(currentConfig, false)
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -272,6 +340,7 @@ class ConfigurationDialog(
                 topMargin = CodeAssistTheme.dp(activity, 22)
             }
         }
+        attachPressScale(exportButton)
         root.addView(exportButton)
 
         // --- BOTÓN COMPARTIR ---
@@ -296,7 +365,7 @@ class ConfigurationDialog(
                     spinnerPresets.selectedItem?.toString() ?: "Personalizado"
                 )
                 dialog.dismiss()
-                onExport(currentConfig, true) // <-- true = Compartir
+                onExport(currentConfig, true)
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -305,6 +374,7 @@ class ConfigurationDialog(
                 topMargin = CodeAssistTheme.dp(activity, 8)
             }
         }
+        attachPressScale(shareButton)
         root.addView(shareButton)
 
         root.addView(
@@ -323,9 +393,21 @@ class ConfigurationDialog(
             }
         )
 
+        // --- STATS ---
+        root.addView(activity.sectionTitle("Estadísticas de contexto"))
+        val statsPanel = panel().apply {
+            minimumHeight = CodeAssistTheme.dp(activity, 64)
+        }
+        tvStatsTotal = activity.textView("Calculando…", 13f, CodeAssistTheme.TEXT_PRIMARY, true)
+        statsPanel.addView(tvStatsTotal)
+        flowStatsExt = FlowLayout(activity).apply {
+            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, 0)
+        }
+        statsPanel.addView(flowStatsExt)
+        root.addView(statsPanel)
+
         dialog.setContentView(scroll)
-        
-        // 🔥 NUEVO: try-finally para garantizar que onDismiss() se llame siempre
+
         dialog.setOnDismissListener {
             try {
                 readUIValues()
@@ -341,7 +423,7 @@ class ConfigurationDialog(
         val initialIndex = presetAdapter.getPosition(lastState?.second ?: "Personalizado")
             .takeIf { it >= 0 } ?: 0
         spinnerPresets.setSelection(initialIndex, false)
-        updateTagsUI()
+        updateTagsUI(animate = false)
 
         spinnerPresets.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(
@@ -354,6 +436,8 @@ class ConfigurationDialog(
                 val selected = parent?.getItemAtPosition(position)?.toString() ?: return
                 isCustomMode = selected == "Personalizado"
                 btnSavePreset.visibility = if (isCustomMode) View.VISIBLE else View.GONE
+                btnDeletePreset.visibility =
+                    if (presetManager.isUserPreset(selected)) View.VISIBLE else View.GONE
                 if (!isCustomMode) {
                     presetManager.loadPreset(selected)?.let { applyConfigToUI(it) }
                 }
@@ -371,7 +455,168 @@ class ConfigurationDialog(
             )
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
+
+        // Entrada escalonada del contenido
+        scroll.post { playEntrance(root) }
+
+        if (::treeView.isInitialized) treeView.render(currentConfig)
+        refreshPreview()
     }
+
+    // ==================================================================
+    // Animaciones
+    // ==================================================================
+
+    private fun playEntrance(root: ViewGroup) {
+        val n = root.childCount
+        for (i in 0 until n) {
+            val child = root.getChildAt(i)
+            child.alpha = 0f
+            child.translationY = CodeAssistTheme.dp(activity, 10).toFloat()
+            child.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(i * 30L)
+                .setDuration(260)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
+    }
+
+    private fun animateTagIn(view: View) {
+        view.animate().cancel()
+        view.scaleX = 0.5f
+        view.scaleY = 0.5f
+        view.alpha = 0f
+        view.animate()
+            .scaleX(1f).scaleY(1f).alpha(1f)
+            .setDuration(240)
+            .setInterpolator(OvershootInterpolator(1.6f))
+            .start()
+    }
+
+    private fun animateTagOut(view: View, onEnd: () -> Unit) {
+        view.animate().cancel()
+        view.animate()
+            .scaleX(0.5f).scaleY(0.5f).alpha(0f)
+            .setDuration(180)
+            .setInterpolator(DecelerateInterpolator())
+            .withEndAction(onEnd)
+            .start()
+    }
+
+    private fun attachPressScale(button: View) {
+        button.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN ->
+                    v.animate().scaleX(0.97f).scaleY(0.97f).setDuration(80)
+                        .setInterpolator(DecelerateInterpolator()).start()
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_CANCEL ->
+                    v.animate().scaleX(1f).scaleY(1f).setDuration(120)
+                        .setInterpolator(DecelerateInterpolator()).start()
+            }
+            false
+        }
+    }
+
+    // ==================================================================
+    // Preview (stats con cross-fade)
+    // ==================================================================
+
+    private fun scheduleRefresh() {
+        if (refreshScheduled) return
+        refreshScheduled = true
+        mainHandler.postDelayed({
+            refreshScheduled = false
+            refreshPreview()
+        }, 180)
+    }
+
+    private fun refreshPreview() {
+        if (!::tvStatsTotal.isInitialized) return
+        val snapshot = currentConfig
+        Thread {
+            val filter = FileFilter(projectRoot, snapshot)
+            val stats = CodeStats.compute(projectRoot, filter)
+            mainHandler.post { updateStatsUI(stats) }
+        }.start()
+    }
+
+    private fun updateStatsUI(stats: PreviewStats) {
+        val newText = if (stats.totalFiles == 0) {
+            "Sin archivos · 0 tokens · 0 B"
+        } else {
+            buildString {
+                append(stats.totalFiles)
+                append(if (stats.totalFiles == 1) " archivo" else " archivos")
+                append("  ·  ~")
+                append(formatNumber(stats.totalTokens))
+                append(" tokens  ·  ")
+                append(formatSize(stats.totalBytes))
+            }
+        }
+
+        // Cross-fade del texto total
+        tvStatsTotal.animate().cancel()
+        tvStatsTotal.animate()
+            .alpha(0.25f)
+            .setDuration(110)
+            .withEndAction {
+                tvStatsTotal.text = newText
+                tvStatsTotal.animate().alpha(1f).setDuration(160).start()
+            }
+            .start()
+
+        // Cross-fade de los chips por extensión
+        flowStatsExt.animate().cancel()
+        flowStatsExt.animate()
+            .alpha(0.25f)
+            .setDuration(110)
+            .withEndAction {
+                flowStatsExt.removeAllViews()
+                stats.byExtension.take(12).forEach { flowStatsExt.addView(createStatChip(it)) }
+                flowStatsExt.animate().alpha(1f).setDuration(160).start()
+            }
+            .start()
+    }
+
+    private fun createStatChip(stat: ExtensionStats) = TextView(activity).apply {
+        text = "${stat.extension} · ${stat.files} · ${formatNumber(stat.tokens)} tok"
+        textSize = 10f
+        setTextColor(CodeAssistTheme.TAG_INCLUDE_TEXT)
+        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+        setPadding(
+            CodeAssistTheme.dp(activity, 9),
+            CodeAssistTheme.dp(activity, 6),
+            CodeAssistTheme.dp(activity, 9),
+            CodeAssistTheme.dp(activity, 6)
+        )
+        background = CodeAssistTheme.roundedBg(activity, CodeAssistTheme.TAG_INCLUDE, 6f)
+        layoutParams = ViewGroup.MarginLayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            marginEnd = CodeAssistTheme.dp(activity, 6)
+            bottomMargin = CodeAssistTheme.dp(activity, 6)
+        }
+    }
+
+    private fun formatNumber(n: Long): String = when {
+        n < 1000 -> n.toString()
+        n < 1_000_000 -> "%.1fK".format(n / 1000.0)
+        else -> "%.2fM".format(n / 1_000_000.0)
+    }
+
+    private fun formatSize(bytes: Long): String = when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024L * 1024L -> "%.1f KB".format(bytes / 1024.0)
+        else -> "%.2f MB".format(bytes / (1024.0 * 1024.0))
+    }
+
+    // ==================================================================
+    // Helpers de UI
+    // ==================================================================
 
     private fun panel(): LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
@@ -445,8 +690,11 @@ class ConfigurationDialog(
             if (branchIndex != null) spinnerBranches.setSelection(branchIndex)
         }
 
-        updateTagsUI()
+        updateTagsUI(animate = true)
         isUpdatingUI = false
+
+        if (::treeView.isInitialized) treeView.render(currentConfig)
+        refreshPreview()
     }
 
     private fun markAsCustom() {
@@ -460,6 +708,7 @@ class ConfigurationDialog(
                 isUpdatingUI = false
             }
         }
+        scheduleRefresh()
     }
 
     private fun readUIValues() {
@@ -484,12 +733,16 @@ class ConfigurationDialog(
         )
     }
 
-    private fun updateTagsUI() {
+    private fun tagKey(tag: String, isInclusion: Boolean) =
+        "${if (isInclusion) "I" else "E"}:$tag"
+
+    private fun updateTagsUI(animate: Boolean = false) {
         if (!::flowInclusions.isInitialized) return
 
         flowInclusions.removeAllViews()
         flowExclusions.removeAllViews()
         flowGitignore.removeAllViews()
+        tagViews.clear()
 
         if (currentConfig.inclusions.isEmpty()) {
             addEmptyLabel(flowInclusions, "Sin extensiones adicionales")
@@ -514,6 +767,27 @@ class ConfigurationDialog(
                     val bg = if (overridden) CodeAssistTheme.TAG_CONFLICT else CodeAssistTheme.TAG_EXCLUDE
                     val fg = if (overridden) CodeAssistTheme.TAG_CONFLICT_TEXT else CodeAssistTheme.TAG_EXCLUDE_TEXT
                     flowGitignore.addView(createTagView(tag, bg, fg, null))
+                }
+            }
+        }
+
+        if (animate) {
+            // Fade-in escalonado de todos los tags visibles
+            val all = listOf(flowInclusions, flowExclusions, flowGitignore)
+            var i = 0
+            all.forEach { flow ->
+                for (k in 0 until flow.childCount) {
+                    val child = flow.getChildAt(k)
+                    child.alpha = 0f
+                    child.scaleX = 0.85f
+                    child.scaleY = 0.85f
+                    child.animate()
+                        .alpha(1f).scaleX(1f).scaleY(1f)
+                        .setStartDelay(i * 20L)
+                        .setDuration(180)
+                        .setInterpolator(DecelerateInterpolator())
+                        .start()
+                    i++
                 }
             }
         }
@@ -545,9 +819,11 @@ class ConfigurationDialog(
             isInclusion -> CodeAssistTheme.TAG_INCLUDE_TEXT
             else -> CodeAssistTheme.TAG_EXCLUDE_TEXT
         }
-        flow.addView(createTagView(tag, backgroundColor, foregroundColor) {
+        val view = createTagView(tag, backgroundColor, foregroundColor) {
             showTagOptions(tag, isInclusion)
-        })
+        }
+        flow.addView(view)
+        tagViews[tagKey(tag, isInclusion)] = view
     }
 
     private fun createTagView(
@@ -583,7 +859,8 @@ class ConfigurationDialog(
             currentConfig.copy(exclusions = currentConfig.exclusions + tag)
         }
         markAsCustom()
-        updateTagsUI()
+        updateTagsUI(animate = false)
+        tagViews[tagKey(tag, isInclusion)]?.let { animateTagIn(it) }
     }
 
     private fun showTagOptions(tag: String, isInclusion: Boolean) {
@@ -608,17 +885,26 @@ class ConfigurationDialog(
                                 )
                             }
                             markAsCustom()
-                            updateTagsUI()
+                            updateTagsUI(animate = false)
+                            tagViews[tagKey(normalized, isInclusion)]?.let { animateTagIn(it) }
                         }
                     }
                 } else {
-                    currentConfig = if (isInclusion) {
-                        currentConfig.copy(inclusions = currentConfig.inclusions - tag)
-                    } else {
-                        currentConfig.copy(exclusions = currentConfig.exclusions - tag)
+                    val view = tagViews[tagKey(tag, isInclusion)]
+                    val applyDelete = {
+                        currentConfig = if (isInclusion) {
+                            currentConfig.copy(inclusions = currentConfig.inclusions - tag)
+                        } else {
+                            currentConfig.copy(exclusions = currentConfig.exclusions - tag)
+                        }
+                        markAsCustom()
+                        updateTagsUI(animate = false)
                     }
-                    markAsCustom()
-                    updateTagsUI()
+                    if (view != null) {
+                        animateTagOut(view, applyDelete)
+                    } else {
+                        applyDelete()
+                    }
                 }
             }
             .show()
@@ -725,11 +1011,61 @@ class ConfigurationDialog(
                     isUpdatingUI = false
                     isCustomMode = false
                     btnSavePreset.visibility = View.GONE
+                    btnDeletePreset.visibility =
+                        if (presetManager.isUserPreset(name)) View.VISIBLE else View.GONE
+                    animatePresetRow(saved = true)
                 }
             }
             .setNegativeButton("Cancelar", null)
             .show()
             .styleDialog()
+    }
+
+    private fun confirmDeletePreset() {
+        val selected = spinnerPresets.selectedItem?.toString() ?: return
+        if (!presetManager.isUserPreset(selected)) return
+
+        AlertDialog.Builder(activity)
+            .setTitle("Eliminar perfil")
+            .setMessage("¿Eliminar el perfil \"$selected\"? Esta acción no se puede deshacer.")
+            .setPositiveButton("Eliminar") { _, _ ->
+                presetManager.deleteUserPreset(selected)
+                animatePresetRow(saved = false) {
+                    presetAdapter = activity.spinnerAdapter(getPresetList())
+                    spinnerPresets.adapter = presetAdapter
+                    isUpdatingUI = true
+                    spinnerPresets.setSelection(0, false)
+                    isUpdatingUI = false
+                    isCustomMode = true
+                    btnSavePreset.visibility = View.VISIBLE
+                    btnDeletePreset.visibility = View.GONE
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+            .styleDialog()
+    }
+
+    private fun animatePresetRow(saved: Boolean, onEnd: (() -> Unit)? = null) {
+        val target = if (saved) btnSavePreset else btnDeletePreset
+        target.animate().cancel()
+        target.scaleX = 0.6f
+        target.scaleY = 0.6f
+        target.alpha = 0f
+        target.animate()
+            .scaleX(1f).scaleY(1f).alpha(1f)
+            .setDuration(220)
+            .setInterpolator(OvershootInterpolator(1.4f))
+            .withEndAction { onEnd?.invoke() }
+            .start()
+
+        spinnerPresets.animate().cancel()
+        spinnerPresets.alpha = 0.4f
+        spinnerPresets.animate()
+            .alpha(1f)
+            .setDuration(240)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
     }
 
     private fun android.app.AlertDialog.styleDialog() {

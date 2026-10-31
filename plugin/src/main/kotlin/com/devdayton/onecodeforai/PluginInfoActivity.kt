@@ -59,9 +59,6 @@ class PluginInfoActivity : Activity() {
     private val authorName     = "DevDayton"
     private val hostIdePackage = "com.tyron.code"
 
-    // ======================================================================
-    // PALETA (acentos por sección)
-    // ======================================================================
     private val brandAccent  = CodeAssistTheme.ACCENT
     private val textOnAccent = Color.parseColor("#1A1210")
     private val successGreen = Color.parseColor("#4ADE80")
@@ -73,10 +70,8 @@ class PluginInfoActivity : Activity() {
     private val techAccent     = Color.parseColor("#14B8A6")
     private val linksAccent    = Color.parseColor("#3B82F6")
     private val creatorAccent  = Color.parseColor("#F97316")
+    private val guideAccent    = Color.parseColor("#EC4899") // Rosa para la guía
 
-    // ======================================================================
-    // PALETA DE CÓDIGO
-    // ======================================================================
     private val codeBaseText      = Color.parseColor("#D4D4D4")
     private val codeKeywordColor  = Color.parseColor("#C586C0")
     private val codeStringColor   = Color.parseColor("#CE9178")
@@ -84,9 +79,6 @@ class PluginInfoActivity : Activity() {
     private val codeNumberColor   = Color.parseColor("#B5CEA8")
     private val codeFunctionColor = Color.parseColor("#DCDCAA")
 
-    // ======================================================================
-    // COLOR ÚNICO DE PANELES (uniforme para todas las tarjetas)
-    // ======================================================================
     private val panelFillColor     = Color.parseColor("#131318")
     private val panelFillColorEnd  = Color.parseColor("#0F0F13")
 
@@ -94,9 +86,9 @@ class PluginInfoActivity : Activity() {
     private val entryAnimationTargets = mutableListOf<View>()
     private val activeAnimators = mutableListOf<ValueAnimator>()
 
-    // ======================================================================
-    // CICLO DE VIDA (warnings suprimidos)
-    // ======================================================================
+    private lateinit var mainPageContainer: ScrollView
+    private lateinit var guidePageContainer: ScrollView
+
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -116,56 +108,28 @@ class PluginInfoActivity : Activity() {
             )
         }
 
-        // Fondo plano con cuadrícula estática
         rootLayout.addView(StaticGridBackgroundView(this), FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
         ))
 
-        val scrollContainer = ScrollView(this).apply {
-            setBackgroundColor(Color.TRANSPARENT)
-            isVerticalScrollBarEnabled = false
-            clipToPadding = false
+        val contentFrame = FrameLayout(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
         }
 
-        val contentColumn = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12) + getStatusBarHeightPx(), dp(16), dp(28))
-        }
+        mainPageContainer = buildMainPage()
+        guidePageContainer = buildGuidePage()
+        guidePageContainer.visibility = View.GONE
 
-        contentColumn.addView(buildTopBar())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildHeaderCard())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildBadgeTagsRow())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildCodeSampleCard())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildFeaturesCard())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildIntegrationStepsCard())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildLaunchButton())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildTechnicalInfoCard())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildLinksCard())
-        contentColumn.addView(createSpacer(10))
-        contentColumn.addView(buildCreatorCard())
-        contentColumn.addView(createSpacer(18))
-        contentColumn.addView(buildFooter())
+        contentFrame.addView(mainPageContainer)
+        contentFrame.addView(guidePageContainer)
 
-        scrollContainer.addView(
-            contentColumn,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        rootLayout.addView(scrollContainer, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        ))
-
+        rootLayout.addView(contentFrame)
         setContentView(rootLayout)
+
         mainHandler.post { playStaggeredEntry() }
     }
 
@@ -186,23 +150,331 @@ class PluginInfoActivity : Activity() {
     }
 
     // ======================================================================
-    // SECCIONES
+    // NAVEGACIÓN ENTRE PÁGINAS
     // ======================================================================
 
-    private fun buildTopBar(): View = LinearLayout(this).apply {
+    private fun showGuidePage() {
+        mainPageContainer.visibility = View.GONE
+        guidePageContainer.visibility = View.VISIBLE
+        guidePageContainer.scrollTo(0, 0)
+        // Animación rápida de fade-in
+        guidePageContainer.alpha = 0f
+        guidePageContainer.animate().alpha(1f).setDuration(300).start()
+    }
+
+    private fun showMainPage() {
+        guidePageContainer.visibility = View.GONE
+        mainPageContainer.visibility = View.VISIBLE
+        mainPageContainer.alpha = 0f
+        mainPageContainer.animate().alpha(1f).setDuration(300).start()
+    }
+
+    // ======================================================================
+    // PÁGINA PRINCIPAL
+    // ======================================================================
+
+    private fun buildMainPage(): ScrollView {
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            isVerticalScrollBarEnabled = false
+            clipToPadding = false
+        }
+
+        val contentColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12) + getStatusBarHeightPx(), dp(16), dp(28))
+        }
+
+        contentColumn.addView(buildTopBar(false))
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildHeaderCard())
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildBadgeTagsRow())
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildCodeSampleCard())
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildFeaturesCard())
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildIntegrationStepsCard())
+        contentColumn.addView(createSpacer(10))
+        
+        // Botón que lleva a la guía
+        contentColumn.addView(buildGuideActionButton())
+        contentColumn.addView(createSpacer(10))
+        
+        contentColumn.addView(buildLaunchButton())
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildTechnicalInfoCard())
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildLinksCard())
+        contentColumn.addView(createSpacer(10))
+        contentColumn.addView(buildCreatorCard())
+        contentColumn.addView(createSpacer(18))
+        contentColumn.addView(buildFooter())
+
+        scroll.addView(contentColumn, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        return scroll
+    }
+
+    // ======================================================================
+    // PÁGINA DE LA GUÍA DE INSTALACIÓN
+    // ======================================================================
+
+    private fun buildGuidePage(): ScrollView {
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            isVerticalScrollBarEnabled = false
+            clipToPadding = false
+        }
+
+        val contentColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12) + getStatusBarHeightPx(), dp(16), dp(28))
+        }
+
+        // TopBar con botón de volver
+        contentColumn.addView(buildTopBar(true))
+        contentColumn.addView(createSpacer(10))
+
+        // Header de la guía
+        val headerCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(20), dp(16), dp(20))
+            background = TechPanelDrawable(
+                accentColor = guideAccent,
+                glowColor = Color.argb(55, Color.red(guideAccent), Color.green(guideAccent), Color.blue(guideAccent)),
+                chamferDp = 12f,
+                withOrnaments = true,
+                density = resources.displayMetrics.density
+            )
+        }
+        headerCard.addView(TextView(this).apply {
+            text = "Guía de Instalación"
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            textSize = 20f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setShadowLayer(dp(6f), 0f, 0f, Color.argb(120, Color.red(guideAccent), Color.green(guideAccent), Color.blue(guideAccent)))
+        })
+        headerCard.addView(TextView(this).apply {
+            text = "Sigue estos pasos para activar One Code For AI en tu IDE."
+            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
+            textSize = 12f
+            setPadding(0, dp(6), 0, 0)
+            setLineSpacing(0f, 1.3f)
+        })
+        contentColumn.addView(headerCard)
+        contentColumn.addView(createSpacer(16))
+
+        // Pasos de instalación
+        contentColumn.addView(createSectionTitle("Pasos", guideAccent))
+        
+        contentColumn.addView(buildGuideStep(
+            "1",
+            "Descarga el APK",
+            "Consigue el archivo .apk más reciente desde el repositorio oficial o el canal de distribución.",
+            R.drawable.ic_tech_download,
+            guideAccent
+        ))
+        
+        contentColumn.addView(buildGuideStep(
+            "2",
+            "Instala la aplicación",
+            "Abre el archivo APK en tu dispositivo y acepta la instalación desde fuentes desconocidas si el sistema lo solicita.",
+            R.drawable.ic_tech_check,
+            guideAccent
+        ))
+        
+        contentColumn.addView(buildGuideStep(
+            "3",
+            "Abre CodeAssist",
+            "Una vez instalado, inicia la aplicación CodeAssist en tu dispositivo.",
+            R.drawable.ic_tech_rocket,
+            guideAccent
+        ))
+        
+        contentColumn.addView(buildGuideStep(
+            "4",
+            "Activa el plugin",
+            "Ve a Ajustes > Plugins > Instalados y activa el plugin One Code For AI. Se cargará automáticamente.",
+            R.drawable.ic_tech_settings,
+            guideAccent
+        ))
+
+        contentColumn.addView(buildGuideStep(
+            "5",
+            "Reinicia el IDE",
+            "Cierra y vuelve a abrir CodeAssist para asegurar que todos los componentes se hayan cargado correctamente.",
+            R.drawable.ic_tech_back,
+            guideAccent
+        ))
+
+        contentColumn.addView(createSpacer(24))
+        
+        // Botón de volver al final
+        val backButton = RippleGlowButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56))
+            registerForEntryAnimation(this)
+            addChild(ImageView(this@PluginInfoActivity).apply {
+                setImageResource(R.drawable.ic_tech_back)
+                layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) }
+                setColorFilter(textOnAccent)
+            })
+            addChild(TextView(this@PluginInfoActivity).apply {
+                text = "Volver al inicio"
+                setTextColor(textOnAccent)
+                textSize = 14f
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            })
+            setOnClickListener { showMainPage() }
+        }
+        contentColumn.addView(backButton)
+        contentColumn.addView(createSpacer(18))
+        contentColumn.addView(buildFooter())
+
+        scroll.addView(contentColumn, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        return scroll
+    }
+
+    private fun buildGuideStep(
+        number: String,
+        title: String,
+        description: String,
+        iconRes: Int,
+        accent: Int
+    ): View {
+        val stepCard = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = TechPanelDrawable(
+                accentColor = accent,
+                glowColor = Color.TRANSPARENT,
+                chamferDp = 10f,
+                withOrnaments = false,
+                density = resources.displayMetrics.density
+            )
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(8)
+            }
+        }
+
+        val numberBadge = TextView(this).apply {
+            text = number
+            setTextColor(Color.parseColor("#1A1210"))
+            textSize = 12f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { marginEnd = dp(12) }
+            background = TechPanelDrawable(
+                accentColor = accent,
+                glowColor = Color.TRANSPARENT,
+                chamferDp = 6f,
+                withOrnaments = false,
+                density = resources.displayMetrics.density,
+                forceColoredFill = true
+            )
+        }
+        stepCard.addView(numberBadge)
+
+        val textContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        textContainer.addView(TextView(this).apply {
+            text = title
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            textSize = 14f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        })
+        textContainer.addView(TextView(this).apply {
+            text = description
+            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
+            textSize = 12f
+            setPadding(0, dp(4), 0, 0)
+            setLineSpacing(0f, 1.25f)
+        })
+        stepCard.addView(textContainer)
+
+        stepCard.addView(ImageView(this).apply {
+            setImageResource(iconRes)
+            setColorFilter(accent)
+            layoutParams = LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginStart = dp(8) }
+        })
+
+        return stepCard
+    }
+
+    private fun buildGuideActionButton(): View {
+        val button = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(20), dp(16), dp(20), dp(16))
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            registerForEntryAnimation(this)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { showGuidePage() }
+            background = TechPanelDrawable(
+                accentColor = guideAccent,
+                glowColor = Color.TRANSPARENT,
+                chamferDp = 12f,
+                withOrnaments = true,
+                density = resources.displayMetrics.density
+            )
+        }
+
+        button.addView(ImageView(this).apply {
+            setImageResource(R.drawable.ic_tech_settings)
+            layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) }
+            setColorFilter(guideAccent)
+        })
+        button.addView(TextView(this).apply {
+            text = "Guía de instalación"
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            textSize = 14f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        })
+        return button
+    }
+
+    // ======================================================================
+    // TOP BAR (reutilizable para ambas páginas)
+    // ======================================================================
+
+    private fun buildTopBar(isGuidePage: Boolean): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         registerForEntryAnimation(this)
 
-        val statusDot = View(this@PluginInfoActivity).apply {
-            background = createRoundedBackground(successGreen, 50f)
-            layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginEnd = dp(8) }
+        if (isGuidePage) {
+            // Botón de volver
+            addView(ImageView(this@PluginInfoActivity).apply {
+                setImageResource(R.drawable.ic_tech_back)
+                setColorFilter(CodeAssistTheme.TEXT_SECONDARY)
+                background = createRoundedBackground(CodeAssistTheme.SURFACE_RAISED, 10f, CodeAssistTheme.OUTLINE)
+                layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { marginEnd = dp(12) }
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { showMainPage() }
+            })
+        } else {
+            val statusDot = View(this@PluginInfoActivity).apply {
+                background = createRoundedBackground(successGreen, 50f)
+                layoutParams = LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginEnd = dp(8) }
+            }
+            addView(statusDot)
+            animateStatusDotPulse(statusDot)
         }
-        addView(statusDot)
-        animateStatusDotPulse(statusDot)
 
         addView(TextView(this@PluginInfoActivity).apply {
-            text = "INFO"
+            text = if (isGuidePage) "GUÍA" else "INFO"
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
             letterSpacing = 0.15f
@@ -223,7 +495,12 @@ class PluginInfoActivity : Activity() {
         })
     }
 
+    // ======================================================================
+    // EL RESTO DE COMPONENTES (Header, Features, etc. - Sin cambios)
+    // ======================================================================
+
     private fun buildHeaderCard(): View {
+        // ... (mismo código que ya tienes)
         val wrapper = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -311,6 +588,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildBadgeTagsRow(): View {
+        // ... (mismo código que ya tienes)
         val flow = FlowLayout(this)
         registerForEntryAnimation(flow)
 
@@ -337,6 +615,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildCodeSampleCard(): View {
+        // ... (mismo código que ya tienes)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -391,6 +670,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildFeaturesCard(): View {
+        // ... (mismo código que ya tienes)
         val card = createPanelCard(featuresAccent)
         registerForEntryAnimation(card)
         card.addView(createSectionTitle("Características", featuresAccent))
@@ -417,6 +697,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildIntegrationStepsCard(): View {
+        // ... (mismo código que ya tienes)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(16))
@@ -509,6 +790,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildLaunchButton(): View {
+        // ... (mismo código que ya tienes)
         val button = RippleGlowButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -539,6 +821,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildTechnicalInfoCard(): View {
+        // ... (mismo código que ya tienes)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -576,6 +859,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildLinksCard(): View {
+        // ... (mismo código que ya tienes)
         val card = createPanelCard(linksAccent)
         registerForEntryAnimation(card)
         card.addView(createSectionTitle("Enlaces", linksAccent))
@@ -599,15 +883,8 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun buildCreatorCard(): View {
-        val container = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-            registerForEntryAnimation(this)
-        }
-
-        val contentCard = LinearLayout(this).apply {
+        // ... (mismo código que ya tienes, sin el efecto de giro)
+        val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
@@ -618,13 +895,8 @@ class PluginInfoActivity : Activity() {
                 withOrnaments = true,
                 density = resources.displayMetrics.density
             )
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(dp(4), dp(4), dp(4), dp(4))
-            }
         }
+        registerForEntryAnimation(card)
 
         val avatar = TextView(this).apply {
             text = "D"
@@ -643,7 +915,7 @@ class PluginInfoActivity : Activity() {
                 forceColoredFill = true
             )
         }
-        contentCard.addView(avatar)
+        card.addView(avatar)
         animateTextGlow(avatar, successGreen)
 
         val infoColumn = LinearLayout(this).apply {
@@ -672,12 +944,12 @@ class PluginInfoActivity : Activity() {
             isFocusable = true
             setOnClickListener { openExternalUrl(authorUrl) }
         })
-        contentCard.addView(infoColumn)
-        container.addView(contentCard)
-        return container
+        card.addView(infoColumn)
+        return card
     }
 
     private fun buildFooter(): View = LinearLayout(this).apply {
+        // ... (mismo código que ya tienes)
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
         registerForEntryAnimation(this)
@@ -702,6 +974,7 @@ class PluginInfoActivity : Activity() {
     // ======================================================================
 
     private fun createPanelCard(accent: Int): LinearLayout = LinearLayout(this).apply {
+        // ... (mismo código que ya tienes)
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16), dp(14), dp(16), dp(14))
         background = TechPanelDrawable(
@@ -713,8 +986,8 @@ class PluginInfoActivity : Activity() {
         )
     }
 
-    /** Título con formato "# TEXTO" — el # es del color del panel, el texto es blanco. */
     private fun createSectionTitle(label: String, accent: Int): LinearLayout = LinearLayout(this).apply {
+        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, 0, 0, dp(10))
@@ -737,11 +1010,13 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createDot(color: Int): View = View(this).apply {
+        // ... (mismo código que ya tienes)
         background = createRoundedBackground(color, 50f)
         layoutParams = LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginEnd = dp(6) }
     }
 
     private fun createIconRow(iconResource: Int, label: String, accent: Int): View = LinearLayout(this).apply {
+        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, dp(5), 0, dp(5))
@@ -760,6 +1035,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createInfoRow(label: String, value: String): View = LinearLayout(this).apply {
+        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         setPadding(0, dp(4), 0, dp(4))
 
@@ -779,6 +1055,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createLinkRow(iconResource: Int, label: String, url: String, accent: Int): View = LinearLayout(this).apply {
+        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, dp(6), 0, dp(6))
@@ -805,6 +1082,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createBadgeTag(label: String, backgroundColor: Int, textColor: Int): TextView = TextView(this).apply {
+        // ... (mismo código que ya tienes)
         text = label
         setTextColor(textColor)
         textSize = 11f
@@ -850,6 +1128,7 @@ class PluginInfoActivity : Activity() {
     // ======================================================================
 
     private fun playTypewriterEffect(view: TextView, text: String) {
+        // ... (mismo código que ya tienes)
         val spannable = SpannableStringBuilder(text)
         for (i in text.indices) {
             spannable.setSpan(ForegroundColorSpan(Color.TRANSPARENT), i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -871,6 +1150,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun animateTextGlow(view: TextView, glowColor: Int) {
+        // ... (mismo código que ya tienes)
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 2400
             repeatCount = ValueAnimator.INFINITE
@@ -892,6 +1172,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun animateStatusDotPulse(dot: View) {
+        // ... (mismo código que ya tienes)
         ObjectAnimator.ofPropertyValuesHolder(
             dot,
             PropertyValuesHolder.ofFloat("alpha", 0.45f, 1f),
@@ -907,6 +1188,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun animateIconGlowPulse(icon: View, glowColor: Int) {
+        // ... (mismo código que ya tienes)
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 2600
             repeatCount = ValueAnimator.INFINITE
@@ -955,6 +1237,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun applyKotlinSyntaxHighlighting(source: String): SpannableStringBuilder {
+        // ... (mismo código que ya tienes)
         val spannable = SpannableStringBuilder(source)
         val keywords = listOf(
             "val", "var", "fun", "class", "object",
@@ -1040,20 +1323,16 @@ class PluginInfoActivity : Activity() {
     }
 
     // ======================================================================
-    // TECH PANEL DRAWABLE — Panel uniforme oscuro + borde acentuado
+    // TECH PANEL DRAWABLE
     // ======================================================================
 
-    /**
-     * Panel con relleno uniforme oscuro (mismo color para todas las tarjetas)
-     * y un borde acentuado con glow para que resalte. Sin degradado blanco.
-     */
     private class TechPanelDrawable(
         private val accentColor: Int,
         private var glowColor: Int,
         private val chamferDp: Float,
         private val withOrnaments: Boolean = false,
         private val density: Float,
-        private val forceColoredFill: Boolean = false  // para pills/avatars
+        private val forceColoredFill: Boolean = false
     ) : Drawable() {
 
         private val panelPath = Path()
@@ -1106,15 +1385,12 @@ class PluginInfoActivity : Activity() {
 
             buildPanelPath(width, height, chamfer)
 
-            // 1. Glow exterior
             if (glowColor != Color.TRANSPARENT) {
                 glowPaint.color = glowColor
                 canvas.drawPath(panelPath, glowPaint)
             }
 
-            // 2. Relleno uniforme
             if (forceColoredFill) {
-                // Relleno del color de acento (para pills y avatars)
                 fillPaint.shader = LinearGradient(
                     0f, 0f, 0f, height,
                     accentColor,
@@ -1122,7 +1398,6 @@ class PluginInfoActivity : Activity() {
                     Shader.TileMode.CLAMP
                 )
             } else {
-                // Relleno uniforme oscuro (paneles)
                 fillPaint.shader = LinearGradient(
                     0f, 0f, 0f, height,
                     Color.parseColor("#131318"),
@@ -1132,7 +1407,6 @@ class PluginInfoActivity : Activity() {
             }
             canvas.drawPath(panelPath, fillPaint)
 
-            // 3. Sutil glass — highlight blanco muy tenue en el top (alpha bajo)
             if (!forceColoredFill) {
                 topHighlightPaint.shader = LinearGradient(
                     0f, 0f, 0f, height * 0.4f,
@@ -1149,7 +1423,6 @@ class PluginInfoActivity : Activity() {
                 canvas.drawRect(0f, 0f, width, height * 0.4f, topHighlightPaint)
                 canvas.restore()
 
-                // Sombra inferior (profundidad)
                 bottomShadowPaint.shader = LinearGradient(
                     0f, height * 0.7f, 0f, height,
                     intArrayOf(Color.TRANSPARENT, Color.argb(60, 0, 0, 0)),
@@ -1162,7 +1435,6 @@ class PluginInfoActivity : Activity() {
                 canvas.restore()
             }
 
-            // 4. Borde con gradiente del acento (más visible para que resalte)
             borderPaint.shader = LinearGradient(
                 0f, 0f, width, height,
                 Color.argb(230, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor)),
@@ -1171,7 +1443,6 @@ class PluginInfoActivity : Activity() {
             )
             canvas.drawPath(panelPath, borderPaint)
 
-            // 5. Ornamentos (más visibles)
             if (withOrnaments) drawOrnaments(canvas, width, height, chamfer)
         }
 
@@ -1262,6 +1533,7 @@ class PluginInfoActivity : Activity() {
     // ======================================================================
 
     private inner class RippleGlowButton(context: Context) : FrameLayout(context) {
+        // ... (mismo código que ya tienes)
         private val backgroundDrawable = GlassButtonBackground(
             chamferDp = 12f,
             density = resources.displayMetrics.density
@@ -1315,7 +1587,7 @@ class PluginInfoActivity : Activity() {
         private val chamferDp: Float,
         private val density: Float
     ) : Drawable() {
-
+        // ... (mismo código que ya tienes)
         private val panelPath = Path()
         private var pressed = false
 
@@ -1433,6 +1705,7 @@ class PluginInfoActivity : Activity() {
     }
 
     private class RadialRippleOverlay(context: Context) : View(context) {
+        // ... (mismo código que ya tienes)
         private val ripplePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1480,11 +1753,8 @@ class PluginInfoActivity : Activity() {
     // FONDO ESTÁTICO CON CUADRÍCULA
     // ======================================================================
 
-    /**
-     * Fondo plano estilo CodeAssist con cuadrícula sutil semi-rellena.
-     * Sin animación = cero coste de CPU/batería.
-     */
     private inner class StaticGridBackgroundView(context: Context) : View(context) {
+        // ... (mismo código que ya tienes)
         private val density = resources.displayMetrics.density
 
         private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -1518,13 +1788,11 @@ class PluginInfoActivity : Activity() {
             val h = height.toFloat()
             if (w <= 0f || h <= 0f) return
 
-            // 1. Base plana
             canvas.drawRect(0f, 0f, w, h, basePaint)
 
             val cols = (w / cellSize).toInt() + 1
             val rows = (h / cellSize).toInt() + 1
 
-            // 2. Relleno semi-transparente de cada celda
             for (row in 0 until rows) {
                 for (col in 0 until cols) {
                     val left = col * cellSize
@@ -1533,7 +1801,6 @@ class PluginInfoActivity : Activity() {
                 }
             }
 
-            // 3. Líneas de cuadrícula
             for (col in 0..cols) {
                 val x = col * cellSize
                 canvas.drawLine(x, 0f, x, h, gridLinePaint)
@@ -1543,109 +1810,7 @@ class PluginInfoActivity : Activity() {
                 canvas.drawLine(0f, y, w, y, gridLinePaint)
             }
 
-            // 4. Viñeta para centrar la atención
             canvas.drawRect(0f, 0f, w, h, vignettePaint)
-        }
-    }
-
-    // ======================================================================
-    // BORDE DE GLOW ROTATORIO (para la tarjeta de autor)
-    // ======================================================================
-
-    private class RotatingGlowBorderView(context: Context) : View(context) {
-        private val density = resources.displayMetrics.density
-        private val outerGlowRing = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 10f * density
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                maskFilter = BlurMaskFilter(10f * density, BlurMaskFilter.Blur.NORMAL)
-            }
-        }
-        private val primaryGlowRing = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 4f * density
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                maskFilter = BlurMaskFilter(4f * density, BlurMaskFilter.Blur.NORMAL)
-            }
-        }
-        private val innerHighlightRing = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeWidth = 1.5f * density
-        }
-        private var animator: ValueAnimator? = null
-        private var progress = 0f
-        private val glowPath = Path()
-        private val glowRect = RectF()
-
-        fun startAnimation() {
-            animator?.cancel()
-            animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 8000L
-                repeatCount = ValueAnimator.INFINITE
-                interpolator = LinearInterpolator()
-                addUpdateListener {
-                    progress = it.animatedValue as Float
-                    invalidate()
-                }
-                start()
-            }
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            val width = width.toFloat()
-            val height = height.toFloat()
-            if (width <= 0f || height <= 0f) return
-
-            val radius = 14f * density
-            val inset = 8f * density
-            glowRect.set(inset, inset, width - inset, height - inset)
-            glowPath.reset()
-            glowPath.addRoundRect(glowRect, radius, radius, Path.Direction.CW)
-
-            val cx = width / 2f
-            val cy = height / 2f
-            val flickerPrimary = 0.7f + 0.3f * sin((progress * 4 * Math.PI).toFloat())
-            val flickerSecondary = 0.7f + 0.3f * sin((progress * 6 * Math.PI + 1).toFloat())
-            val rotationPrimary = progress * 360f * 0.7f
-            val rotationSecondary = -progress * 360f * 1.2f
-
-            outerGlowRing.shader = SweepGradient(cx, cy, intArrayOf(
-                Color.TRANSPARENT,
-                Color.argb((70 * flickerPrimary).toInt(), 180, 40, 0),
-                Color.argb((140 * flickerPrimary).toInt(), 255, 90, 20),
-                Color.argb((90 * flickerPrimary).toInt(), 200, 50, 10),
-                Color.argb((140 * flickerPrimary).toInt(), 255, 90, 20),
-                Color.argb((70 * flickerPrimary).toInt(), 180, 40, 0),
-                Color.TRANSPARENT
-            ), floatArrayOf(0f, 0.12f, 0.3f, 0.45f, 0.6f, 0.88f, 1f))
-            canvas.save()
-            canvas.rotate(rotationPrimary, cx, cy)
-            canvas.drawPath(glowPath, outerGlowRing)
-            canvas.restore()
-
-            primaryGlowRing.shader = SweepGradient(cx, cy, intArrayOf(
-                Color.TRANSPARENT,
-                Color.argb((180 * flickerSecondary).toInt(), 255, 100, 20),
-                Color.argb((255 * flickerSecondary).toInt(), 255, 160, 50),
-                Color.argb((255 * flickerSecondary).toInt(), 255, 200, 80),
-                Color.argb((255 * flickerSecondary).toInt(), 255, 160, 50),
-                Color.argb((180 * flickerSecondary).toInt(), 255, 100, 20),
-                Color.TRANSPARENT
-            ), floatArrayOf(0f, 0.12f, 0.3f, 0.5f, 0.7f, 0.88f, 1f))
-            canvas.save()
-            canvas.rotate(rotationSecondary, cx, cy)
-            canvas.drawPath(glowPath, primaryGlowRing)
-            canvas.restore()
-
-            innerHighlightRing.shader = SweepGradient(cx, cy, intArrayOf(
-                Color.TRANSPARENT,
-                Color.argb((255 * flickerPrimary).toInt(), 255, 240, 200),
-                Color.TRANSPARENT
-            ), floatArrayOf(0f, 0.5f, 1f))
-            canvas.save()
-            canvas.rotate(rotationPrimary + 20f, cx, cy)
-            canvas.drawPath(glowPath, innerHighlightRing)
-            canvas.restore()
         }
     }
 
@@ -1657,6 +1822,7 @@ class PluginInfoActivity : Activity() {
         context: Context,
         private val accentColor: Int
     ) : View(context) {
+        // ... (mismo código que ya tienes)
         private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(110, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
             strokeWidth = 1f

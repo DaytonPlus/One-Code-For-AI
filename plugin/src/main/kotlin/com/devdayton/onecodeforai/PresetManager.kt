@@ -5,7 +5,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class PresetManager(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("onecode_presets", Context.MODE_PRIVATE)
+    private val prefs = context.applicationContext
+        .getSharedPreferences("onecode_presets", Context.MODE_PRIVATE)
 
     fun getDefaultPresets(): Map<String, FilterConfig> = mapOf(
         "Android (Kotlin)" to FilterConfig(
@@ -28,27 +29,29 @@ class PresetManager(context: Context) {
     )
 
     fun savePreset(name: String, config: FilterConfig) {
-        val json = configToJson(config)
-        prefs.edit().putString("preset_$name", json.toString()).commit()
+        prefs.edit().putString("preset_$name", configToJson(config).toString()).commit()
     }
 
-    fun getUserPresetNames(): List<String> {
-        return prefs.all.keys.filter { it.startsWith("preset_") }.map { it.removePrefix("preset_") }.sorted()
+    fun getUserPresetNames(): List<String> =
+        prefs.all.keys.filter { it.startsWith("preset_") }
+            .map { it.removePrefix("preset_") }
+            .sorted()
+
+    fun isUserPreset(name: String): Boolean = name in getUserPresetNames()
+
+    fun deleteUserPreset(name: String) {
+        prefs.edit().remove("preset_$name").commit()
     }
 
     fun loadPreset(name: String): FilterConfig? {
         getDefaultPresets()[name]?.let { return it }
         val str = prefs.getString("preset_$name", null) ?: return null
-        return try {
-            jsonToConfig(JSONObject(str))
-        } catch (e: Exception) { null }
+        return try { jsonToConfig(JSONObject(str)) } catch (e: Exception) { null }
     }
 
-    // --- Persistencia del último estado completo ---
     fun saveLastState(config: FilterConfig, presetName: String) {
-        val json = configToJson(config)
         prefs.edit()
-            .putString("last_state_config", json.toString())
+            .putString("last_state_config", configToJson(config).toString())
             .putString("last_state_preset", presetName)
             .commit()
     }
@@ -57,31 +60,36 @@ class PresetManager(context: Context) {
         val configStr = prefs.getString("last_state_config", null) ?: return null
         val presetName = prefs.getString("last_state_preset", "Personalizado") ?: "Personalizado"
         return try {
-            val config = jsonToConfig(JSONObject(configStr))
-            Pair(config, presetName)
+            Pair(jsonToConfig(JSONObject(configStr)), presetName)
         } catch (e: Exception) { null }
     }
 
-    private fun configToJson(config: FilterConfig): JSONObject {
-        return JSONObject().apply {
-            put("excludeBinaries", config.excludeBinaries)
-            put("respectGitignore", config.respectGitignore)
-            put("maxSizeKb", config.maxSizeKb)
-            put("inclusions", JSONArray(config.inclusions))
-            put("exclusions", JSONArray(config.exclusions))
-            put("useGit", config.useGit)
-            put("gitRef", config.gitRef ?: JSONObject.NULL)
-        }
+    private fun configToJson(config: FilterConfig): JSONObject = JSONObject().apply {
+        put("excludeBinaries", config.excludeBinaries)
+        put("respectGitignore", config.respectGitignore)
+        put("maxSizeKb", config.maxSizeKb)
+        put("inclusions", JSONArray(config.inclusions))
+        put("exclusions", JSONArray(config.exclusions))
+        put("useGit", config.useGit)
+        put("gitRef", config.gitRef ?: JSONObject.NULL)
+        put("excludedPaths", JSONArray(config.excludedPaths))
     }
 
     private fun jsonToConfig(json: JSONObject): FilterConfig {
-        val inclusionsArray = json.optJSONArray("inclusions") ?: JSONArray()
-        val exclusionsArray = json.optJSONArray("exclusions") ?: JSONArray()
         val inclusions = mutableListOf<String>()
         val exclusions = mutableListOf<String>()
-        for (i in 0 until inclusionsArray.length()) inclusions.add(inclusionsArray.getString(i))
-        for (i in 0 until exclusionsArray.length()) exclusions.add(exclusionsArray.getString(i))
-        val gitRef = if (json.isNull("gitRef")) null else json.optString("gitRef").takeIf { it.isNotEmpty() }
+        val excludedPaths = mutableListOf<String>()
+        json.optJSONArray("inclusions")?.let { arr ->
+            for (i in 0 until arr.length()) inclusions.add(arr.getString(i))
+        }
+        json.optJSONArray("exclusions")?.let { arr ->
+            for (i in 0 until arr.length()) exclusions.add(arr.getString(i))
+        }
+        json.optJSONArray("excludedPaths")?.let { arr ->
+            for (i in 0 until arr.length()) excludedPaths.add(arr.getString(i))
+        }
+        val gitRef = if (json.isNull("gitRef")) null
+                     else json.optString("gitRef").takeIf { it.isNotEmpty() }
 
         return FilterConfig(
             excludeBinaries = json.optBoolean("excludeBinaries", true),
@@ -90,7 +98,8 @@ class PresetManager(context: Context) {
             inclusions = inclusions,
             exclusions = exclusions,
             useGit = json.optBoolean("useGit", false),
-            gitRef = gitRef
+            gitRef = gitRef,
+            excludedPaths = excludedPaths
         )
     }
 }

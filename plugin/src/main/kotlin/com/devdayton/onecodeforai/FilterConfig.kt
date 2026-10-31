@@ -6,6 +6,7 @@ data class FilterConfig(
     val maxSizeKb: Int = 512,
     val inclusions: List<String> = emptyList(),
     val exclusions: List<String> = emptyList(),
-    val useGit: Boolean = false, // Si usar Git para leer el código
-    val gitRef: String? = null   // Rama o commit específico
+    val useGit: Boolean = false,
+    val gitRef: String? = null,
+    val excludedPaths: List<String> = emptyList()
 )

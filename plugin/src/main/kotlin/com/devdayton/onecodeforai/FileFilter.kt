@@ -20,38 +20,56 @@ class FileFilter(
         "ttf", "otf", "woff", "woff2", "pdf", "db", "sqlite", "lock", "bin"
     )
 
-    private val ignoreRules: List<IgnoreRule> by lazy { if (config.respectGitignore) loadGitignore() else emptyList() }
+    private val ignoreRules: List<IgnoreRule> by lazy {
+        if (config.respectGitignore) loadGitignore() else emptyList()
+    }
 
-    fun include(file: File): Boolean {
+    fun include(file: File, respectExcludedPaths: Boolean = true): Boolean {
         if (file.isDirectory) {
             if (file.name in excludedDirs) return false
             if (isIgnored(file)) return false
+            if (respectExcludedPaths && isPathExcluded(file)) return false
             return true
         }
         if (!file.isFile) return false
         if (file.length() > config.maxSizeKb * 1024L) return false
-        
+
+        // Rutas excluidas explícitamente por el usuario (prioridad alta)
+        if (respectExcludedPaths && isPathExcluded(file)) return false
+
         val ext = file.extension.lowercase()
-        
-        // 1. Exclusiones (Prioridad Máxima)
+
+        // 1. Exclusiones
         if (config.exclusions.any { it.equals(ext, ignoreCase = true) || it == file.name }) return false
-        
+
         // 2. Inclusiones
         if (config.inclusions.any { it.equals(ext, ignoreCase = true) || it == file.name }) return true
-        
+
         // 3. Gitignore
         if (isIgnored(file)) return false
-        
+
         // 4. Binarios por defecto
         if (config.excludeBinaries && ext in binaryExtensions) return false
-        
+
         if (file.name.startsWith(".")) return false
-        
-        // Si llegó hasta aquí, solo incluirlo si tiene una extensión conocida
-        val textExtensions = setOf("kt", "kts", "java", "xml", "toml", "gradle", "properties", "json", "yaml", "yml", "md", "txt", "pro", "cfg", "ini", "html", "css", "scss", "js", "ts", "tsx", "jsx", "py", "rb", "go", "rs", "c", "h", "cpp", "hpp", "cs", "sh", "bat", "ps1", "sql", "proto", "graphql")
+
+        val textExtensions = setOf(
+            "kt", "kts", "java", "xml", "toml", "gradle", "properties", "json",
+            "yaml", "yml", "md", "txt", "pro", "cfg", "ini", "html", "css", "scss",
+            "js", "ts", "tsx", "jsx", "py", "rb", "go", "rs", "c", "h", "cpp",
+            "hpp", "cs", "sh", "bat", "ps1", "sql", "proto", "graphql"
+        )
         if (ext.isNotEmpty() && ext !in textExtensions) return false
-        
+
         return true
+    }
+
+    private fun isPathExcluded(file: File): Boolean {
+        if (config.excludedPaths.isEmpty()) return false
+        val rel = runCatching { file.relativeTo(root).path.replace('\\', '/') }.getOrNull() ?: return false
+        return config.excludedPaths.any { excluded ->
+            rel == excluded || rel.startsWith("$excluded/")
+        }
     }
 
     private fun isIgnored(file: File): Boolean {

@@ -2,8 +2,10 @@ package com.devdayton.onecodeforai
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -17,6 +19,44 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 object UiFactory {
+
+    // Paquete del plugin. Coincide con module.toml -> [android].namespace
+    private const val PLUGIN_PACKAGE = "com.devdayton.onecodeforai"
+
+    private var pluginResourcesCache: Resources? = null
+
+    /**
+     * Devuelve el Resources del APK del plugin. Necesario porque las vistas se crean
+     * con el Activity de CodeAssist (contexto anfitrión) y sus recursos no contienen
+     * los drawables del plugin.
+     */
+    fun Context.pluginResources(): Resources? {
+        pluginResourcesCache?.let { return it }
+        return try {
+            val res = packageManager.getResourcesForApplication(PLUGIN_PACKAGE)
+            pluginResourcesCache = res
+            res
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Carga un drawable del plugin sin importar con qué Context se construyó la vista.
+     * Si el ID es del framework (p. ej. android.R.drawable.*), hace fallback al
+     * Resources del propio contexto.
+     */
+    fun Context.loadPluginDrawable(resId: Int): Drawable? {
+        pluginResources()?.let { res ->
+            try {
+                return res.getDrawable(resId, null)
+            } catch (_: Exception) {
+                // cae al fallback
+            }
+        }
+        return try { getDrawable(resId) } catch (_: Exception) { null }
+    }
+
     fun Context.textView(
         text: String,
         size: Float,
@@ -60,7 +100,7 @@ object UiFactory {
         setTextColor(CodeAssistTheme.TEXT_PRIMARY)
         setHintTextColor(CodeAssistTheme.TEXT_MUTED)
         textSize = 13f
-        isSingleLine = true // 🔥 Corregido
+        isSingleLine = true
         background = CodeAssistTheme.roundedBg(
             this@editText,
             CodeAssistTheme.SURFACE_RAISED,
@@ -80,23 +120,31 @@ object UiFactory {
         iconRes: Int,
         contentDescriptionText: String = "Acción",
         onClick: () -> Unit
-    ) = ImageButton(this).apply {
-        setImageResource(iconRes)
-        contentDescription = contentDescriptionText
-        background = CodeAssistTheme.selectableBg(this@iconButton)
-        setColorFilter(CodeAssistTheme.TEXT_SECONDARY)
-        scaleType = ImageView.ScaleType.CENTER // 🔥 Corregido
-        setPadding(
-            CodeAssistTheme.dp(this@iconButton, 10),
-            CodeAssistTheme.dp(this@iconButton, 10),
-            CodeAssistTheme.dp(this@iconButton, 10),
-            CodeAssistTheme.dp(this@iconButton, 10)
+    ): ImageButton {
+        val button = ImageButton(this)
+        // Cargar el drawable desde el Resources del plugin, no desde el contexto actual.
+        val drawable = loadPluginDrawable(iconRes)
+        if (drawable != null) {
+            button.setImageDrawable(drawable)
+        } else {
+            runCatching { button.setImageResource(iconRes) }
+        }
+        button.contentDescription = contentDescriptionText
+        button.background = CodeAssistTheme.selectableBg(this)
+        button.setColorFilter(CodeAssistTheme.TEXT_SECONDARY)
+        button.scaleType = ImageView.ScaleType.CENTER
+        button.setPadding(
+            CodeAssistTheme.dp(this, 10),
+            CodeAssistTheme.dp(this, 10),
+            CodeAssistTheme.dp(this, 10),
+            CodeAssistTheme.dp(this, 10)
         )
-        setOnClickListener { onClick() }
-        layoutParams = LinearLayout.LayoutParams(
-            CodeAssistTheme.dp(this@iconButton, 40),
-            CodeAssistTheme.dp(this@iconButton, 40)
+        button.setOnClickListener { onClick() }
+        button.layoutParams = LinearLayout.LayoutParams(
+            CodeAssistTheme.dp(this, 40),
+            CodeAssistTheme.dp(this, 40)
         )
+        return button
     }
 
     fun Context.actionText(
