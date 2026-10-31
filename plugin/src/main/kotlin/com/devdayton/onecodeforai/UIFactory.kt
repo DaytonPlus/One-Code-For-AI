@@ -2,6 +2,7 @@ package com.devdayton.onecodeforai
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.Typeface
@@ -56,6 +57,34 @@ object UiFactory {
         }
         return try { getDrawable(resId) } catch (_: Exception) { null }
     }
+
+    /**
+     * Resuelve un string del APK del plugin aplicando el locale del IDE host.
+     *
+     * Necesario porque las vistas del ConfigurationDialog se construyen con el
+     * Context de CodeAssist (contexto anfitrión), cuyos Resources no conocen
+     * los IDs del plugin. Además aplica el locale que tenga configurado el IDE,
+     * para que si el usuario cambia el idioma de CodeAssist el plugin lo siga.
+     */
+    fun Context.pluginString(resId: Int): String {
+        return try {
+            val pluginCtx = createPackageContext(PLUGIN_PACKAGE, 0)
+            val locale = LanguageHelper.detectIdeLocale(this)
+            val config = Configuration(pluginCtx.resources.configuration)
+            config.setLocale(locale)
+            pluginCtx.createConfigurationContext(config).getString(resId)
+        } catch (_: Exception) {
+            // Último recurso: intentar con el contexto actual.
+            // Funciona si el Context ya pertenece al plugin (p. ej. PluginInfoActivity).
+            runCatching { getString(resId) }.getOrDefault("")
+        }
+    }
+
+    /**
+     * Igual que [pluginString] pero con argumentos de formato (como getString(id, args)).
+     */
+    fun Context.pluginString(resId: Int, vararg args: Any): String =
+        String.format(pluginString(resId), *args)
 
     fun Context.textView(
         text: String,

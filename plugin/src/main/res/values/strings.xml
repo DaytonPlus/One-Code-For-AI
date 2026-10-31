@@ -1,4 +1,179 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">One Code For AI</string>
+
+    <!-- ===== Config dialog ===== -->
+    <string name="dialog_subtitle">CONTEXT GENERATOR  •  %1$s</string>
+    <string name="close">Close</string>
+
+    <string name="section_presets">Export profile</string>
+    <string name="save_preset">Save profile</string>
+    <string name="delete_preset">Delete profile</string>
+
+    <string name="section_base_filters">Base filters</string>
+    <string name="exclude_binaries">Exclude binary files</string>
+    <string name="respect_gitignore">Respect .gitignore rules</string>
+    <string name="max_size">Maximum size</string>
+    <string name="kb_suffix"> KB</string>
+
+    <string name="section_inclusions">Inclusions</string>
+    <string name="section_exclusions">Exclusions</string>
+    <string name="action_add">＋ Add</string>
+    <string name="section_gitignore_rules">Rules detected in .gitignore</string>
+
+    <string name="section_version_control">Version control</string>
+    <string name="git_info">Branch: %1$s  ·  Commit: %2$s</string>
+    <string name="no_branch">no branch</string>
+    <string name="no_commit">no commit</string>
+    <string name="read_from_git">Read from a Git reference</string>
+    <string name="commit_hash_hint">Commit hash (optional)</string>
+    <string name="current_directory">Current (Directory)</string>
+
+    <string name="section_tree">File tree</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+
+    <string name="action_export">Export to Downloads</string>
+    <string name="action_share">Share file</string>
+    <string name="export_description">A single .txt file will be generated with the files allowed by the filters.</string>
+
+    <string name="section_stats">Context statistics</string>
+    <string name="calculating">Calculating…</string>
+    <string name="analyzing">Analyzing…</string>
+    <string name="analyzing_files">Analyzing… %1$d files</string>
+    <string name="cancel">Cancel</string>
+    <string name="canceled_retry">Canceled. Tap a filter to retry.</string>
+
+    <string name="stats_empty">No files · 0 tokens · 0 B</string>
+    <string name="stats_files_many">%1$d files</string>
+    <string name="stats_files_one">%1$d file</string>
+    <string name="stats_tokens">~%1$s tokens</string>
+
+    <string name="no_inclusions">No additional extensions</string>
+    <string name="no_exclusions">No custom exclusions</string>
+    <string name="no_gitignore_rules">No rules found in .gitignore</string>
+    <string name="no_tree_matches">No files match the filters</string>
+    
+    <string name="show_tree">Show file tree</string>
+    <string name="action_reload">Reload</string>
+
+    <!-- ===== Tag dialogs ===== -->
+    <string name="preset_name_hint">Profile name</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="delete_preset_message">Delete profile \"%1$s\"? This action cannot be undone.</string>
+    <string name="edit_extension">Edit extension</string>
+    <string name="delete_rule">Delete rule</string>
+    <string name="add_inclusion_title">Add inclusion</string>
+    <string name="add_exclusion_title">Add exclusion</string>
+    <string name="extension_hint">e.g.: kt, json, src/config</string>
+    <string name="accept">OK</string>
+    <string name="custom_preset">Custom</string>
+
+    <!-- ===== Plugin messages ===== -->
+    <string name="action_label">One Code For AI: generate .txt</string>
+    <string name="dialog_already_open">⏳ The configuration window is already open.</string>
+    <string name="no_folder_selected">❌ No folder selected.</string>
+    <string name="select_valid_folder">❌ Select a valid folder.</string>
+    <string name="error_opening_dialog">❌ Error: could not open the window.</string>
+    <string name="opening_config">⚙️ Opening configuration…</string>
+    <string name="starting_generation">Starting generation (%1$s)…</string>
+    <string name="generating_dump">Generating code dump…</string>
+    <string name="filename_log">File name: %1$s</string>
+    <string name="failed_creation">❌ File creation failed.</string>
+    <string name="could_not_create">❌ Could not create the file.</string>
+    <string name="sharing">Sharing: %1$s</string>
+    <string name="saved_to_downloads">✅ Saved to Downloads/OneCodeForAI: %1$s</string>
+    <string name="general_error">❌ General error: %1$s</string>
+    <string name="unknown_error">Unknown error</string>
+    <string name="share_with">Share dump with:</string>
+    <string name="share_error">❌ Error sharing: %1$s</string>
+
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Err</string>
+    <string name="error_notification_title">One Code error</string>
+
+    <string name="action_save_share">Save</string>
+    <string name="action_save_share_share">Share</string>
+
+    <!-- ===== Settings page ===== -->
+    <string name="settings_gitignore">Respect .gitignore</string>
+    <string name="settings_gitignore_desc">Ignores files listed in .gitignore</string>
+    <string name="settings_binaries">Exclude binaries</string>
+    <string name="settings_binaries_desc">Filters out images, videos, etc.</string>
+    <string name="settings_git">Git integration</string>
+    <string name="settings_git_desc">Lets you pick a branch or commit</string>
+    <string name="settings_tree">File tree &amp; stats</string>
+    <string name="settings_tree_desc">Shows the file tree and token count. Disable it on large projects if you don\'t need it.</string>
+
+    <!-- ===== PluginInfoActivity / guide ===== -->
+    <string name="info_title">INFO</string>
+    <string name="guide_title">GUIDE</string>
+    <string name="guide_header_title">Installation guide</string>
+    <string name="guide_header_subtitle">Follow these steps to enable One Code For AI in your IDE.</string>
+    <string name="guide_section_steps">Steps</string>
+    <string name="guide_step1_title">Download the APK</string>
+    <string name="guide_step1_desc">Get the latest .apk from the official repository or the distribution channel.</string>
+    <string name="guide_step2_title">Install the app</string>
+    <string name="guide_step2_desc">Open the APK on your device and accept the install from unknown sources if prompted.</string>
+    <string name="guide_step3_title">Open CodeAssist</string>
+    <string name="guide_step3_desc">Once installed, launch the CodeAssist app on your device.</string>
+    <string name="guide_step4_title">Enable the plugin</string>
+    <string name="guide_step4_desc">Go to Settings → Plugins → Installed and enable One Code For AI. It will load automatically.</string>
+    <string name="guide_step5_title">Restart the IDE</string>
+    <string name="guide_step5_desc">Close and reopen CodeAssist so all components load correctly.</string>
+    <string name="guide_back_home">Back to home</string>
+    <string name="guide_install_button">Installation guide</string>
+
+    <string name="info_subtitle">Plugin for CodeAssist</string>
+    <string name="open_codeassist">Open CodeAssist</string>
+    <string name="features_title">Features</string>
+    <string name="integration_title">CodeAssist integration</string>
+    <string name="tech_info_title">Technical information</string>
+    <string name="links_title">Links</string>
+    <string name="creator_dev">Independent developer</string>
+    <string name="footer_made_with">Made with ❤️ for the community</string>
+    <string name="codeassist_not_installed">CodeAssist is not installed</string>
+    <string name="codeassist_open_error">Could not open CodeAssist</string>
+    <string name="no_app_for_link">No app available to open links</string>
+    <!-- Badges -->
+    <string name="badge_open_source">Open Source</string>
+    <string name="badge_ai_ready">AI Ready</string>
+
+    <!-- Features -->
+    <string name="feature_1">A single .txt with all your project code</string>
+    <string name="feature_2">Export from any Git branch or commit</string>
+    <string name="feature_3">Ready-made presets: Android, Web, Python, Text</string>
+    <string name="feature_4">Share the file with ChatGPT, Claude, Gemini</string>
+    <string name="feature_5">Filters by extension and .gitignore rules</string>
+    <string name="feature_6">UI integrated with the CodeAssist dark theme</string>
+
+    <!-- Integration steps -->
+    <string name="step_1_title">Open a project</string>
+    <string name="step_1_desc">Tap the project file tree in CodeAssist</string>
+    <string name="step_2_title">Long-press a folder</string>
+    <string name="step_2_desc">The options context menu will open</string>
+    <string name="step_3_title">Choose One Code For AI</string>
+    <string name="step_3_desc">The option to generate the dump will appear</string>
+    <string name="step_4_title">Export or share</string>
+    <string name="step_4_desc">Save the .txt to Downloads or send it to your AI</string>
+
+    <!-- Technical info -->
+    <string name="tech_info_package">Package</string>
+    <string name="tech_info_version">Version</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_min_sdk">Min SDK</string>
+    <string name="tech_info_target_sdk">Target SDK</string>
+    <string name="tech_info_language">Language</string>
+    <string name="tech_info_status">Status</string>
+    <string name="tech_info_status_stable">● Stable</string>
+
+    <!-- Links -->
+    <string name="link_repository">GitHub repository</string>
+    <string name="link_report_bug">Report issue</string>
+    <string name="link_license">MIT License</string>
+
+    <!-- Code sample -->
+    <string name="code_sample">// Turn any folder into AI context\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ ready for ChatGPT</string>
 </resources>

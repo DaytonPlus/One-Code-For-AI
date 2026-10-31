@@ -70,7 +70,7 @@ class PluginInfoActivity : Activity() {
     private val techAccent     = Color.parseColor("#14B8A6")
     private val linksAccent    = Color.parseColor("#3B82F6")
     private val creatorAccent  = Color.parseColor("#F97316")
-    private val guideAccent    = Color.parseColor("#EC4899") // Rosa para la guía
+    private val guideAccent    = Color.parseColor("#EC4899")
 
     private val codeBaseText      = Color.parseColor("#D4D4D4")
     private val codeKeywordColor  = Color.parseColor("#C586C0")
@@ -88,6 +88,14 @@ class PluginInfoActivity : Activity() {
 
     private lateinit var mainPageContainer: ScrollView
     private lateinit var guidePageContainer: ScrollView
+
+    // ======================================================================
+    // Localización: aplicar el locale del IDE host a esta Activity propia
+    // ======================================================================
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LanguageHelper.wrapContextWithIdeLocale(newBase))
+    }
 
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -157,7 +165,6 @@ class PluginInfoActivity : Activity() {
         mainPageContainer.visibility = View.GONE
         guidePageContainer.visibility = View.VISIBLE
         guidePageContainer.scrollTo(0, 0)
-        // Animación rápida de fade-in
         guidePageContainer.alpha = 0f
         guidePageContainer.animate().alpha(1f).setDuration(300).start()
     }
@@ -197,11 +204,10 @@ class PluginInfoActivity : Activity() {
         contentColumn.addView(createSpacer(10))
         contentColumn.addView(buildIntegrationStepsCard())
         contentColumn.addView(createSpacer(10))
-        
-        // Botón que lleva a la guía
+
         contentColumn.addView(buildGuideActionButton())
         contentColumn.addView(createSpacer(10))
-        
+
         contentColumn.addView(buildLaunchButton())
         contentColumn.addView(createSpacer(10))
         contentColumn.addView(buildTechnicalInfoCard())
@@ -232,7 +238,6 @@ class PluginInfoActivity : Activity() {
             setPadding(dp(16), dp(12) + getStatusBarHeightPx(), dp(16), dp(28))
         }
 
-        // TopBar con botón de volver
         contentColumn.addView(buildTopBar(true))
         contentColumn.addView(createSpacer(10))
 
@@ -249,14 +254,14 @@ class PluginInfoActivity : Activity() {
             )
         }
         headerCard.addView(TextView(this).apply {
-            text = "Guía de Instalación"
+            text = getString(R.string.guide_header_title)
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
             textSize = 20f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             setShadowLayer(dp(6f), 0f, 0f, Color.argb(120, Color.red(guideAccent), Color.green(guideAccent), Color.blue(guideAccent)))
         })
         headerCard.addView(TextView(this).apply {
-            text = "Sigue estos pasos para activar One Code For AI en tu IDE."
+            text = getString(R.string.guide_header_subtitle)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 12f
             setPadding(0, dp(6), 0, 0)
@@ -266,50 +271,46 @@ class PluginInfoActivity : Activity() {
         contentColumn.addView(createSpacer(16))
 
         // Pasos de instalación
-        contentColumn.addView(createSectionTitle("Pasos", guideAccent))
-        
+        contentColumn.addView(createSectionTitle(getString(R.string.guide_section_steps), guideAccent))
+
         contentColumn.addView(buildGuideStep(
             "1",
-            "Descarga el APK",
-            "Consigue el archivo .apk más reciente desde el repositorio oficial o el canal de distribución.",
+            getString(R.string.guide_step1_title),
+            getString(R.string.guide_step1_desc),
             R.drawable.ic_tech_download,
             guideAccent
         ))
-        
         contentColumn.addView(buildGuideStep(
             "2",
-            "Instala la aplicación",
-            "Abre el archivo APK en tu dispositivo y acepta la instalación desde fuentes desconocidas si el sistema lo solicita.",
+            getString(R.string.guide_step2_title),
+            getString(R.string.guide_step2_desc),
             R.drawable.ic_tech_check,
             guideAccent
         ))
-        
         contentColumn.addView(buildGuideStep(
             "3",
-            "Abre CodeAssist",
-            "Una vez instalado, inicia la aplicación CodeAssist en tu dispositivo.",
+            getString(R.string.guide_step3_title),
+            getString(R.string.guide_step3_desc),
             R.drawable.ic_tech_rocket,
             guideAccent
         ))
-        
         contentColumn.addView(buildGuideStep(
             "4",
-            "Activa el plugin",
-            "Ve a Ajustes > Plugins > Instalados y activa el plugin One Code For AI. Se cargará automáticamente.",
+            getString(R.string.guide_step4_title),
+            getString(R.string.guide_step4_desc),
             R.drawable.ic_tech_settings,
             guideAccent
         ))
-
         contentColumn.addView(buildGuideStep(
             "5",
-            "Reinicia el IDE",
-            "Cierra y vuelve a abrir CodeAssist para asegurar que todos los componentes se hayan cargado correctamente.",
+            getString(R.string.guide_step5_title),
+            getString(R.string.guide_step5_desc),
             R.drawable.ic_tech_back,
             guideAccent
         ))
 
         contentColumn.addView(createSpacer(24))
-        
+
         // Botón de volver al final
         val backButton = RippleGlowButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56))
@@ -320,7 +321,7 @@ class PluginInfoActivity : Activity() {
                 setColorFilter(textOnAccent)
             })
             addChild(TextView(this@PluginInfoActivity).apply {
-                text = "Volver al inicio"
+                text = getString(R.string.guide_back_home)
                 setTextColor(textOnAccent)
                 textSize = 14f
                 typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -435,7 +436,7 @@ class PluginInfoActivity : Activity() {
             setColorFilter(guideAccent)
         })
         button.addView(TextView(this).apply {
-            text = "Guía de instalación"
+            text = getString(R.string.guide_install_button)
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
             textSize = 14f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -444,7 +445,7 @@ class PluginInfoActivity : Activity() {
     }
 
     // ======================================================================
-    // TOP BAR (reutilizable para ambas páginas)
+    // TOP BAR
     // ======================================================================
 
     private fun buildTopBar(isGuidePage: Boolean): View = LinearLayout(this).apply {
@@ -453,7 +454,6 @@ class PluginInfoActivity : Activity() {
         registerForEntryAnimation(this)
 
         if (isGuidePage) {
-            // Botón de volver
             addView(ImageView(this@PluginInfoActivity).apply {
                 setImageResource(R.drawable.ic_tech_back)
                 setColorFilter(CodeAssistTheme.TEXT_SECONDARY)
@@ -474,7 +474,8 @@ class PluginInfoActivity : Activity() {
         }
 
         addView(TextView(this@PluginInfoActivity).apply {
-            text = if (isGuidePage) "GUÍA" else "INFO"
+            text = if (isGuidePage) getString(R.string.guide_title)
+                   else getString(R.string.info_title)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
             letterSpacing = 0.15f
@@ -496,11 +497,10 @@ class PluginInfoActivity : Activity() {
     }
 
     // ======================================================================
-    // EL RESTO DE COMPONENTES (Header, Features, etc. - Sin cambios)
+    // HEADER
     // ======================================================================
 
     private fun buildHeaderCard(): View {
-        // ... (mismo código que ya tienes)
         val wrapper = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -549,10 +549,10 @@ class PluginInfoActivity : Activity() {
             setShadowLayer(dp(6f), 0f, 0f, Color.argb(120, Color.red(headerAccent), Color.green(headerAccent), Color.blue(headerAccent)))
         }
         textColumn.addView(titleView)
-        playTypewriterEffect(titleView, "One Code For AI")
+        playTypewriterEffect(titleView, getString(R.string.app_name))
 
         textColumn.addView(TextView(this).apply {
-            text = "Plugin para CodeAssist"
+            text = getString(R.string.info_subtitle)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
             setPadding(0, dp(3), 0, 0)
@@ -587,19 +587,38 @@ class PluginInfoActivity : Activity() {
         return wrapper
     }
 
+    // ======================================================================
+    // BADGE TAGS
+    // ======================================================================
+
     private fun buildBadgeTagsRow(): View {
-        // ... (mismo código que ya tienes)
         val flow = FlowLayout(this)
         registerForEntryAnimation(flow)
 
         data class BadgeTag(val label: String, val background: Int, val foreground: Int)
         val badges = listOf(
             BadgeTag("Kotlin", Color.parseColor("#7F52FF"), Color.WHITE),
-            BadgeTag("Android ${getAndroidVersionName(getMinimumSdk())}+", Color.parseColor("#3DDC84"), Color.parseColor("#0A1A0A")),
-            BadgeTag("Open Source", Color.parseColor("#4CAF50"), Color.WHITE),
+            BadgeTag(
+                "Android ${getAndroidVersionName(getMinimumSdk())}+",
+                Color.parseColor("#3DDC84"),
+                Color.parseColor("#0A1A0A")
+            ),
+            BadgeTag(
+                getString(R.string.badge_open_source),
+                Color.parseColor("#4CAF50"),
+                Color.WHITE
+            ),
             BadgeTag("MIT", Color.parseColor("#2196F3"), Color.WHITE),
-            BadgeTag("IA Ready", brandAccent, textOnAccent),
-            BadgeTag("v${getInstalledVersionName()}", CodeAssistTheme.SURFACE_RAISED, brandAccent),
+            BadgeTag(
+                getString(R.string.badge_ai_ready),
+                brandAccent,
+                textOnAccent
+            ),
+            BadgeTag(
+                "v${getInstalledVersionName()}",
+                CodeAssistTheme.SURFACE_RAISED,
+                brandAccent
+            ),
         )
         badges.forEachIndexed { index, badge ->
             val tagView = createBadgeTag(badge.label, badge.background, badge.foreground)
@@ -614,8 +633,11 @@ class PluginInfoActivity : Activity() {
         return flow
     }
 
+    // ======================================================================
+    // CODE SAMPLE
+    // ======================================================================
+
     private fun buildCodeSampleCard(): View {
-        // ... (mismo código que ya tienes)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -646,20 +668,8 @@ class PluginInfoActivity : Activity() {
         })
         card.addView(titleBar)
 
-        val sampleCode = """
-            // Convierte cualquier carpeta en contexto para IA
-            val proyecto = Folder("mi-app")
-            proyecto.export(
-                filtros = ANDROID,
-                destino = "Descargas/"
-            )
-            
-            // → mi-app_2026-10-30.txt
-            // → 12,847 tokens ✨ listos para ChatGPT
-        """.trimIndent()
-
         card.addView(TextView(this).apply {
-            text = applyKotlinSyntaxHighlighting(sampleCode)
+            text = applyKotlinSyntaxHighlighting(getString(R.string.code_sample))
             setTextColor(codeBaseText)
             textSize = 11f
             typeface = Typeface.MONOSPACE
@@ -669,22 +679,25 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
+    // ======================================================================
+    // FEATURES
+    // ======================================================================
+
     private fun buildFeaturesCard(): View {
-        // ... (mismo código que ya tienes)
         val card = createPanelCard(featuresAccent)
         registerForEntryAnimation(card)
-        card.addView(createSectionTitle("Características", featuresAccent))
+        card.addView(createSectionTitle(getString(R.string.features_title), featuresAccent))
 
         val features = listOf(
-            R.drawable.ic_tech_code to "Un solo .txt con todo el código del proyecto",
-            R.drawable.ic_tech_git to "Exporta desde cualquier rama o commit de Git",
-            R.drawable.ic_tech_filter to "Presets listos: Android, Web, Python, Texto",
-            R.drawable.ic_tech_share to "Comparte el archivo con ChatGPT, Claude, Gemini",
-            R.drawable.ic_tech_filter to "Filtros por extensión y reglas .gitignore",
-            R.drawable.ic_tech_code to "UI integrada con el tema oscuro de CodeAssist"
+            R.drawable.ic_tech_code to R.string.feature_1,
+            R.drawable.ic_tech_git to R.string.feature_2,
+            R.drawable.ic_tech_filter to R.string.feature_3,
+            R.drawable.ic_tech_share to R.string.feature_4,
+            R.drawable.ic_tech_filter to R.string.feature_5,
+            R.drawable.ic_tech_code to R.string.feature_6,
         )
-        features.forEachIndexed { index, (iconResource, label) ->
-            val row = createIconRow(iconResource, label, featuresAccent)
+        features.forEachIndexed { index, (iconResource, labelRes) ->
+            val row = createIconRow(iconResource, getString(labelRes), featuresAccent)
             card.addView(row)
             row.alpha = 0f
             row.animate()
@@ -696,8 +709,11 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
+    // ======================================================================
+    // INTEGRATION STEPS
+    // ======================================================================
+
     private fun buildIntegrationStepsCard(): View {
-        // ... (mismo código que ya tienes)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(14), dp(16), dp(16))
@@ -710,14 +726,30 @@ class PluginInfoActivity : Activity() {
             )
         }
         registerForEntryAnimation(card)
-        card.addView(createSectionTitle("Integración con CodeAssist", stepsAccent))
+        card.addView(createSectionTitle(getString(R.string.integration_title), stepsAccent))
 
         data class Step(val number: String, val title: String, val description: String)
         val steps = listOf(
-            Step("01", "Abre un proyecto", "Toca el árbol de archivos del proyecto en CodeAssist"),
-            Step("02", "Mantén presionada una carpeta", "Se abrirá el menú contextual de opciones"),
-            Step("03", "Elige One Code For AI", "Aparecerá la opción de generar el volcado"),
-            Step("04", "Exporta o comparte", "Guarda el .txt en Descargas o envíalo a tu IA")
+            Step(
+                "01",
+                getString(R.string.step_1_title),
+                getString(R.string.step_1_desc)
+            ),
+            Step(
+                "02",
+                getString(R.string.step_2_title),
+                getString(R.string.step_2_desc)
+            ),
+            Step(
+                "03",
+                getString(R.string.step_3_title),
+                getString(R.string.step_3_desc)
+            ),
+            Step(
+                "04",
+                getString(R.string.step_4_title),
+                getString(R.string.step_4_desc)
+            )
         )
 
         steps.forEachIndexed { index, step ->
@@ -789,8 +821,11 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
+    // ======================================================================
+    // LAUNCH BUTTON
+    // ======================================================================
+
     private fun buildLaunchButton(): View {
-        // ... (mismo código que ya tienes)
         val button = RippleGlowButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -805,7 +840,7 @@ class PluginInfoActivity : Activity() {
             setColorFilter(textOnAccent)
         })
         button.addChild(TextView(this).apply {
-            text = "Abrir CodeAssist"
+            text = getString(R.string.open_codeassist)
             setTextColor(textOnAccent)
             textSize = 14f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -820,8 +855,11 @@ class PluginInfoActivity : Activity() {
         return button
     }
 
+    // ======================================================================
+    // TECHNICAL INFO
+    // ======================================================================
+
     private fun buildTechnicalInfoCard(): View {
-        // ... (mismo código que ya tienes)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(14), dp(14), dp(14))
@@ -834,16 +872,22 @@ class PluginInfoActivity : Activity() {
             )
         }
         registerForEntryAnimation(card)
-        card.addView(createSectionTitle("Información técnica", techAccent))
+        card.addView(createSectionTitle(getString(R.string.tech_info_title), techAccent))
 
+        val ideLocale = LanguageHelper.detectIdeLocale(this)
+        val languageDisplay = ideLocale.getDisplayLanguage(ideLocale)
+            .replaceFirstChar { it.titlecase(ideLocale) }
         val rows = listOf(
-            "Paquete" to packageName,
-            "Versión" to "v${getInstalledVersionName()}",
-            "APK" to getFormattedApkSize(),
-            "Min SDK" to "Android ${getAndroidVersionName(getMinimumSdk())} (API ${getMinimumSdk()})",
-            "Target SDK" to "Android ${getAndroidVersionName(getTargetSdk())} (API ${getTargetSdk()})",
-            "Idioma" to "Español (ES)",
-            "Estado" to "● Estable"
+            getString(R.string.tech_info_package) to packageName,
+            getString(R.string.tech_info_version) to "v${getInstalledVersionName()}",
+            getString(R.string.tech_info_apk) to getFormattedApkSize(),
+            getString(R.string.tech_info_min_sdk) to
+                "Android ${getAndroidVersionName(getMinimumSdk())} (API ${getMinimumSdk()})",
+            getString(R.string.tech_info_target_sdk) to
+                "Android ${getAndroidVersionName(getTargetSdk())} (API ${getTargetSdk()})",
+            getString(R.string.tech_info_language) to
+                "$languageDisplay (${ideLocale.language.uppercase(ideLocale)})",
+            getString(R.string.tech_info_status) to getString(R.string.tech_info_status_stable)
         )
         rows.forEachIndexed { index, (label, value) ->
             val row = createInfoRow(label, value)
@@ -858,16 +902,19 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
+    // ======================================================================
+    // LINKS
+    // ======================================================================
+
     private fun buildLinksCard(): View {
-        // ... (mismo código que ya tienes)
         val card = createPanelCard(linksAccent)
         registerForEntryAnimation(card)
-        card.addView(createSectionTitle("Enlaces", linksAccent))
+        card.addView(createSectionTitle(getString(R.string.links_title), linksAccent))
 
         val links = listOf(
-            Triple(R.drawable.ic_tech_github, "Repositorio en GitHub", repositoryUrl),
-            Triple(R.drawable.ic_tech_bug, "Reportar problema", issuesUrl),
-            Triple(R.drawable.ic_tech_license, "Licencia MIT", licenseUrl),
+            Triple(R.drawable.ic_tech_github, getString(R.string.link_repository), repositoryUrl),
+            Triple(R.drawable.ic_tech_bug, getString(R.string.link_report_bug), issuesUrl),
+            Triple(R.drawable.ic_tech_license, getString(R.string.link_license), licenseUrl),
         )
         links.forEachIndexed { index, (iconResource, label, url) ->
             val row = createLinkRow(iconResource, label, url, linksAccent)
@@ -882,8 +929,11 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
+    // ======================================================================
+    // CREATOR
+    // ======================================================================
+
     private fun buildCreatorCard(): View {
-        // ... (mismo código que ya tienes, sin el efecto de giro)
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -929,7 +979,7 @@ class PluginInfoActivity : Activity() {
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         })
         infoColumn.addView(TextView(this).apply {
-            text = "Desarrollador independiente"
+            text = getString(R.string.creator_dev)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
             setPadding(0, dp(2), 0, 0)
@@ -948,14 +998,17 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
+    // ======================================================================
+    // FOOTER
+    // ======================================================================
+
     private fun buildFooter(): View = LinearLayout(this).apply {
-        // ... (mismo código que ya tienes)
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
         registerForEntryAnimation(this)
 
         addView(TextView(this@PluginInfoActivity).apply {
-            text = "Hecho con ❤️ para la comunidad"
+            text = getString(R.string.footer_made_with)
             setTextColor(CodeAssistTheme.TEXT_MUTED)
             textSize = 10f
             gravity = Gravity.CENTER
@@ -974,7 +1027,6 @@ class PluginInfoActivity : Activity() {
     // ======================================================================
 
     private fun createPanelCard(accent: Int): LinearLayout = LinearLayout(this).apply {
-        // ... (mismo código que ya tienes)
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16), dp(14), dp(16), dp(14))
         background = TechPanelDrawable(
@@ -987,7 +1039,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createSectionTitle(label: String, accent: Int): LinearLayout = LinearLayout(this).apply {
-        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, 0, 0, dp(10))
@@ -1010,13 +1061,11 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createDot(color: Int): View = View(this).apply {
-        // ... (mismo código que ya tienes)
         background = createRoundedBackground(color, 50f)
         layoutParams = LinearLayout.LayoutParams(dp(9), dp(9)).apply { marginEnd = dp(6) }
     }
 
     private fun createIconRow(iconResource: Int, label: String, accent: Int): View = LinearLayout(this).apply {
-        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, dp(5), 0, dp(5))
@@ -1035,7 +1084,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createInfoRow(label: String, value: String): View = LinearLayout(this).apply {
-        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         setPadding(0, dp(4), 0, dp(4))
 
@@ -1055,7 +1103,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createLinkRow(iconResource: Int, label: String, url: String, accent: Int): View = LinearLayout(this).apply {
-        // ... (mismo código que ya tienes)
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, dp(6), 0, dp(6))
@@ -1082,7 +1129,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun createBadgeTag(label: String, backgroundColor: Int, textColor: Int): TextView = TextView(this).apply {
-        // ... (mismo código que ya tienes)
         text = label
         setTextColor(textColor)
         textSize = 11f
@@ -1128,7 +1174,6 @@ class PluginInfoActivity : Activity() {
     // ======================================================================
 
     private fun playTypewriterEffect(view: TextView, text: String) {
-        // ... (mismo código que ya tienes)
         val spannable = SpannableStringBuilder(text)
         for (i in text.indices) {
             spannable.setSpan(ForegroundColorSpan(Color.TRANSPARENT), i, i + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1150,7 +1195,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun animateTextGlow(view: TextView, glowColor: Int) {
-        // ... (mismo código que ya tienes)
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 2400
             repeatCount = ValueAnimator.INFINITE
@@ -1172,7 +1216,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun animateStatusDotPulse(dot: View) {
-        // ... (mismo código que ya tienes)
         ObjectAnimator.ofPropertyValuesHolder(
             dot,
             PropertyValuesHolder.ofFloat("alpha", 0.45f, 1f),
@@ -1188,7 +1231,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun animateIconGlowPulse(icon: View, glowColor: Int) {
-        // ... (mismo código que ya tienes)
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 2600
             repeatCount = ValueAnimator.INFINITE
@@ -1237,7 +1279,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private fun applyKotlinSyntaxHighlighting(source: String): SpannableStringBuilder {
-        // ... (mismo código que ya tienes)
         val spannable = SpannableStringBuilder(source)
         val keywords = listOf(
             "val", "var", "fun", "class", "object",
@@ -1304,8 +1345,11 @@ class PluginInfoActivity : Activity() {
     } catch (_: Exception) { "—" }
 
     private fun openExternalUrl(url: String) {
-        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-        catch (_: ActivityNotFoundException) { Toast.makeText(this, "No hay app para abrir enlaces", Toast.LENGTH_SHORT).show() }
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, getString(R.string.no_app_for_link), Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun launchCodeAssist() {
@@ -1315,10 +1359,10 @@ class PluginInfoActivity : Activity() {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(launchIntent)
             } else {
-                Toast.makeText(this, "CodeAssist no está instalado", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.codeassist_not_installed), Toast.LENGTH_SHORT).show()
             }
         } catch (_: Exception) {
-            Toast.makeText(this, "No se pudo abrir CodeAssist", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.codeassist_open_error), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1533,7 +1577,6 @@ class PluginInfoActivity : Activity() {
     // ======================================================================
 
     private inner class RippleGlowButton(context: Context) : FrameLayout(context) {
-        // ... (mismo código que ya tienes)
         private val backgroundDrawable = GlassButtonBackground(
             chamferDp = 12f,
             density = resources.displayMetrics.density
@@ -1587,7 +1630,6 @@ class PluginInfoActivity : Activity() {
         private val chamferDp: Float,
         private val density: Float
     ) : Drawable() {
-        // ... (mismo código que ya tienes)
         private val panelPath = Path()
         private var pressed = false
 
@@ -1705,7 +1747,6 @@ class PluginInfoActivity : Activity() {
     }
 
     private class RadialRippleOverlay(context: Context) : View(context) {
-        // ... (mismo código que ya tienes)
         private val ripplePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1754,7 +1795,6 @@ class PluginInfoActivity : Activity() {
     // ======================================================================
 
     private inner class StaticGridBackgroundView(context: Context) : View(context) {
-        // ... (mismo código que ya tienes)
         private val density = resources.displayMetrics.density
 
         private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -1822,7 +1862,6 @@ class PluginInfoActivity : Activity() {
         context: Context,
         private val accentColor: Int
     ) : View(context) {
-        // ... (mismo código que ya tienes)
         private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(110, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
             strokeWidth = 1f

@@ -8,6 +8,13 @@ class PresetManager(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences("onecode_presets", Context.MODE_PRIVATE)
 
+    companion object {
+        // Nombres de presets por defecto en inglés (estables, no se traducen).
+        // "Plain Text" sustituye al antiguo "Solo Texto Plano".
+        private const val LEGACY_TEXT_PRESET = "Solo Texto Plano"
+        private const val TEXT_PRESET = "Plain Text"
+    }
+
     fun getDefaultPresets(): Map<String, FilterConfig> = mapOf(
         "Android (Kotlin)" to FilterConfig(
             inclusions = listOf("kt", "xml", "gradle", "toml", "properties", "pro"),
@@ -21,7 +28,7 @@ class PresetManager(context: Context) {
             inclusions = listOf("py", "txt", "md", "json", "yaml", "yml", "toml"),
             exclusions = listOf("pyc", "pyd", "pyo")
         ),
-        "Solo Texto Plano" to FilterConfig(
+        TEXT_PRESET to FilterConfig(
             excludeBinaries = true,
             inclusions = listOf("txt", "md", "json", "xml", "yaml", "yml"),
             exclusions = emptyList()
@@ -44,21 +51,28 @@ class PresetManager(context: Context) {
     }
 
     fun loadPreset(name: String): FilterConfig? {
-        getDefaultPresets()[name]?.let { return it }
-        val str = prefs.getString("preset_$name", null) ?: return null
+        // Compatibilidad: si el llamador pasó "Solo Texto Plano" (nombre antiguo),
+        // lo traducimos al nombre actual.
+        val resolved = if (name == LEGACY_TEXT_PRESET) TEXT_PRESET else name
+        getDefaultPresets()[resolved]?.let { return it }
+        val str = prefs.getString("preset_$resolved", null) ?: return null
         return try { jsonToConfig(JSONObject(str)) } catch (e: Exception) { null }
     }
 
     fun saveLastState(config: FilterConfig, presetName: String) {
+        // Guardamos siempre el nombre actual (migrando el legacy si viniera).
+        val resolved = if (presetName == LEGACY_TEXT_PRESET) TEXT_PRESET else presetName
         prefs.edit()
             .putString("last_state_config", configToJson(config).toString())
-            .putString("last_state_preset", presetName)
+            .putString("last_state_preset", resolved)
             .commit()
     }
 
     fun loadLastState(): Pair<FilterConfig, String>? {
         val configStr = prefs.getString("last_state_config", null) ?: return null
-        val presetName = prefs.getString("last_state_preset", "Personalizado") ?: "Personalizado"
+        val rawPreset = prefs.getString("last_state_preset", "Personalizado") ?: "Personalizado"
+        // Migración: si el estado guardado tiene el nombre antiguo, devolvemos el nuevo.
+        val presetName = if (rawPreset == LEGACY_TEXT_PRESET) TEXT_PRESET else rawPreset
         return try {
             Pair(jsonToConfig(JSONObject(configStr)), presetName)
         } catch (e: Exception) { null }

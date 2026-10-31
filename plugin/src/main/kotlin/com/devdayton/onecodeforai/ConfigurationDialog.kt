@@ -3,6 +3,7 @@ package com.devdayton.onecodeforai
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Handler
@@ -20,8 +21,10 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
@@ -29,6 +32,7 @@ import com.devdayton.onecodeforai.UiFactory.actionText
 import com.devdayton.onecodeforai.UiFactory.checkBox
 import com.devdayton.onecodeforai.UiFactory.editText
 import com.devdayton.onecodeforai.UiFactory.iconButton
+import com.devdayton.onecodeforai.UiFactory.pluginString
 import com.devdayton.onecodeforai.UiFactory.sectionTitle
 import com.devdayton.onecodeforai.UiFactory.spinnerAdapter
 import com.devdayton.onecodeforai.UiFactory.textView
@@ -38,6 +42,7 @@ class ConfigurationDialog(
     private val projectRoot: java.io.File,
     private val gitEnabledGlobally: Boolean,
     private val onExport: (config: FilterConfig, isShare: Boolean) -> Unit,
+    private val treeEnabledGlobally: Boolean = true,
     private val onDismiss: () -> Unit = {}
 ) {
     private val presetManager = PresetManager(activity)
@@ -47,7 +52,7 @@ class ConfigurationDialog(
     private var gitignoreTags: List<String> = emptyList()
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var refreshScheduled = false
+    private var rescanScheduled = false
 
     private lateinit var spinnerPresets: Spinner
     private lateinit var presetAdapter: ArrayAdapter<String>
@@ -65,18 +70,51 @@ class ConfigurationDialog(
     private lateinit var spinnerBranches: Spinner
     private lateinit var etCommitHash: EditText
 
+    // Tree
+    private var treeVisible = false
+    private lateinit var cbShowTree: CheckBox
+    private lateinit var treeActionsRow: LinearLayout
+    private lateinit var treeWrapper: FrameLayout
+    private lateinit var treeView: ProjectTreeView
+    private lateinit var treeLoadingPanel: LinearLayout
+    private lateinit var treeLoadingText: TextView
+    private lateinit var treeViewContainer: View
+
+    // Stats
+    private lateinit var statsContainer: LinearLayout
     private lateinit var tvStatsTotal: TextView
     private lateinit var flowStatsExt: FlowLayout
-    private lateinit var treeView: ProjectTreeView
 
-    /** Referencias a los tags visibles para animar add/remove. */
     private val tagViews = mutableMapOf<String, TextView>()
+
+    // ------------------------------------------------------------------
+    // Helpers de localización
+    // ------------------------------------------------------------------
+
+    private fun customPresetLabel(): String =
+        activity.pluginString(R.string.custom_preset)
+
+    private fun currentDirectoryLabel(): String =
+        activity.pluginString(R.string.current_directory)
+
+    private fun resolveInitialPresetIndex(lastStatePreset: String?): Int {
+        val customLabel = customPresetLabel()
+        return when {
+            lastStatePreset == null -> 0
+            lastStatePreset == customLabel -> 0
+            lastStatePreset == "Personalizado" -> 0
+            lastStatePreset == "Custom" -> 0
+            else -> presetAdapter.getPosition(lastStatePreset).takeIf { it >= 0 } ?: 0
+        }
+    }
+
+    // ------------------------------------------------------------------
 
     fun show() {
         gitignoreTags = FileFilter(projectRoot).loadGitignoreRules()
         val lastState = presetManager.loadLastState()
         currentConfig = lastState?.first ?: FilterConfig()
-        isCustomMode = (lastState?.second ?: "Personalizado") == "Personalizado"
+        isCustomMode = (lastState?.second ?: customPresetLabel()) == customPresetLabel()
 
         val dialog = Dialog(activity).apply {
             requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
@@ -121,10 +159,17 @@ class ConfigurationDialog(
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        headerText.addView(activity.textView("One Code For AI", 17f, CodeAssistTheme.TEXT_PRIMARY, true))
         headerText.addView(
             activity.textView(
-                "GENERADOR DE CONTEXTO  •  ${projectRoot.name}",
+                activity.pluginString(R.string.app_name),
+                17f,
+                CodeAssistTheme.TEXT_PRIMARY,
+                true
+            )
+        )
+        headerText.addView(
+            activity.textView(
+                activity.pluginString(R.string.dialog_subtitle, projectRoot.name),
                 10f,
                 CodeAssistTheme.TEXT_SECONDARY
             ).apply {
@@ -135,14 +180,14 @@ class ConfigurationDialog(
         header.addView(
             activity.iconButton(
                 R.drawable.ic_tech_close,
-                "Cerrar"
+                activity.pluginString(R.string.close)
             ) { dialog.dismiss() }
         )
         root.addView(header)
         root.addView(divider())
 
         // --- PRESETS ---
-        root.addView(activity.sectionTitle("Perfil de exportación"))
+        root.addView(activity.sectionTitle(activity.pluginString(R.string.section_presets)))
         val presetRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -162,7 +207,7 @@ class ConfigurationDialog(
         }
         btnSavePreset = activity.iconButton(
             R.drawable.ic_tech_save,
-            "Guardar perfil"
+            activity.pluginString(R.string.save_preset)
         ) { showSavePresetDialog() }.apply {
             visibility = if (isCustomMode) View.VISIBLE else View.GONE
             layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
@@ -171,7 +216,7 @@ class ConfigurationDialog(
         }
         btnDeletePreset = activity.iconButton(
             R.drawable.ic_tech_trash,
-            "Eliminar perfil"
+            activity.pluginString(R.string.delete_preset)
         ) { confirmDeletePreset() }.apply {
             visibility = View.GONE
             layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
@@ -184,15 +229,15 @@ class ConfigurationDialog(
         root.addView(presetRow)
 
         // --- FILTROS BASE ---
-        root.addView(activity.sectionTitle("Filtros base"))
+        root.addView(activity.sectionTitle(activity.pluginString(R.string.section_base_filters)))
         val basePanel = panel()
-        cbBinaries = activity.checkBox("Excluir archivos binarios").apply {
+        cbBinaries = activity.checkBox(activity.pluginString(R.string.exclude_binaries)).apply {
             isChecked = currentConfig.excludeBinaries
             setOnCheckedChangeListener { _, _ ->
                 if (!isUpdatingUI) markAsCustom()
             }
         }
-        cbGitignore = activity.checkBox("Respetar reglas de .gitignore").apply {
+        cbGitignore = activity.checkBox(activity.pluginString(R.string.respect_gitignore)).apply {
             isChecked = currentConfig.respectGitignore
             setOnCheckedChangeListener { _, _ ->
                 if (!isUpdatingUI) {
@@ -210,7 +255,11 @@ class ConfigurationDialog(
             setPadding(0, CodeAssistTheme.dp(activity, 8), 0, 0)
         }
         sizeRow.addView(
-            activity.textView("Tamaño máximo", 12f, CodeAssistTheme.TEXT_SECONDARY).apply {
+            activity.textView(
+                activity.pluginString(R.string.max_size),
+                12f,
+                CodeAssistTheme.TEXT_SECONDARY
+            ).apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
         )
@@ -229,7 +278,11 @@ class ConfigurationDialog(
         }
         sizeRow.addView(etMaxSize)
         sizeRow.addView(
-            activity.textView(" KB", 11f, CodeAssistTheme.TEXT_SECONDARY).apply {
+            activity.textView(
+                activity.pluginString(R.string.kb_suffix),
+                11f,
+                CodeAssistTheme.TEXT_SECONDARY
+            ).apply {
                 setPadding(CodeAssistTheme.dp(activity, 7), 0, 0, 0)
             }
         )
@@ -237,81 +290,143 @@ class ConfigurationDialog(
         root.addView(basePanel)
 
         // --- TAGS ---
-        root.addView(tagSectionHeader("Inclusiones", "＋ Añadir") {
-            showAddTagDialog("Añadir inclusión") { addTag(it, true) }
-        })
+        root.addView(
+            tagSectionHeader(
+                activity.pluginString(R.string.section_inclusions),
+                activity.pluginString(R.string.action_add)
+            ) {
+                showAddTagDialog(
+                    activity.pluginString(R.string.add_inclusion_title)
+                ) { addTag(it, true) }
+            }
+        )
         flowInclusions = createFlow()
         root.addView(flowInclusions)
 
-        root.addView(tagSectionHeader("Exclusiones", "＋ Añadir") {
-            showAddTagDialog("Añadir exclusión") { addTag(it, false) }
-        })
+        root.addView(
+            tagSectionHeader(
+                activity.pluginString(R.string.section_exclusions),
+                activity.pluginString(R.string.action_add)
+            ) {
+                showAddTagDialog(
+                    activity.pluginString(R.string.add_exclusion_title)
+                ) { addTag(it, false) }
+            }
+        )
         flowExclusions = createFlow()
         root.addView(flowExclusions)
 
         gitignoreSection = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
         }
-        gitignoreSection.addView(activity.sectionTitle("Reglas detectadas en .gitignore"))
+        gitignoreSection.addView(
+            activity.sectionTitle(activity.pluginString(R.string.section_gitignore_rules))
+        )
         flowGitignore = createFlow()
         gitignoreSection.addView(flowGitignore)
         root.addView(gitignoreSection)
 
         // --- GIT ---
         if (gitEnabledGlobally) {
-            root.addView(activity.sectionTitle("Control de versiones"))
+            root.addView(activity.sectionTitle(activity.pluginString(R.string.section_version_control)))
             layoutGitBox = panel()
             root.addView(layoutGitBox)
             setupGitUI()
         }
 
         // --- TREE ---
-        val treeHeader = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, CodeAssistTheme.dp(activity, 18), 0, CodeAssistTheme.dp(activity, 4))
-        }
-        treeHeader.addView(
-            activity.textView("Árbol de archivos".uppercase(), 11f, CodeAssistTheme.TEXT_SECONDARY, true)
-                .apply {
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                }
-        )
-        treeHeader.addView(activity.actionText("Expandir") {
-            if (::treeView.isInitialized) treeView.expandAll()
-        })
-        treeHeader.addView(activity.actionText("Colapsar") {
-            if (::treeView.isInitialized) treeView.collapseAll()
-        })
-        root.addView(treeHeader)
+        if (treeEnabledGlobally) {
+            root.addView(activity.sectionTitle(activity.pluginString(R.string.section_tree)))
 
-        val treeWrapper = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            background = CodeAssistTheme.roundedBg(
-                activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
+            // Checkbox toggle (estilo Git)
+            val treeTogglePanel = panel()
+            cbShowTree = activity.checkBox(activity.pluginString(R.string.show_tree)).apply {
+                isChecked = false
+                setOnCheckedChangeListener { _, checked -> setTreeVisibility(checked) }
+            }
+            treeTogglePanel.addView(cbShowTree)
+            root.addView(treeTogglePanel)
+
+            // Fila de acciones (Recargar · Expandir · Colapsar)
+            treeActionsRow = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(
+                    0,
+                    CodeAssistTheme.dp(activity, 4),
+                    0,
+                    CodeAssistTheme.dp(activity, 4)
+                )
+                visibility = View.GONE
+            }
+            treeActionsRow.addView(
+                View(activity).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+                }
             )
-            clipToOutline = true
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                CodeAssistTheme.dp(activity, 280)
+            treeActionsRow.addView(
+                activity.actionText(activity.pluginString(R.string.action_reload)) {
+                    reloadTree()
+                }
             )
+            treeActionsRow.addView(
+                activity.actionText(activity.pluginString(R.string.action_expand)) {
+                    if (::treeView.isInitialized) treeView.expandAll()
+                }
+            )
+            treeActionsRow.addView(
+                activity.actionText(activity.pluginString(R.string.action_collapse)) {
+                    if (::treeView.isInitialized) treeView.collapseAll()
+                }
+            )
+            root.addView(treeActionsRow)
+
+            // Árbol (oculto hasta marcar el checkbox)
+            treeWrapper = FrameLayout(activity).apply {
+                background = CodeAssistTheme.roundedBg(
+                    activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
+                )
+                clipToOutline = true
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    CodeAssistTheme.dp(activity, 280)
+                )
+                visibility = View.GONE
+            }
+
+            treeView = ProjectTreeView(
+                activity = activity,
+                projectRoot = projectRoot,
+                onExcludedPathsChanged = { excluded ->
+                    currentConfig = currentConfig.copy(excludedPaths = excluded)
+                    markAsCustomOnly()
+                },
+                onStatsChanged = { stats -> updateStatsUI(stats) }
+            )
+            treeViewContainer = treeView.getView().apply { visibility = View.GONE }
+            treeWrapper.addView(
+                treeViewContainer,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            treeLoadingPanel = buildTreeLoadingPanel()
+            treeWrapper.addView(
+                treeLoadingPanel,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            )
+
+            root.addView(treeWrapper)
         }
-        treeView = ProjectTreeView(activity, projectRoot) { excludedPaths ->
-            currentConfig = currentConfig.copy(excludedPaths = excludedPaths)
-            markAsCustom()
-        }
-        treeWrapper.addView(
-            treeView.getView(),
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-        root.addView(treeWrapper)
 
         // --- BOTÓN EXPORTAR ---
         val exportButton = Button(activity).apply {
-            text = "Exportar a Descargas"
+            text = activity.pluginString(R.string.action_export)
             textSize = 13f
             isAllCaps = false
             setTextColor(Color.parseColor("#21170F"))
@@ -328,7 +443,7 @@ class ConfigurationDialog(
                 readUIValues()
                 presetManager.saveLastState(
                     currentConfig,
-                    spinnerPresets.selectedItem?.toString() ?: "Personalizado"
+                    spinnerPresets.selectedItem?.toString() ?: customPresetLabel()
                 )
                 dialog.dismiss()
                 onExport(currentConfig, false)
@@ -345,7 +460,7 @@ class ConfigurationDialog(
 
         // --- BOTÓN COMPARTIR ---
         val shareButton = Button(activity).apply {
-            text = "Compartir archivo"
+            text = activity.pluginString(R.string.action_share)
             textSize = 13f
             isAllCaps = false
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
@@ -362,7 +477,7 @@ class ConfigurationDialog(
                 readUIValues()
                 presetManager.saveLastState(
                     currentConfig,
-                    spinnerPresets.selectedItem?.toString() ?: "Personalizado"
+                    spinnerPresets.selectedItem?.toString() ?: customPresetLabel()
                 )
                 dialog.dismiss()
                 onExport(currentConfig, true)
@@ -379,7 +494,7 @@ class ConfigurationDialog(
 
         root.addView(
             activity.textView(
-                "Se generará un único archivo .txt con los archivos permitidos por los filtros.",
+                activity.pluginString(R.string.export_description),
                 10f,
                 CodeAssistTheme.TEXT_MUTED
             ).apply {
@@ -394,34 +509,48 @@ class ConfigurationDialog(
         )
 
         // --- STATS ---
-        root.addView(activity.sectionTitle("Estadísticas de contexto"))
-        val statsPanel = panel().apply {
-            minimumHeight = CodeAssistTheme.dp(activity, 64)
+        if (treeEnabledGlobally) {
+            statsContainer = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                visibility = View.GONE
+            }
+            statsContainer.addView(
+                activity.sectionTitle(activity.pluginString(R.string.section_stats))
+            )
+            val statsPanel = panel().apply {
+                minimumHeight = CodeAssistTheme.dp(activity, 64)
+            }
+            tvStatsTotal = activity.textView(
+                activity.pluginString(R.string.calculating),
+                13f,
+                CodeAssistTheme.TEXT_PRIMARY,
+                true
+            )
+            statsPanel.addView(tvStatsTotal)
+            flowStatsExt = FlowLayout(activity).apply {
+                setPadding(0, CodeAssistTheme.dp(activity, 4), 0, 0)
+            }
+            statsPanel.addView(flowStatsExt)
+            statsContainer.addView(statsPanel)
+            root.addView(statsContainer)
         }
-        tvStatsTotal = activity.textView("Calculando…", 13f, CodeAssistTheme.TEXT_PRIMARY, true)
-        statsPanel.addView(tvStatsTotal)
-        flowStatsExt = FlowLayout(activity).apply {
-            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, 0)
-        }
-        statsPanel.addView(flowStatsExt)
-        root.addView(statsPanel)
 
         dialog.setContentView(scroll)
 
         dialog.setOnDismissListener {
             try {
+                if (::treeView.isInitialized) treeView.cancelScan()
                 readUIValues()
                 presetManager.saveLastState(
                     currentConfig,
-                    spinnerPresets.selectedItem?.toString() ?: "Personalizado"
+                    spinnerPresets.selectedItem?.toString() ?: customPresetLabel()
                 )
             } finally {
                 onDismiss()
             }
         }
 
-        val initialIndex = presetAdapter.getPosition(lastState?.second ?: "Personalizado")
-            .takeIf { it >= 0 } ?: 0
+        val initialIndex = resolveInitialPresetIndex(lastState?.second)
         spinnerPresets.setSelection(initialIndex, false)
         updateTagsUI(animate = false)
 
@@ -434,7 +563,7 @@ class ConfigurationDialog(
             ) {
                 if (isUpdatingUI) return
                 val selected = parent?.getItemAtPosition(position)?.toString() ?: return
-                isCustomMode = selected == "Personalizado"
+                isCustomMode = selected == customPresetLabel()
                 btnSavePreset.visibility = if (isCustomMode) View.VISIBLE else View.GONE
                 btnDeletePreset.visibility =
                     if (presetManager.isUserPreset(selected)) View.VISIBLE else View.GONE
@@ -456,11 +585,140 @@ class ConfigurationDialog(
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
 
-        // Entrada escalonada del contenido
         scroll.post { playEntrance(root) }
 
-        if (::treeView.isInitialized) treeView.render(currentConfig)
-        refreshPreview()
+        // Ya NO se arranca el escaneo automáticamente: el árbol está desmarcado por defecto
+    }
+
+    // ==================================================================
+    // Tree visibility
+    // ==================================================================
+
+    private fun setTreeVisibility(visible: Boolean) {
+        treeVisible = visible
+        if (::treeActionsRow.isInitialized) {
+            treeActionsRow.visibility = if (visible) View.VISIBLE else View.GONE
+        }
+        if (::treeWrapper.isInitialized) {
+            treeWrapper.visibility = if (visible) View.VISIBLE else View.GONE
+        }
+        if (::statsContainer.isInitialized) {
+            statsContainer.visibility = if (visible) View.VISIBLE else View.GONE
+        }
+
+        if (visible) {
+            startTreeScan()
+        } else if (::treeView.isInitialized) {
+            treeView.cancelScan()
+        }
+    }
+
+    private fun reloadTree() {
+        if (!treeVisible) return
+        startTreeScan()
+    }
+
+    // ==================================================================
+    // Tree loading panel + scan
+    // ==================================================================
+
+    private fun buildTreeLoadingPanel(): LinearLayout {
+        val panel = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(
+                CodeAssistTheme.dp(activity, 16),
+                CodeAssistTheme.dp(activity, 16),
+                CodeAssistTheme.dp(activity, 16),
+                CodeAssistTheme.dp(activity, 16)
+            )
+            background = CodeAssistTheme.roundedBg(
+                activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
+            )
+        }
+
+        val spinner = ProgressBar(activity).apply {
+            isIndeterminate = true
+            indeterminateTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
+            layoutParams = LinearLayout.LayoutParams(
+                CodeAssistTheme.dp(activity, 34),
+                CodeAssistTheme.dp(activity, 34)
+            )
+        }
+        panel.addView(spinner)
+
+        treeLoadingText = activity.textView(
+            activity.pluginString(R.string.analyzing),
+            12f,
+            CodeAssistTheme.TEXT_SECONDARY
+        ).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, CodeAssistTheme.dp(activity, 10), 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        panel.addView(treeLoadingText)
+
+        val cancelBtn = Button(activity).apply {
+            text = activity.pluginString(R.string.cancel)
+            textSize = 12f
+            isAllCaps = false
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            background = CodeAssistTheme.selectableBg(
+                activity,
+                CodeAssistTheme.SURFACE_RAISED,
+                CodeAssistTheme.SURFACE,
+                8f,
+                CodeAssistTheme.OUTLINE
+            )
+            minHeight = CodeAssistTheme.dp(activity, 36)
+            setPadding(
+                CodeAssistTheme.dp(activity, 16),
+                CodeAssistTheme.dp(activity, 6),
+                CodeAssistTheme.dp(activity, 16),
+                CodeAssistTheme.dp(activity, 6)
+            )
+            setOnClickListener {
+                if (::treeView.isInitialized) treeView.cancelScan()
+                treeLoadingText.text = activity.pluginString(R.string.canceled_retry)
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                CodeAssistTheme.dp(activity, 36)
+            ).apply {
+                topMargin = CodeAssistTheme.dp(activity, 12)
+                gravity = Gravity.CENTER_HORIZONTAL
+            }
+        }
+        panel.addView(cancelBtn)
+
+        return panel
+    }
+
+    private fun startTreeScan() {
+        if (!treeVisible) return
+        if (!::treeView.isInitialized) return
+        readUIValues()
+
+        treeLoadingPanel.visibility = View.VISIBLE
+        treeViewContainer.visibility = View.GONE
+        treeLoadingText.text = activity.pluginString(R.string.analyzing)
+
+        treeView.scanAsync(
+            config = currentConfig,
+            onProgress = { count ->
+                if (::treeLoadingText.isInitialized) {
+                    treeLoadingText.text = activity.pluginString(R.string.analyzing_files, count)
+                }
+            },
+            onComplete = { root ->
+                treeLoadingPanel.visibility = View.GONE
+                treeViewContainer.visibility = View.VISIBLE
+                treeView.renderTree(root)
+            }
+        )
     }
 
     // ==================================================================
@@ -521,43 +779,27 @@ class ConfigurationDialog(
     }
 
     // ==================================================================
-    // Preview (stats con cross-fade)
+    // Stats
     // ==================================================================
 
-    private fun scheduleRefresh() {
-        if (refreshScheduled) return
-        refreshScheduled = true
-        mainHandler.postDelayed({
-            refreshScheduled = false
-            refreshPreview()
-        }, 180)
-    }
-
-    private fun refreshPreview() {
-        if (!::tvStatsTotal.isInitialized) return
-        val snapshot = currentConfig
-        Thread {
-            val filter = FileFilter(projectRoot, snapshot)
-            val stats = CodeStats.compute(projectRoot, filter)
-            mainHandler.post { updateStatsUI(stats) }
-        }.start()
-    }
-
     private fun updateStatsUI(stats: PreviewStats) {
+        if (!::tvStatsTotal.isInitialized) return
+
         val newText = if (stats.totalFiles == 0) {
-            "Sin archivos · 0 tokens · 0 B"
+            activity.pluginString(R.string.stats_empty)
         } else {
-            buildString {
-                append(stats.totalFiles)
-                append(if (stats.totalFiles == 1) " archivo" else " archivos")
-                append("  ·  ~")
-                append(formatNumber(stats.totalTokens))
-                append(" tokens  ·  ")
-                append(formatSize(stats.totalBytes))
+            val filesLabel = if (stats.totalFiles == 1) {
+                activity.pluginString(R.string.stats_files_one, stats.totalFiles)
+            } else {
+                activity.pluginString(R.string.stats_files_many, stats.totalFiles)
             }
+            val tokensLabel = activity.pluginString(
+                R.string.stats_tokens,
+                formatNumber(stats.totalTokens)
+            )
+            "$filesLabel  ·  $tokensLabel  ·  ${formatSize(stats.totalBytes)}"
         }
 
-        // Cross-fade del texto total
         tvStatsTotal.animate().cancel()
         tvStatsTotal.animate()
             .alpha(0.25f)
@@ -568,7 +810,6 @@ class ConfigurationDialog(
             }
             .start()
 
-        // Cross-fade de los chips por extensión
         flowStatsExt.animate().cancel()
         flowStatsExt.animate()
             .alpha(0.25f)
@@ -693,22 +934,35 @@ class ConfigurationDialog(
         updateTagsUI(animate = true)
         isUpdatingUI = false
 
-        if (::treeView.isInitialized) treeView.render(currentConfig)
-        refreshPreview()
+        if (treeVisible) startTreeScan()
     }
 
-    private fun markAsCustom() {
+    private fun markAsCustomOnly() {
         if (!isCustomMode) {
             isCustomMode = true
             btnSavePreset.visibility = View.VISIBLE
-            val customIndex = presetAdapter.getPosition("Personalizado")
+            val customLabel = customPresetLabel()
+            val customIndex = presetAdapter.getPosition(customLabel)
             if (customIndex >= 0 && spinnerPresets.selectedItemPosition != customIndex) {
                 isUpdatingUI = true
                 spinnerPresets.setSelection(customIndex)
                 isUpdatingUI = false
             }
         }
-        scheduleRefresh()
+    }
+
+    private fun markAsCustom() {
+        markAsCustomOnly()
+        scheduleRescan()
+    }
+
+    private fun scheduleRescan() {
+        if (rescanScheduled) return
+        rescanScheduled = true
+        mainHandler.postDelayed({
+            rescanScheduled = false
+            if (treeVisible) startTreeScan()
+        }, 220)
     }
 
     private fun readUIValues() {
@@ -720,7 +974,7 @@ class ConfigurationDialog(
             useGit = cbUseGit.isChecked
             if (useGit) {
                 gitRef = etCommitHash.text.toString().trim().takeIf { it.isNotEmpty() }
-                    ?: spinnerBranches.selectedItem?.toString()?.takeIf { it != "Actual (Directorio)" }
+                    ?: spinnerBranches.selectedItem?.toString()?.takeIf { it != currentDirectoryLabel() }
             }
         }
 
@@ -745,13 +999,13 @@ class ConfigurationDialog(
         tagViews.clear()
 
         if (currentConfig.inclusions.isEmpty()) {
-            addEmptyLabel(flowInclusions, "Sin extensiones adicionales")
+            addEmptyLabel(flowInclusions, activity.pluginString(R.string.no_inclusions))
         } else {
             currentConfig.inclusions.forEach { addTagToFlow(flowInclusions, it, true) }
         }
 
         if (currentConfig.exclusions.isEmpty()) {
-            addEmptyLabel(flowExclusions, "Sin exclusiones personalizadas")
+            addEmptyLabel(flowExclusions, activity.pluginString(R.string.no_exclusions))
         } else {
             currentConfig.exclusions.forEach { addTagToFlow(flowExclusions, it, false) }
         }
@@ -759,7 +1013,7 @@ class ConfigurationDialog(
         gitignoreSection.visibility = if (currentConfig.respectGitignore) View.VISIBLE else View.GONE
         if (currentConfig.respectGitignore) {
             if (gitignoreTags.isEmpty()) {
-                addEmptyLabel(flowGitignore, "No se encontraron reglas en .gitignore")
+                addEmptyLabel(flowGitignore, activity.pluginString(R.string.no_gitignore_rules))
             } else {
                 gitignoreTags.forEach { tag ->
                     val overridden = currentConfig.inclusions.contains(tag) ||
@@ -772,7 +1026,6 @@ class ConfigurationDialog(
         }
 
         if (animate) {
-            // Fade-in escalonado de todos los tags visibles
             val all = listOf(flowInclusions, flowExclusions, flowGitignore)
             var i = 0
             all.forEach { flow ->
@@ -866,9 +1119,17 @@ class ConfigurationDialog(
     private fun showTagOptions(tag: String, isInclusion: Boolean) {
         AlertDialog.Builder(activity)
             .setTitle(tag)
-            .setItems(arrayOf("Editar extensión", "Eliminar regla")) { _, which ->
+            .setItems(
+                arrayOf(
+                    activity.pluginString(R.string.edit_extension),
+                    activity.pluginString(R.string.delete_rule)
+                )
+            ) { _, which ->
                 if (which == 0) {
-                    showAddTagDialog("Editar extensión", tag) { updated ->
+                    showAddTagDialog(
+                        activity.pluginString(R.string.edit_extension),
+                        tag
+                    ) { updated ->
                         val normalized = updated.trim().lowercase()
                         if (normalized.isNotEmpty() && normalized != tag) {
                             currentConfig = if (isInclusion) {
@@ -917,27 +1178,29 @@ class ConfigurationDialog(
         onAccept: (String) -> Unit
     ) {
         val input = activity.editText(initial).apply {
-            hint = "Ej.: kt, json, src/config"
+            hint = activity.pluginString(R.string.extension_hint)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         }
         AlertDialog.Builder(activity)
             .setTitle(title)
             .setView(input)
-            .setPositiveButton("Aceptar") { _, _ ->
+            .setPositiveButton(activity.pluginString(R.string.accept)) { _, _ ->
                 input.text.toString().trim().lowercase().takeIf { it.isNotEmpty() }?.let(onAccept)
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(activity.pluginString(R.string.cancel), null)
             .show()
             .styleDialog()
     }
 
     private fun setupGitUI() {
-        val branch = GitUtils.getCurrentBranch(projectRoot) ?: "sin rama"
-        val commit = GitUtils.getCurrentCommit(projectRoot) ?: "sin commit"
+        val branch = GitUtils.getCurrentBranch(projectRoot)
+            ?: activity.pluginString(R.string.no_branch)
+        val commit = GitUtils.getCurrentCommit(projectRoot)
+            ?: activity.pluginString(R.string.no_commit)
 
         layoutGitBox.addView(
             activity.textView(
-                "Rama: $branch  ·  Commit: $commit",
+                activity.pluginString(R.string.git_info, branch, commit),
                 11f,
                 CodeAssistTheme.TEXT_SECONDARY
             ).apply {
@@ -945,7 +1208,7 @@ class ConfigurationDialog(
             }
         )
 
-        cbUseGit = activity.checkBox("Leer desde una referencia Git").apply {
+        cbUseGit = activity.checkBox(activity.pluginString(R.string.read_from_git)).apply {
             isChecked = currentConfig.useGit
             setOnCheckedChangeListener { _, checked ->
                 spinnerBranches.visibility = if (checked) View.VISIBLE else View.GONE
@@ -957,7 +1220,7 @@ class ConfigurationDialog(
 
         val branches = GitUtils.getBranches(projectRoot)
         spinnerBranches = Spinner(activity).apply {
-            adapter = activity.spinnerAdapter(listOf("Actual (Directorio)") + branches)
+            adapter = activity.spinnerAdapter(listOf(currentDirectoryLabel()) + branches)
             visibility = if (currentConfig.useGit) View.VISIBLE else View.GONE
             background = CodeAssistTheme.roundedBg(
                 activity,
@@ -976,7 +1239,7 @@ class ConfigurationDialog(
         layoutGitBox.addView(spinnerBranches)
 
         etCommitHash = activity.editText(currentConfig.gitRef ?: "").apply {
-            hint = "Hash de commit (opcional)"
+            hint = activity.pluginString(R.string.commit_hash_hint)
             visibility = if (currentConfig.useGit) View.VISIBLE else View.GONE
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -988,19 +1251,21 @@ class ConfigurationDialog(
         layoutGitBox.addView(etCommitHash)
     }
 
-    private fun getPresetList(): MutableList<String> = mutableListOf("Personalizado").apply {
+    private fun getPresetList(): MutableList<String> = mutableListOf(customPresetLabel()).apply {
         addAll(presetManager.getDefaultPresets().keys)
         addAll(presetManager.getUserPresetNames())
     }
 
     private fun showSavePresetDialog() {
-        val input = activity.editText("").apply { hint = "Nombre del perfil" }
+        val input = activity.editText("").apply {
+            hint = activity.pluginString(R.string.preset_name_hint)
+        }
         AlertDialog.Builder(activity)
-            .setTitle("Guardar perfil")
+            .setTitle(activity.pluginString(R.string.save_preset))
             .setView(input)
-            .setPositiveButton("Guardar") { _, _ ->
+            .setPositiveButton(activity.pluginString(R.string.save)) { _, _ ->
                 val name = input.text.toString().trim()
-                if (name.isNotEmpty() && name != "Personalizado") {
+                if (name.isNotEmpty() && name != customPresetLabel()) {
                     readUIValues()
                     presetManager.savePreset(name, currentConfig)
                     presetManager.saveLastState(currentConfig, name)
@@ -1016,7 +1281,7 @@ class ConfigurationDialog(
                     animatePresetRow(saved = true)
                 }
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(activity.pluginString(R.string.cancel), null)
             .show()
             .styleDialog()
     }
@@ -1026,9 +1291,9 @@ class ConfigurationDialog(
         if (!presetManager.isUserPreset(selected)) return
 
         AlertDialog.Builder(activity)
-            .setTitle("Eliminar perfil")
-            .setMessage("¿Eliminar el perfil \"$selected\"? Esta acción no se puede deshacer.")
-            .setPositiveButton("Eliminar") { _, _ ->
+            .setTitle(activity.pluginString(R.string.delete_preset))
+            .setMessage(activity.pluginString(R.string.delete_preset_message, selected))
+            .setPositiveButton(activity.pluginString(R.string.delete)) { _, _ ->
                 presetManager.deleteUserPreset(selected)
                 animatePresetRow(saved = false) {
                     presetAdapter = activity.spinnerAdapter(getPresetList())
@@ -1041,7 +1306,7 @@ class ConfigurationDialog(
                     btnDeletePreset.visibility = View.GONE
                 }
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton(activity.pluginString(R.string.cancel), null)
             .show()
             .styleDialog()
     }

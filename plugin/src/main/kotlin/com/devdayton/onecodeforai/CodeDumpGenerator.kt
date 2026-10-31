@@ -13,10 +13,10 @@ class CodeDumpGenerator(
     }
 
     fun generateTo(writer: Writer) {
-        // 1. Árbol de directorios
+        // 1. Directory tree
         writer.write(DirectoryTree(root, filter).build())
 
-        // 2. Contenido (secuencia perezosa para no saturar memoria)
+        // 2. Contents (lazy sequence to avoid loading everything into memory)
         collectFiles(root)
             .sortedBy { it.relativeTo(root).path.lowercase() }
             .forEach { file ->
@@ -26,11 +26,12 @@ class CodeDumpGenerator(
                 writer.write(SEPARATOR)
 
                 val content = if (gitRef != null) {
-                    GitUtils.getFileContent(root, gitRef, rel) ?: "[Error leyendo de Git]"
+                    GitUtils.getFileContent(root, gitRef, rel) ?: "[Git read error]"
                 } else {
-                    runCatching { file.readText(Charsets.UTF_8) }.getOrElse { "[Error leyendo archivo: ${it.message}]" }
+                    runCatching { file.readText(Charsets.UTF_8) }
+                        .getOrElse { "[File read error: ${it.message}]" }
                 }
-                
+
                 writer.write(content.replace("\r\n", "\n"))
                 if (!content.endsWith("\n")) writer.write("\n")
             }
