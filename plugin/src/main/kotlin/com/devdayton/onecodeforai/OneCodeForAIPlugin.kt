@@ -89,10 +89,30 @@ class OneCodeForAIPlugin : Plugin {
         val folderPath = ctx.contextPath
             ?: return ActionResult.message(msg(R.string.no_folder_selected))
 
-        val root = File(folderPath)
-        if (!root.isDirectory) {
+        var selectedDir = File(folderPath)
+        
+        // Si el usuario seleccionó un archivo, tomamos su carpeta contenedora
+        if (selectedDir.isFile) {
+            selectedDir = selectedDir.parentFile ?: selectedDir
+        }
+
+        if (!selectedDir.isDirectory) {
             return ActionResult.message(msg(R.string.select_valid_folder))
         }
+
+        // --- AUTO-DETECCIÓN DE LA RAÍZ DEL PROYECTO ---
+        // Busca la carpeta superior que contenga el .git
+        val detectedRoot = GitUtils.findGitRoot(selectedDir) ?: selectedDir
+        if (detectedRoot.absolutePath != selectedDir.absolutePath) {
+            logInfo("📍 Raíz del proyecto detectada automáticamente: ${detectedRoot.name}")
+        }
+
+        return showConfigurationDialog(detectedRoot, logInfo)
+    }
+
+    private fun showConfigurationDialog(root: File, logInfo: (String) -> Unit): ActionResult {
+        val msgCtx = getAndroidContext()
+        fun msg(resId: Int): String = msgCtx?.pluginString(resId) ?: ""
 
         val activity = getCurrentActivity()
         if (activity == null) {
@@ -116,7 +136,18 @@ class OneCodeForAIPlugin : Plugin {
                         executeExport(root, config, isShare, logInfo)
                     },
                     treeEnabledGlobally = treeEnabled,
-                    onDismiss = { isDialogShowing = false }
+                    onDismiss = { isDialogShowing = false },
+                    onChangeRoot = { newRoot ->
+                        // Si el usuario pide cambiar la raíz (ej. con el botón de Git),
+                        // cerramos este diálogo y abrimos uno nuevo apuntando a la nueva ruta.
+                        isDialogShowing = false
+                        // Pequeño delay para evitar problemas con el WindowManager al reemplazar diálogos
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            if (!isDialogShowing) {
+                                showConfigurationDialog(newRoot, logInfo)
+                            }
+                        }, 250)
+                    }
                 ).show()
             } catch (e: Exception) {
                 isDialogShowing = false

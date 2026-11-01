@@ -16,9 +16,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.RadialGradient
-import android.graphics.RectF
 import android.graphics.Shader
-import android.graphics.SweepGradient
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -37,7 +35,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.animation.DecelerateInterpolator
-import android.view.animation.LinearInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -47,16 +44,14 @@ import android.widget.Toast
 import java.io.File
 import java.util.Calendar
 import java.util.Locale
-import kotlin.math.sin
-import kotlin.random.Random
 
 class PluginInfoActivity : Activity() {
 
-    private val repositoryUrl  = "https://github.com/devdayton/one-code-for-ai"
+    private val repositoryUrl  = "https://github.com/daytonplus/one-code-for-ai"
     private val issuesUrl      = "$repositoryUrl/issues"
     private val licenseUrl     = "$repositoryUrl/blob/main/LICENSE"
-    private val authorUrl      = "https://github.com/devdayton"
-    private val authorName     = "DevDayton"
+    private val authorUrl      = "https://github.com/daytonplus"
+    private val authorName     = "DaytonPlus"
     private val hostIdePackage = "com.tyron.code"
 
     private val brandAccent  = CodeAssistTheme.ACCENT
@@ -71,6 +66,7 @@ class PluginInfoActivity : Activity() {
     private val linksAccent    = Color.parseColor("#3B82F6")
     private val creatorAccent  = Color.parseColor("#F97316")
     private val guideAccent    = Color.parseColor("#EC4899")
+    private val helpAccent     = Color.parseColor("#8B5CF6")
 
     private val codeBaseText      = Color.parseColor("#D4D4D4")
     private val codeKeywordColor  = Color.parseColor("#C586C0")
@@ -79,19 +75,13 @@ class PluginInfoActivity : Activity() {
     private val codeNumberColor   = Color.parseColor("#B5CEA8")
     private val codeFunctionColor = Color.parseColor("#DCDCAA")
 
-    private val panelFillColor     = Color.parseColor("#131318")
-    private val panelFillColorEnd  = Color.parseColor("#0F0F13")
-
     private val mainHandler = Handler(Looper.getMainLooper())
     private val entryAnimationTargets = mutableListOf<View>()
     private val activeAnimators = mutableListOf<ValueAnimator>()
 
     private lateinit var mainPageContainer: ScrollView
     private lateinit var guidePageContainer: ScrollView
-
-    // ======================================================================
-    // Localización: aplicar el locale del IDE host a esta Activity propia
-    // ======================================================================
+    private lateinit var helpPageContainer: ScrollView
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrapContextWithIdeLocale(newBase))
@@ -130,10 +120,14 @@ class PluginInfoActivity : Activity() {
 
         mainPageContainer = buildMainPage()
         guidePageContainer = buildGuidePage()
+        helpPageContainer = buildHelpPage()
+        
         guidePageContainer.visibility = View.GONE
+        helpPageContainer.visibility = View.GONE
 
         contentFrame.addView(mainPageContainer)
         contentFrame.addView(guidePageContainer)
+        contentFrame.addView(helpPageContainer)
 
         rootLayout.addView(contentFrame)
         setContentView(rootLayout)
@@ -158,23 +152,25 @@ class PluginInfoActivity : Activity() {
     }
 
     // ======================================================================
-    // NAVEGACIÓN ENTRE PÁGINAS
+    // NAVEGACIÓN
     // ======================================================================
 
-    private fun showGuidePage() {
-        mainPageContainer.visibility = View.GONE
-        guidePageContainer.visibility = View.VISIBLE
-        guidePageContainer.scrollTo(0, 0)
-        guidePageContainer.alpha = 0f
-        guidePageContainer.animate().alpha(1f).setDuration(300).start()
+    private fun showPage(target: ScrollView) {
+        listOf(mainPageContainer, guidePageContainer, helpPageContainer).forEach { 
+            if (it == target) {
+                it.visibility = View.VISIBLE
+                it.scrollTo(0, 0)
+                it.alpha = 0f
+                it.animate().alpha(1f).setDuration(300).start()
+            } else {
+                it.visibility = View.GONE
+            }
+        }
     }
 
-    private fun showMainPage() {
-        guidePageContainer.visibility = View.GONE
-        mainPageContainer.visibility = View.VISIBLE
-        mainPageContainer.alpha = 0f
-        mainPageContainer.animate().alpha(1f).setDuration(300).start()
-    }
+    private fun showGuidePage() = showPage(guidePageContainer)
+    private fun showHelpPage() = showPage(helpPageContainer)
+    private fun showMainPage() = showPage(mainPageContainer)
 
     // ======================================================================
     // PÁGINA PRINCIPAL
@@ -192,7 +188,7 @@ class PluginInfoActivity : Activity() {
             setPadding(dp(16), dp(12) + getStatusBarHeightPx(), dp(16), dp(28))
         }
 
-        contentColumn.addView(buildTopBar(false))
+        contentColumn.addView(buildTopBar("info"))
         contentColumn.addView(createSpacer(10))
         contentColumn.addView(buildHeaderCard())
         contentColumn.addView(createSpacer(10))
@@ -205,7 +201,28 @@ class PluginInfoActivity : Activity() {
         contentColumn.addView(buildIntegrationStepsCard())
         contentColumn.addView(createSpacer(10))
 
-        contentColumn.addView(buildGuideActionButton())
+        // Botones de acción (Guía y Ayuda)
+        val actionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        
+        val guideBtn = buildActionButton("guide", guideAccent) { showGuidePage() }
+        val helpBtn = buildActionButton("help", helpAccent) { showHelpPage() }
+        
+        val lpGuide = LinearLayout.LayoutParams(0, dp(56), 1f).apply { marginEnd = dp(6) }
+        val lpHelp = LinearLayout.LayoutParams(0, dp(56), 1f).apply { marginStart = dp(6) }
+        
+        guideBtn.layoutParams = lpGuide
+        helpBtn.layoutParams = lpHelp
+        
+        actionRow.addView(guideBtn)
+        actionRow.addView(helpBtn)
+        
+        contentColumn.addView(actionRow)
         contentColumn.addView(createSpacer(10))
 
         contentColumn.addView(buildLaunchButton())
@@ -220,6 +237,155 @@ class PluginInfoActivity : Activity() {
 
         scroll.addView(contentColumn, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         return scroll
+    }
+
+    // ======================================================================
+    // PÁGINA DE AYUDA (FAQ)
+    // ======================================================================
+
+    private fun buildHelpPage(): ScrollView {
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            isVerticalScrollBarEnabled = false
+            clipToPadding = false
+        }
+
+        val contentColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12) + getStatusBarHeightPx(), dp(16), dp(28))
+        }
+
+        contentColumn.addView(buildTopBar("help"))
+        contentColumn.addView(createSpacer(10))
+
+        // Header de ayuda
+        val headerCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(20), dp(16), dp(20))
+            background = TechPanelDrawable(
+                accentColor = helpAccent,
+                glowColor = Color.argb(55, Color.red(helpAccent), Color.green(helpAccent), Color.blue(helpAccent)),
+                chamferDp = 12f,
+                withOrnaments = true,
+                density = resources.displayMetrics.density
+            )
+        }
+        headerCard.addView(TextView(this).apply {
+            text = getString(R.string.help_header_title)
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            textSize = 20f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setShadowLayer(dp(6f), 0f, 0f, Color.argb(120, Color.red(helpAccent), Color.green(helpAccent), Color.blue(helpAccent)))
+        })
+        headerCard.addView(TextView(this).apply {
+            text = getString(R.string.help_header_subtitle)
+            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
+            textSize = 12f
+            setPadding(0, dp(6), 0, 0)
+            setLineSpacing(0f, 1.3f)
+        })
+        contentColumn.addView(headerCard)
+        contentColumn.addView(createSpacer(16))
+
+        // Preguntas
+        contentColumn.addView(createSectionTitle("FAQ", helpAccent))
+
+        contentColumn.addView(buildFaqCard(getString(R.string.help_q1), getString(R.string.help_a1), helpAccent))
+        contentColumn.addView(buildFaqCard(getString(R.string.help_q2), getString(R.string.help_a2), helpAccent))
+        contentColumn.addView(buildFaqCard(getString(R.string.help_q3), getString(R.string.help_a3), helpAccent))
+        contentColumn.addView(buildFaqCard(getString(R.string.help_q4), getString(R.string.help_a4), helpAccent))
+
+        contentColumn.addView(createSpacer(24))
+
+        // Botón de volver
+        val backButton = RippleGlowButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56))
+            addChild(ImageView(this@PluginInfoActivity).apply {
+                setImageResource(R.drawable.ic_tech_back)
+                layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) }
+                setColorFilter(textOnAccent)
+            })
+            addChild(TextView(this@PluginInfoActivity).apply {
+                text = getString(R.string.help_back_home)
+                setTextColor(textOnAccent)
+                textSize = 14f
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            })
+            setOnClickListener { showMainPage() }
+        }
+        contentColumn.addView(backButton)
+        contentColumn.addView(createSpacer(18))
+        contentColumn.addView(buildFooter())
+
+        scroll.addView(contentColumn, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        return scroll
+    }
+
+    private fun buildFaqCard(question: String, answer: String, accent: Int): View {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = TechPanelDrawable(
+                accentColor = accent,
+                glowColor = Color.TRANSPARENT,
+                chamferDp = 10f,
+                withOrnaments = false,
+                density = resources.displayMetrics.density
+            )
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(10)
+            }
+        }
+
+        val qRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+        }
+        
+        qRow.addView(TextView(this).apply {
+            text = "Q"
+            setTextColor(accent)
+            textSize = 14f
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(dp(24), ViewGroup.LayoutParams.WRAP_CONTENT)
+        })
+        
+        qRow.addView(TextView(this).apply {
+            text = question
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            textSize = 13.5f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setLineSpacing(0f, 1.2f)
+        })
+        
+        card.addView(qRow)
+        card.addView(createSpacer(8))
+
+        val aRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+        }
+        
+        aRow.addView(TextView(this).apply {
+            text = "A"
+            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
+            textSize = 14f
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(dp(24), ViewGroup.LayoutParams.WRAP_CONTENT)
+        })
+        
+        aRow.addView(TextView(this).apply {
+            text = answer
+            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
+            textSize = 12.5f
+            setLineSpacing(0f, 1.3f)
+        })
+
+        card.addView(aRow)
+        return card
     }
 
     // ======================================================================
@@ -238,10 +404,9 @@ class PluginInfoActivity : Activity() {
             setPadding(dp(16), dp(12) + getStatusBarHeightPx(), dp(16), dp(28))
         }
 
-        contentColumn.addView(buildTopBar(true))
+        contentColumn.addView(buildTopBar("guide"))
         contentColumn.addView(createSpacer(10))
 
-        // Header de la guía
         val headerCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(20), dp(16), dp(20))
@@ -270,51 +435,18 @@ class PluginInfoActivity : Activity() {
         contentColumn.addView(headerCard)
         contentColumn.addView(createSpacer(16))
 
-        // Pasos de instalación
         contentColumn.addView(createSectionTitle(getString(R.string.guide_section_steps), guideAccent))
 
-        contentColumn.addView(buildGuideStep(
-            "1",
-            getString(R.string.guide_step1_title),
-            getString(R.string.guide_step1_desc),
-            R.drawable.ic_tech_download,
-            guideAccent
-        ))
-        contentColumn.addView(buildGuideStep(
-            "2",
-            getString(R.string.guide_step2_title),
-            getString(R.string.guide_step2_desc),
-            R.drawable.ic_tech_check,
-            guideAccent
-        ))
-        contentColumn.addView(buildGuideStep(
-            "3",
-            getString(R.string.guide_step3_title),
-            getString(R.string.guide_step3_desc),
-            R.drawable.ic_tech_rocket,
-            guideAccent
-        ))
-        contentColumn.addView(buildGuideStep(
-            "4",
-            getString(R.string.guide_step4_title),
-            getString(R.string.guide_step4_desc),
-            R.drawable.ic_tech_settings,
-            guideAccent
-        ))
-        contentColumn.addView(buildGuideStep(
-            "5",
-            getString(R.string.guide_step5_title),
-            getString(R.string.guide_step5_desc),
-            R.drawable.ic_tech_back,
-            guideAccent
-        ))
+        contentColumn.addView(buildGuideStep("1", getString(R.string.guide_step1_title), getString(R.string.guide_step1_desc), R.drawable.ic_tech_download, guideAccent))
+        contentColumn.addView(buildGuideStep("2", getString(R.string.guide_step2_title), getString(R.string.guide_step2_desc), R.drawable.ic_tech_check, guideAccent))
+        contentColumn.addView(buildGuideStep("3", getString(R.string.guide_step3_title), getString(R.string.guide_step3_desc), R.drawable.ic_tech_rocket, guideAccent))
+        contentColumn.addView(buildGuideStep("4", getString(R.string.guide_step4_title), getString(R.string.guide_step4_desc), R.drawable.ic_tech_settings, guideAccent))
+        contentColumn.addView(buildGuideStep("5", getString(R.string.guide_step5_title), getString(R.string.guide_step5_desc), R.drawable.ic_tech_back, guideAccent))
 
         contentColumn.addView(createSpacer(24))
 
-        // Botón de volver al final
         val backButton = RippleGlowButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(56))
-            registerForEntryAnimation(this)
             addChild(ImageView(this@PluginInfoActivity).apply {
                 setImageResource(R.drawable.ic_tech_back)
                 layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) }
@@ -336,13 +468,7 @@ class PluginInfoActivity : Activity() {
         return scroll
     }
 
-    private fun buildGuideStep(
-        number: String,
-        title: String,
-        description: String,
-        iconRes: Int,
-        accent: Int
-    ): View {
+    private fun buildGuideStep(number: String, title: String, description: String, iconRes: Int, accent: Int): View {
         val stepCard = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
@@ -408,52 +534,16 @@ class PluginInfoActivity : Activity() {
         return stepCard
     }
 
-    private fun buildGuideActionButton(): View {
-        val button = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(dp(20), dp(16), dp(20), dp(16))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-            registerForEntryAnimation(this)
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { showGuidePage() }
-            background = TechPanelDrawable(
-                accentColor = guideAccent,
-                glowColor = Color.TRANSPARENT,
-                chamferDp = 12f,
-                withOrnaments = true,
-                density = resources.displayMetrics.density
-            )
-        }
-
-        button.addView(ImageView(this).apply {
-            setImageResource(R.drawable.ic_tech_settings)
-            layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) }
-            setColorFilter(guideAccent)
-        })
-        button.addView(TextView(this).apply {
-            text = getString(R.string.guide_install_button)
-            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
-            textSize = 14f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        })
-        return button
-    }
-
     // ======================================================================
-    // TOP BAR
+    // COMPONENTES COMUNES
     // ======================================================================
 
-    private fun buildTopBar(isGuidePage: Boolean): View = LinearLayout(this).apply {
+    private fun buildTopBar(pageType: String): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         registerForEntryAnimation(this)
 
-        if (isGuidePage) {
+        if (pageType != "info") {
             addView(ImageView(this@PluginInfoActivity).apply {
                 setImageResource(R.drawable.ic_tech_back)
                 setColorFilter(CodeAssistTheme.TEXT_SECONDARY)
@@ -474,8 +564,11 @@ class PluginInfoActivity : Activity() {
         }
 
         addView(TextView(this@PluginInfoActivity).apply {
-            text = if (isGuidePage) getString(R.string.guide_title)
-                   else getString(R.string.info_title)
+            text = when(pageType) {
+                "guide" -> getString(R.string.guide_title)
+                "help" -> getString(R.string.help_title)
+                else -> getString(R.string.info_title)
+            }
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
             letterSpacing = 0.15f
@@ -496,8 +589,42 @@ class PluginInfoActivity : Activity() {
         })
     }
 
+    private fun buildActionButton(type: String, accent: Int, onClick: () -> Unit): View {
+        val iconRes = if (type == "guide") R.drawable.ic_tech_settings else R.drawable.ic_tech_code
+        val label = if (type == "guide") getString(R.string.guide_install_button) else getString(R.string.help_button)
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+            background = TechPanelDrawable(
+                accentColor = accent,
+                glowColor = Color.TRANSPARENT,
+                chamferDp = 12f,
+                withOrnaments = true,
+                density = resources.displayMetrics.density
+            )
+
+            addView(ImageView(this@PluginInfoActivity).apply {
+                setImageResource(iconRes)
+                layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginEnd = dp(6) }
+                setColorFilter(accent)
+            })
+            addView(TextView(this@PluginInfoActivity).apply {
+                text = label
+                setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+                textSize = 12f
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                gravity = Gravity.CENTER
+            })
+        }
+    }
+
     // ======================================================================
-    // HEADER
+    // RESTO DE COMPONENTES (Header, Badges, CodeSample, Features, etc.)
     // ======================================================================
 
     private fun buildHeaderCard(): View {
@@ -587,10 +714,6 @@ class PluginInfoActivity : Activity() {
         return wrapper
     }
 
-    // ======================================================================
-    // BADGE TAGS
-    // ======================================================================
-
     private fun buildBadgeTagsRow(): View {
         val flow = FlowLayout(this)
         registerForEntryAnimation(flow)
@@ -598,27 +721,11 @@ class PluginInfoActivity : Activity() {
         data class BadgeTag(val label: String, val background: Int, val foreground: Int)
         val badges = listOf(
             BadgeTag("Kotlin", Color.parseColor("#7F52FF"), Color.WHITE),
-            BadgeTag(
-                "Android ${getAndroidVersionName(getMinimumSdk())}+",
-                Color.parseColor("#3DDC84"),
-                Color.parseColor("#0A1A0A")
-            ),
-            BadgeTag(
-                getString(R.string.badge_open_source),
-                Color.parseColor("#4CAF50"),
-                Color.WHITE
-            ),
+            BadgeTag("Android ${getAndroidVersionName(getMinimumSdk())}+", Color.parseColor("#3DDC84"), Color.parseColor("#0A1A0A")),
+            BadgeTag(getString(R.string.badge_open_source), Color.parseColor("#4CAF50"), Color.WHITE),
             BadgeTag("MIT", Color.parseColor("#2196F3"), Color.WHITE),
-            BadgeTag(
-                getString(R.string.badge_ai_ready),
-                brandAccent,
-                textOnAccent
-            ),
-            BadgeTag(
-                "v${getInstalledVersionName()}",
-                CodeAssistTheme.SURFACE_RAISED,
-                brandAccent
-            ),
+            BadgeTag(getString(R.string.badge_ai_ready), brandAccent, textOnAccent),
+            BadgeTag("v${getInstalledVersionName()}", CodeAssistTheme.SURFACE_RAISED, brandAccent),
         )
         badges.forEachIndexed { index, badge ->
             val tagView = createBadgeTag(badge.label, badge.background, badge.foreground)
@@ -632,10 +739,6 @@ class PluginInfoActivity : Activity() {
         }
         return flow
     }
-
-    // ======================================================================
-    // CODE SAMPLE
-    // ======================================================================
 
     private fun buildCodeSampleCard(): View {
         val card = LinearLayout(this).apply {
@@ -679,10 +782,6 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
-    // ======================================================================
-    // FEATURES
-    // ======================================================================
-
     private fun buildFeaturesCard(): View {
         val card = createPanelCard(featuresAccent)
         registerForEntryAnimation(card)
@@ -709,10 +808,6 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
-    // ======================================================================
-    // INTEGRATION STEPS
-    // ======================================================================
-
     private fun buildIntegrationStepsCard(): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -730,26 +825,10 @@ class PluginInfoActivity : Activity() {
 
         data class Step(val number: String, val title: String, val description: String)
         val steps = listOf(
-            Step(
-                "01",
-                getString(R.string.step_1_title),
-                getString(R.string.step_1_desc)
-            ),
-            Step(
-                "02",
-                getString(R.string.step_2_title),
-                getString(R.string.step_2_desc)
-            ),
-            Step(
-                "03",
-                getString(R.string.step_3_title),
-                getString(R.string.step_3_desc)
-            ),
-            Step(
-                "04",
-                getString(R.string.step_4_title),
-                getString(R.string.step_4_desc)
-            )
+            Step("01", getString(R.string.step_1_title), getString(R.string.step_1_desc)),
+            Step("02", getString(R.string.step_2_title), getString(R.string.step_2_desc)),
+            Step("03", getString(R.string.step_3_title), getString(R.string.step_3_desc)),
+            Step("04", getString(R.string.step_4_title), getString(R.string.step_4_desc))
         )
 
         steps.forEachIndexed { index, step ->
@@ -821,10 +900,6 @@ class PluginInfoActivity : Activity() {
         return card
     }
 
-    // ======================================================================
-    // LAUNCH BUTTON
-    // ======================================================================
-
     private fun buildLaunchButton(): View {
         val button = RippleGlowButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(
@@ -855,10 +930,6 @@ class PluginInfoActivity : Activity() {
         return button
     }
 
-    // ======================================================================
-    // TECHNICAL INFO
-    // ======================================================================
-
     private fun buildTechnicalInfoCard(): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -875,18 +946,14 @@ class PluginInfoActivity : Activity() {
         card.addView(createSectionTitle(getString(R.string.tech_info_title), techAccent))
 
         val ideLocale = LanguageHelper.detectIdeLocale(this)
-        val languageDisplay = ideLocale.getDisplayLanguage(ideLocale)
-            .replaceFirstChar { it.titlecase(ideLocale) }
+        val languageDisplay = ideLocale.getDisplayLanguage(ideLocale).replaceFirstChar { it.titlecase(ideLocale) }
         val rows = listOf(
             getString(R.string.tech_info_package) to packageName,
             getString(R.string.tech_info_version) to "v${getInstalledVersionName()}",
             getString(R.string.tech_info_apk) to getFormattedApkSize(),
-            getString(R.string.tech_info_min_sdk) to
-                "Android ${getAndroidVersionName(getMinimumSdk())} (API ${getMinimumSdk()})",
-            getString(R.string.tech_info_target_sdk) to
-                "Android ${getAndroidVersionName(getTargetSdk())} (API ${getTargetSdk()})",
-            getString(R.string.tech_info_language) to
-                "$languageDisplay (${ideLocale.language.uppercase(ideLocale)})",
+            getString(R.string.tech_info_min_sdk) to "Android ${getAndroidVersionName(getMinimumSdk())} (API ${getMinimumSdk()})",
+            getString(R.string.tech_info_target_sdk) to "Android ${getAndroidVersionName(getTargetSdk())} (API ${getTargetSdk()})",
+            getString(R.string.tech_info_language) to "$languageDisplay (${ideLocale.language.uppercase(ideLocale)})",
             getString(R.string.tech_info_status) to getString(R.string.tech_info_status_stable)
         )
         rows.forEachIndexed { index, (label, value) ->
@@ -901,10 +968,6 @@ class PluginInfoActivity : Activity() {
         }
         return card
     }
-
-    // ======================================================================
-    // LINKS
-    // ======================================================================
 
     private fun buildLinksCard(): View {
         val card = createPanelCard(linksAccent)
@@ -928,10 +991,6 @@ class PluginInfoActivity : Activity() {
         }
         return card
     }
-
-    // ======================================================================
-    // CREATOR
-    // ======================================================================
 
     private fun buildCreatorCard(): View {
         val card = LinearLayout(this).apply {
@@ -985,7 +1044,7 @@ class PluginInfoActivity : Activity() {
             setPadding(0, dp(2), 0, 0)
         })
         infoColumn.addView(TextView(this).apply {
-            text = "github.com/devdayton"
+            text = "github.com/daytonplus"
             setTextColor(creatorAccent)
             textSize = 11f
             typeface = Typeface.MONOSPACE
@@ -997,10 +1056,6 @@ class PluginInfoActivity : Activity() {
         card.addView(infoColumn)
         return card
     }
-
-    // ======================================================================
-    // FOOTER
-    // ======================================================================
 
     private fun buildFooter(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -1023,7 +1078,7 @@ class PluginInfoActivity : Activity() {
     }
 
     // ======================================================================
-    // COMPONENTES REUTILIZABLES
+    // HELPERS DE UI
     // ======================================================================
 
     private fun createPanelCard(accent: Int): LinearLayout = LinearLayout(this).apply {

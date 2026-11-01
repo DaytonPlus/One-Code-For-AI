@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">One Code For AI</string>
+    <string name="app_name">CodeAssist OCForAI</string>
 
     <!-- ===== Config dialog ===== -->
     <string name="dialog_subtitle">CONTEXT GENERATOR  •  %1$s</string>
@@ -53,7 +53,7 @@
     <string name="no_exclusions">No custom exclusions</string>
     <string name="no_gitignore_rules">No rules found in .gitignore</string>
     <string name="no_tree_matches">No files match the filters</string>
-    
+
     <string name="show_tree">Show file tree</string>
     <string name="action_reload">Reload</string>
 
@@ -174,6 +174,49 @@
     <string name="link_report_bug">Report issue</string>
     <string name="link_license">MIT License</string>
 
+    <!-- Git -->
+    <string name="git_not_repo">This folder is not a Git repository</string>
+    <string name="git_refresh">Refresh Git info</string>
+    <string name="git_uncommitted_changes">⚠ %1$d uncommitted changes</string>
+    <string name="git_ref_hint">e.g.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Browse refs</string>
+    <string name="git_preview_diff">Preview diff vs working tree</string>
+    <string name="git_resolving">Resolving…</string>
+    <string name="git_resolved_as">Resolved: %1$s</string>
+    <string name="git_ref_invalid">Invalid Git reference</string>
+    <string name="git_ref_empty">Enter or select a Git reference</string>
+    <string name="git_pick_ref_title">Select a Git reference</string>
+    <string name="git_tab_branches">Branches</string>
+    <string name="git_tab_tags">Tags</string>
+    <string name="git_tab_commits">Commits</string>
+    <string name="git_local_branches">Local branches</string>
+    <string name="git_remote_branches">Remote branches</string>
+    <string name="git_no_branches">No branches found</string>
+    <string name="git_no_tags">No tags found</string>
+    <string name="git_no_commits">No commits found</string>
+    <string name="git_current_marker">current</string>
+    <string name="git_remote_marker">remote</string>
+    <string name="git_diff_title">Diff: %1$s → working tree</string>
+    <string name="git_diff_stats">%1$d files · +%2$d −%3$d</string>
+    <string name="git_diff_no_changes">No changes detected</string>
+    <string name="git_diff_content">Diff content</string>
+    <string name="git_open_parent_root">Go to project root: %1$s</string>
+
+    <!-- Help Section -->
+    <string name="help_title">HELP &amp; FAQ</string>
+    <string name="help_header_title">Frequently Asked Questions</string>
+    <string name="help_header_subtitle">Find answers to common issues and learn how to get the most out of the plugin.</string>
+    <string name="help_button">Help &amp; FAQ</string>
+    <string name="help_back_home">Back to home</string>
+    <string name="help_q1">Why is the generated file empty or missing files?</string>
+    <string name="help_a1">Check your filters. Make sure the extensions are in the "Inclusions" section, or verify that the maximum size limit isn\'t too low. Also, ensure .gitignore rules aren\'t excluding your code.</string>
+    <string name="help_q2">How do I use this with ChatGPT or Claude?</string>
+    <string name="help_a2">Tap "Share file" instead of "Export". Select your AI app (ChatGPT, Claude, etc.) from the share menu. You can then prompt the AI: "Here is my project code, please review it...".</string>
+    <string name="help_q3">The Git section says it\'s not a repository.</string>
+    <string name="help_a3">If you are inside a subfolder, tap the "Go to project root" action. Also, make sure the Git integration is enabled in CodeAssist\'s plugin settings.</string>
+    <string name="help_q4">Where are the files saved?</string>
+    <string name="help_a4">Exported files are saved in your device\'s storage under the path: Downloads/OneCodeForAI.</string>
+    
     <!-- Code sample -->
     <string name="code_sample">// Turn any folder into AI context\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ ready for ChatGPT</string>
 </resources>

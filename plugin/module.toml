@@ -44,7 +44,7 @@ java = ["src/test/java", "src/test/kotlin"]
 resources = ["src/test/resources"]
 
 [dependencies]
-implementation = ["kotlin-stdlib"]
+implementation = ["kotlin-stdlib", "org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r"]
 compileOnly = ["io.github.tyron12233:plugin-api:3.1.0", "io.github.tyron12233:platform-core:3.1.0"]
 
 [android]

@@ -8,7 +8,10 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Handler
 import android.os.Looper
+import android.text.Editable
 import android.text.InputType
+import android.text.TextUtils
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -22,12 +25,14 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.Toast
 import com.devdayton.onecodeforai.UiFactory.actionText
 import com.devdayton.onecodeforai.UiFactory.checkBox
 import com.devdayton.onecodeforai.UiFactory.editText
@@ -43,7 +48,8 @@ class ConfigurationDialog(
     private val gitEnabledGlobally: Boolean,
     private val onExport: (config: FilterConfig, isShare: Boolean) -> Unit,
     private val treeEnabledGlobally: Boolean = true,
-    private val onDismiss: () -> Unit = {}
+    private val onDismiss: () -> Unit = {},
+    private val onChangeRoot: (java.io.File) -> Unit = {} // <-- NUEVO PARÁMETRO
 ) {
     private val presetManager = PresetManager(activity)
     private var currentConfig = FilterConfig()
@@ -66,9 +72,16 @@ class ConfigurationDialog(
     private lateinit var flowGitignore: FlowLayout
     private lateinit var gitignoreSection: LinearLayout
     private lateinit var layoutGitBox: LinearLayout
+
+    // ---- Git ----
     private lateinit var cbUseGit: CheckBox
-    private lateinit var spinnerBranches: Spinner
-    private lateinit var etCommitHash: EditText
+    private lateinit var etGitRef: EditText
+    private lateinit var tvResolvedRef: TextView
+    private lateinit var tvGitInfo: TextView
+    private lateinit var tvGitWarning: TextView
+    private lateinit var gitDetailsBox: LinearLayout
+    private val resolveHandler = Handler(Looper.getMainLooper())
+    private var pendingResolve: Runnable? = null
 
     // Tree
     private var treeVisible = false
@@ -93,9 +106,6 @@ class ConfigurationDialog(
 
     private fun customPresetLabel(): String =
         activity.pluginString(R.string.custom_preset)
-
-    private fun currentDirectoryLabel(): String =
-        activity.pluginString(R.string.current_directory)
 
     private fun resolveInitialPresetIndex(lastStatePreset: String?): Int {
         val customLabel = customPresetLabel()
@@ -338,7 +348,6 @@ class ConfigurationDialog(
         if (treeEnabledGlobally) {
             root.addView(activity.sectionTitle(activity.pluginString(R.string.section_tree)))
 
-            // Checkbox toggle (estilo Git)
             val treeTogglePanel = panel()
             cbShowTree = activity.checkBox(activity.pluginString(R.string.show_tree)).apply {
                 isChecked = false
@@ -347,7 +356,6 @@ class ConfigurationDialog(
             treeTogglePanel.addView(cbShowTree)
             root.addView(treeTogglePanel)
 
-            // Fila de acciones (Recargar · Expandir · Colapsar)
             treeActionsRow = LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -381,7 +389,6 @@ class ConfigurationDialog(
             )
             root.addView(treeActionsRow)
 
-            // Árbol (oculto hasta marcar el checkbox)
             treeWrapper = FrameLayout(activity).apply {
                 background = CodeAssistTheme.roundedBg(
                     activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
@@ -539,6 +546,8 @@ class ConfigurationDialog(
 
         dialog.setOnDismissListener {
             try {
+                pendingResolve?.let { resolveHandler.removeCallbacks(it) }
+                resolveHandler.removeCallbacksAndMessages(null)
                 if (::treeView.isInitialized) treeView.cancelScan()
                 readUIValues()
                 presetManager.saveLastState(
@@ -586,8 +595,6 @@ class ConfigurationDialog(
         }
 
         scroll.post { playEntrance(root) }
-
-        // Ya NO se arranca el escaneo automáticamente: el árbol está desmarcado por defecto
     }
 
     // ==================================================================
@@ -719,6 +726,655 @@ class ConfigurationDialog(
                 treeView.renderTree(root)
             }
         )
+    }
+
+    // ==================================================================
+    // Git UI
+    // ==================================================================
+
+    private fun setupGitUI() {
+        val repoInfo = GitUtils.getRepoInfo(projectRoot)
+        if (repoInfo == null) {
+            layoutGitBox.addView(
+                activity.textView(
+                    activity.pluginString(R.string.git_not_repo),
+                    11f, CodeAssistTheme.TEXT_MUTED
+                ).apply {
+                    setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4))
+                }
+            )
+            
+            // --- NUEVA ACCIÓN PARA IR A LA RAÍZ CON GIT ---
+            val parentRoot = GitUtils.findGitRoot(projectRoot.parentFile ?: projectRoot)
+            if (parentRoot != null && parentRoot.absolutePath != projectRoot.absolutePath) {
+                layoutGitBox.addView(
+                    activity.actionText(
+                        activity.pluginString(R.string.git_open_parent_root, parentRoot.name)
+                    ) {
+                        onChangeRoot(parentRoot)
+                    }.apply {
+                        setPadding(0, CodeAssistTheme.dp(activity, 6), 0, CodeAssistTheme.dp(activity, 6))
+                    }
+                )
+            }
+            // ----------------------------------------------
+            
+            return
+        }
+
+        // Cabecera: rama + commit + refresh
+        val headerRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        tvGitInfo = activity.textView(
+            activity.pluginString(
+                R.string.git_info,
+                repoInfo.currentBranch ?: activity.pluginString(R.string.no_branch),
+                repoInfo.currentCommit ?: activity.pluginString(R.string.no_commit)
+            ),
+            11f, CodeAssistTheme.TEXT_SECONDARY
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        headerRow.addView(tvGitInfo)
+        headerRow.addView(
+            activity.iconButton(
+                R.drawable.ic_tech_refresh,
+                activity.pluginString(R.string.git_refresh)
+            ) { refreshGitInfo() }
+        )
+        layoutGitBox.addView(headerRow)
+
+        // Aviso de cambios sin commitear
+        tvGitWarning = activity.textView(
+            activity.pluginString(
+                R.string.git_uncommitted_changes,
+                GitUtils.countUncommittedChanges(projectRoot)
+            ),
+            10f, CodeAssistTheme.TAG_CONFLICT_TEXT
+        ).apply {
+            setPadding(0, CodeAssistTheme.dp(activity, 2), 0, CodeAssistTheme.dp(activity, 2))
+            visibility = if (repoInfo.hasUncommittedChanges) View.VISIBLE else View.GONE
+        }
+        layoutGitBox.addView(tvGitWarning)
+
+        // Toggle "Leer desde Git"
+        cbUseGit = activity.checkBox(activity.pluginString(R.string.read_from_git)).apply {
+            isChecked = currentConfig.useGit
+            setOnCheckedChangeListener { _, checked ->
+                if (::gitDetailsBox.isInitialized) {
+                    gitDetailsBox.visibility = if (checked) View.VISIBLE else View.GONE
+                }
+                if (checked) updateResolvedRef()
+                if (!isUpdatingUI) markAsCustom()
+            }
+        }
+        layoutGitBox.addView(cbUseGit)
+
+        // Panel de detalles
+        gitDetailsBox = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = if (currentConfig.useGit) View.VISIBLE else View.GONE
+            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, 0)
+        }
+
+        // Campo ref + botón explorar
+        val refRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        etGitRef = activity.editText(currentConfig.gitRef ?: "").apply {
+            hint = activity.pluginString(R.string.git_ref_hint)
+            layoutParams = LinearLayout.LayoutParams(0, CodeAssistTheme.dp(activity, 42), 1f)
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    if (isUpdatingUI) return
+                    scheduleResolve()
+                }
+            })
+        }
+        refRow.addView(etGitRef)
+        refRow.addView(
+            activity.iconButton(
+                R.drawable.ic_tech_search,
+                activity.pluginString(R.string.git_browse_ref)
+            ) { showRefPickerDialog() }.apply {
+                layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
+                    marginStart = CodeAssistTheme.dp(activity, 8)
+                }
+            }
+        )
+        gitDetailsBox.addView(refRow)
+
+        // Ref resuelto
+        tvResolvedRef = activity.textView("", 10f, CodeAssistTheme.TEXT_MUTED).apply {
+            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4))
+            visibility = View.GONE
+        }
+        gitDetailsBox.addView(tvResolvedRef)
+
+        // Botón diff
+        gitDetailsBox.addView(Button(activity).apply {
+            text = activity.pluginString(R.string.git_preview_diff)
+            textSize = 12f
+            isAllCaps = false
+            setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            background = CodeAssistTheme.selectableBg(
+                activity, CodeAssistTheme.SURFACE_RAISED, CodeAssistTheme.SURFACE,
+                8f, CodeAssistTheme.OUTLINE
+            )
+            minHeight = CodeAssistTheme.dp(activity, 38)
+            setOnClickListener { showDiffPreview() }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                CodeAssistTheme.dp(activity, 38)
+            ).apply {
+                topMargin = CodeAssistTheme.dp(activity, 8)
+            }
+        })
+
+        layoutGitBox.addView(gitDetailsBox)
+        updateResolvedRef()
+    }
+
+    private fun refreshGitInfo() {
+        val info = GitUtils.getRepoInfo(projectRoot) ?: return
+        if (::tvGitInfo.isInitialized) {
+            tvGitInfo.text = activity.pluginString(
+                R.string.git_info,
+                info.currentBranch ?: activity.pluginString(R.string.no_branch),
+                info.currentCommit ?: activity.pluginString(R.string.no_commit)
+            )
+        }
+        if (::tvGitWarning.isInitialized) {
+            val count = GitUtils.countUncommittedChanges(projectRoot)
+            if (count > 0) {
+                tvGitWarning.text = activity.pluginString(R.string.git_uncommitted_changes, count)
+                tvGitWarning.visibility = View.VISIBLE
+            } else {
+                tvGitWarning.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun scheduleResolve() {
+        pendingResolve?.let { resolveHandler.removeCallbacks(it) }
+        val r = Runnable { updateResolvedRef() }
+        pendingResolve = r
+        resolveHandler.postDelayed(r, 300)
+    }
+
+    private fun updateResolvedRef() {
+        if (!::tvResolvedRef.isInitialized || !::etGitRef.isInitialized) return
+        val ref = etGitRef.text.toString().trim()
+        if (ref.isEmpty()) {
+            tvResolvedRef.visibility = View.GONE
+            return
+        }
+        tvResolvedRef.text = activity.pluginString(R.string.git_resolving)
+        tvResolvedRef.setTextColor(CodeAssistTheme.TEXT_MUTED)
+        tvResolvedRef.visibility = View.VISIBLE
+        Thread {
+            val short = GitUtils.resolveRefShort(projectRoot, ref)
+            activity.runOnUiThread {
+                if (!::tvResolvedRef.isInitialized) return@runOnUiThread
+                if (etGitRef.text.toString().trim() != ref) return@runOnUiThread
+                if (short == null) {
+                    tvResolvedRef.text = activity.pluginString(R.string.git_ref_invalid)
+                    tvResolvedRef.setTextColor(CodeAssistTheme.TAG_EXCLUDE_TEXT)
+                } else {
+                    tvResolvedRef.text = activity.pluginString(R.string.git_resolved_as, short)
+                    tvResolvedRef.setTextColor(CodeAssistTheme.TEXT_MUTED)
+                }
+            }
+        }.start()
+    }
+
+    // ------------------------------------------------------------------
+    // Selector de referencias Git
+    // ------------------------------------------------------------------
+
+    private fun showRefPickerDialog() {
+        val dialog = Dialog(activity).apply {
+            requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+            setCancelable(true)
+        }
+
+        val root = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 14),
+                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 14)
+            )
+            background = CodeAssistTheme.roundedBg(activity, CodeAssistTheme.BG, 14f, CodeAssistTheme.OUTLINE)
+        }
+
+        val header = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(
+            activity.textView(
+                activity.pluginString(R.string.git_pick_ref_title), 15f,
+                CodeAssistTheme.TEXT_PRIMARY, true
+            ).apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+        )
+        header.addView(
+            activity.iconButton(
+                R.drawable.ic_tech_close, activity.pluginString(R.string.close)
+            ) { dialog.dismiss() }
+        )
+        root.addView(header)
+
+        val tabRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, CodeAssistTheme.dp(activity, 10), 0, CodeAssistTheme.dp(activity, 6))
+        }
+        val scroll = ScrollView(activity).apply { isVerticalScrollBarEnabled = true }
+        val content = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        scroll.addView(content)
+        root.addView(tabRow)
+        root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+
+        val tabs = mutableListOf<TextView>()
+        fun selectTab(index: Int) {
+            tabs.forEachIndexed { i, t ->
+                t.setTextColor(if (i == index) CodeAssistTheme.ACCENT else CodeAssistTheme.TEXT_SECONDARY)
+                t.background = if (i == index) CodeAssistTheme.roundedBg(
+                    activity, CodeAssistTheme.SURFACE_RAISED, 8f, CodeAssistTheme.OUTLINE
+                ) else null
+            }
+            content.removeAllViews()
+            when (index) {
+                0 -> renderBranchesTab(content, dialog)
+                1 -> renderTagsTab(content, dialog)
+                2 -> renderCommitsTab(content, dialog)
+            }
+        }
+
+        listOf(
+            activity.pluginString(R.string.git_tab_branches),
+            activity.pluginString(R.string.git_tab_tags),
+            activity.pluginString(R.string.git_tab_commits)
+        ).forEachIndexed { i, label ->
+            val t = activity.textView(label, 12f, CodeAssistTheme.TEXT_SECONDARY, true).apply {
+                gravity = Gravity.CENTER
+                setPadding(
+                    CodeAssistTheme.dp(activity, 12), CodeAssistTheme.dp(activity, 8),
+                    CodeAssistTheme.dp(activity, 12), CodeAssistTheme.dp(activity, 8)
+                )
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { selectTab(i) }
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            tabs.add(t)
+            tabRow.addView(t)
+        }
+
+        selectTab(0)
+        dialog.setContentView(root)
+        dialog.setOnShowListener {
+            dialog.window?.apply {
+                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                setLayout(
+                    (activity.resources.displayMetrics.widthPixels * 0.92f).toInt(),
+                    (activity.resources.displayMetrics.heightPixels * 0.78f).toInt()
+                )
+            }
+        }
+        dialog.show()
+    }
+
+    private fun renderBranchesTab(container: LinearLayout, dialog: Dialog) {
+        val branches = GitUtils.getBranches(projectRoot)
+        if (branches.isEmpty()) {
+            container.addView(emptyMsg(activity.pluginString(R.string.git_no_branches)))
+            return
+        }
+        val locals = branches.filter { !it.isRemote }
+        val remotes = branches.filter { it.isRemote }
+        if (locals.isNotEmpty()) {
+            container.addView(refSubtitle(activity.pluginString(R.string.git_local_branches)))
+            locals.forEach { b ->
+                container.addView(
+                    refRow(
+                        b.name,
+                        if (b.isCurrent) activity.pluginString(R.string.git_current_marker) else null,
+                        CodeAssistTheme.TAG_INCLUDE_TEXT
+                    ) { applyRef(b.name, dialog) }
+                )
+            }
+        }
+        if (remotes.isNotEmpty()) {
+            container.addView(refSubtitle(activity.pluginString(R.string.git_remote_branches)))
+            remotes.forEach { b ->
+                container.addView(
+                    refRow(
+                        b.name,
+                        activity.pluginString(R.string.git_remote_marker),
+                        CodeAssistTheme.TEXT_SECONDARY
+                    ) { applyRef(b.name, dialog) }
+                )
+            }
+        }
+    }
+
+    private fun renderTagsTab(container: LinearLayout, dialog: Dialog) {
+        val tags = GitUtils.getTags(projectRoot)
+        if (tags.isEmpty()) {
+            container.addView(emptyMsg(activity.pluginString(R.string.git_no_tags)))
+            return
+        }
+        tags.forEach { t ->
+            container.addView(
+                refRow(t.name, t.shortHash, CodeAssistTheme.TEXT_MUTED) {
+                    applyRef(t.name, dialog)
+                }
+            )
+        }
+    }
+
+    private fun renderCommitsTab(container: LinearLayout, dialog: Dialog) {
+        val commits = GitUtils.getRecentCommits(projectRoot, null, 60)
+        if (commits.isEmpty()) {
+            container.addView(emptyMsg(activity.pluginString(R.string.git_no_commits)))
+            return
+        }
+        commits.forEach { c ->
+            val row = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(
+                    CodeAssistTheme.dp(activity, 10), CodeAssistTheme.dp(activity, 8),
+                    CodeAssistTheme.dp(activity, 10), CodeAssistTheme.dp(activity, 8)
+                )
+                background = CodeAssistTheme.selectableBg(activity)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { applyRef(c.hash, dialog) }
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = CodeAssistTheme.dp(activity, 4)
+                }
+            }
+            val head = LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            head.addView(
+                activity.textView(c.shortHash, 11f, CodeAssistTheme.ACCENT, true).apply {
+                    typeface = android.graphics.Typeface.MONOSPACE
+                }
+            )
+            head.addView(
+                activity.textView("  ·  ${c.date}", 10f, CodeAssistTheme.TEXT_MUTED).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                }
+            )
+            row.addView(head)
+            row.addView(
+                activity.textView(c.author, 10f, CodeAssistTheme.TEXT_SECONDARY).apply {
+                    setPadding(0, CodeAssistTheme.dp(activity, 2), 0, 0)
+                }
+            )
+            row.addView(
+                activity.textView(c.message, 12f, CodeAssistTheme.TEXT_PRIMARY).apply {
+                    setPadding(0, CodeAssistTheme.dp(activity, 2), 0, 0)
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                }
+            )
+            container.addView(row)
+        }
+    }
+
+    private fun applyRef(ref: String, dialog: Dialog) {
+        isUpdatingUI = true
+        etGitRef.setText(ref)
+        isUpdatingUI = false
+        updateResolvedRef()
+        dialog.dismiss()
+    }
+
+    private fun refSubtitle(text: String) = activity.textView(
+        text.uppercase(), 10f, CodeAssistTheme.TEXT_MUTED, true
+    ).apply {
+        setPadding(0, CodeAssistTheme.dp(activity, 10), 0, CodeAssistTheme.dp(activity, 4))
+    }
+
+    private fun emptyMsg(text: String) = activity.textView(text, 12f, CodeAssistTheme.TEXT_MUTED).apply {
+        gravity = Gravity.CENTER
+        setPadding(0, CodeAssistTheme.dp(activity, 24), 0, CodeAssistTheme.dp(activity, 24))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+    }
+
+    private fun refRow(
+        label: String,
+        badge: String?,
+        badgeColor: Int,
+        onClick: () -> Unit
+    ): LinearLayout {
+        return LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(
+                CodeAssistTheme.dp(activity, 10), CodeAssistTheme.dp(activity, 9),
+                CodeAssistTheme.dp(activity, 10), CodeAssistTheme.dp(activity, 9)
+            )
+            background = CodeAssistTheme.selectableBg(activity)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onClick() }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = CodeAssistTheme.dp(activity, 4)
+            }
+
+            addView(
+                activity.textView(label, 12f, CodeAssistTheme.TEXT_PRIMARY).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    typeface = android.graphics.Typeface.MONOSPACE
+                }
+            )
+            if (badge != null) {
+                addView(
+                    activity.textView(badge, 9f, badgeColor, true).apply {
+                        setPadding(
+                            CodeAssistTheme.dp(activity, 6), CodeAssistTheme.dp(activity, 2),
+                            CodeAssistTheme.dp(activity, 6), CodeAssistTheme.dp(activity, 2)
+                        )
+                        background = CodeAssistTheme.roundedBg(
+                            activity, CodeAssistTheme.SURFACE_RAISED, 5f
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Preview diff
+    // ------------------------------------------------------------------
+
+    private fun showDiffPreview() {
+        val ref = etGitRef.text.toString().trim()
+        if (ref.isEmpty()) {
+            Toast.makeText(activity, activity.pluginString(R.string.git_ref_empty), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val resolved = GitUtils.resolveRefShort(projectRoot, ref)
+        if (resolved == null) {
+            Toast.makeText(activity, activity.pluginString(R.string.git_ref_invalid), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val stats = GitUtils.getDiffStats(projectRoot, ref)
+        val diff = GitUtils.getDiff(projectRoot, ref)
+
+        val dialog = Dialog(activity).apply {
+            requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+            setCancelable(true)
+        }
+
+        val root = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 14),
+                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 14)
+            )
+            background = CodeAssistTheme.roundedBg(
+                activity, CodeAssistTheme.BG, 14f, CodeAssistTheme.OUTLINE
+            )
+        }
+
+        val header = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val headerText = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        headerText.addView(
+            activity.textView(
+                activity.pluginString(R.string.git_diff_title, resolved), 14f,
+                CodeAssistTheme.TEXT_PRIMARY, true
+            )
+        )
+        if (stats != null) {
+            headerText.addView(
+                activity.textView(
+                    activity.pluginString(
+                        R.string.git_diff_stats,
+                        stats.filesChanged, stats.insertions, stats.deletions
+                    ),
+                    10f, CodeAssistTheme.TEXT_SECONDARY
+                ).apply {
+                    setPadding(0, CodeAssistTheme.dp(activity, 4), 0, 0)
+                }
+            )
+        }
+        header.addView(headerText)
+        header.addView(
+            activity.iconButton(
+                R.drawable.ic_tech_close, activity.pluginString(R.string.close)
+            ) { dialog.dismiss() }
+        )
+        root.addView(header)
+
+        if (stats == null || stats.filesChanged == 0) {
+            root.addView(emptyMsg(activity.pluginString(R.string.git_diff_no_changes)))
+        } else {
+            val filesScroll = ScrollView(activity).apply {
+                isVerticalScrollBarEnabled = true
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 150)
+                )
+            }
+            val filesCol = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, CodeAssistTheme.dp(activity, 8), 0, CodeAssistTheme.dp(activity, 8))
+            }
+            filesScroll.addView(filesCol)
+            stats.files.forEach { fc ->
+                val row = LinearLayout(activity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(
+                        CodeAssistTheme.dp(activity, 4), CodeAssistTheme.dp(activity, 4),
+                        CodeAssistTheme.dp(activity, 4), CodeAssistTheme.dp(activity, 4)
+                    )
+                }
+                val (label, color) = when (fc.status) {
+                    'A' -> "A" to CodeAssistTheme.TAG_INCLUDE_TEXT
+                    'D' -> "D" to CodeAssistTheme.TAG_EXCLUDE_TEXT
+                    'R' -> "R" to CodeAssistTheme.TAG_CONFLICT_TEXT
+                    else -> "M" to CodeAssistTheme.TEXT_SECONDARY
+                }
+                row.addView(
+                    activity.textView(label, 10f, color, true).apply {
+                        typeface = android.graphics.Typeface.MONOSPACE
+                        layoutParams = LinearLayout.LayoutParams(
+                            CodeAssistTheme.dp(activity, 18), ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                    }
+                )
+                row.addView(
+                    activity.textView(fc.path, 10f, CodeAssistTheme.TEXT_PRIMARY).apply {
+                        typeface = android.graphics.Typeface.MONOSPACE
+                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.MIDDLE
+                    }
+                )
+                if (fc.insertions > 0 || fc.deletions > 0) {
+                    row.addView(
+                        activity.textView(
+                            "+${fc.insertions} −${fc.deletions}",
+                            9f, CodeAssistTheme.TEXT_MUTED
+                        ).apply {
+                            typeface = android.graphics.Typeface.MONOSPACE
+                        }
+                    )
+                }
+                filesCol.addView(row)
+            }
+            root.addView(filesScroll)
+
+            root.addView(
+                activity.textView(
+                    activity.pluginString(R.string.git_diff_content).uppercase(),
+                    10f, CodeAssistTheme.TEXT_MUTED, true
+                ).apply {
+                    setPadding(0, CodeAssistTheme.dp(activity, 10), 0, CodeAssistTheme.dp(activity, 4))
+                }
+            )
+
+            val diffScroll = ScrollView(activity).apply {
+                isVerticalScrollBarEnabled = true
+                background = CodeAssistTheme.roundedBg(
+                    activity, CodeAssistTheme.SURFACE, 8f, CodeAssistTheme.OUTLINE
+                )
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+            }
+            val diffText = TextView(activity).apply {
+                text = diff ?: ""
+                textSize = 10f
+                setTextColor(CodeAssistTheme.TEXT_PRIMARY)
+                typeface = android.graphics.Typeface.MONOSPACE
+                setPadding(
+                    CodeAssistTheme.dp(activity, 8), CodeAssistTheme.dp(activity, 8),
+                    CodeAssistTheme.dp(activity, 8), CodeAssistTheme.dp(activity, 8)
+                )
+                setHorizontallyScrolling(true)
+            }
+            diffScroll.addView(
+                HorizontalScrollView(activity).apply { addView(diffText) }
+            )
+            root.addView(diffScroll)
+        }
+
+        dialog.setContentView(root)
+        dialog.setOnShowListener {
+            dialog.window?.apply {
+                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                setLayout(
+                    (activity.resources.displayMetrics.widthPixels * 0.95f).toInt(),
+                    (activity.resources.displayMetrics.heightPixels * 0.88f).toInt()
+                )
+            }
+        }
+        dialog.show()
     }
 
     // ==================================================================
@@ -918,17 +1574,13 @@ class ConfigurationDialog(
         cbGitignore.isChecked = config.respectGitignore
         etMaxSize.setText(config.maxSizeKb.toString())
 
-        if (::cbUseGit.isInitialized) {
+        if (gitEnabledGlobally && ::cbUseGit.isInitialized) {
             cbUseGit.isChecked = config.useGit
-            etCommitHash.setText(config.gitRef ?: "")
-            spinnerBranches.visibility = if (config.useGit) View.VISIBLE else View.GONE
-            etCommitHash.visibility = if (config.useGit) View.VISIBLE else View.GONE
-            val branchIndex = config.gitRef?.let { ref ->
-                (0 until spinnerBranches.count).firstOrNull {
-                    spinnerBranches.getItemAtPosition(it)?.toString() == ref
-                }
+            if (::etGitRef.isInitialized) etGitRef.setText(config.gitRef ?: "")
+            if (::gitDetailsBox.isInitialized) {
+                gitDetailsBox.visibility = if (config.useGit) View.VISIBLE else View.GONE
             }
-            if (branchIndex != null) spinnerBranches.setSelection(branchIndex)
+            updateResolvedRef()
         }
 
         updateTagsUI(animate = true)
@@ -972,9 +1624,13 @@ class ConfigurationDialog(
 
         if (gitEnabledGlobally && ::cbUseGit.isInitialized) {
             useGit = cbUseGit.isChecked
-            if (useGit) {
-                gitRef = etCommitHash.text.toString().trim().takeIf { it.isNotEmpty() }
-                    ?: spinnerBranches.selectedItem?.toString()?.takeIf { it != currentDirectoryLabel() }
+            if (useGit && ::etGitRef.isInitialized) {
+                val ref = etGitRef.text.toString().trim()
+                if (ref.isNotEmpty() && GitUtils.refExists(projectRoot, ref)) {
+                    gitRef = ref
+                } else {
+                    useGit = false
+                }
             }
         }
 
@@ -1190,65 +1846,6 @@ class ConfigurationDialog(
             .setNegativeButton(activity.pluginString(R.string.cancel), null)
             .show()
             .styleDialog()
-    }
-
-    private fun setupGitUI() {
-        val branch = GitUtils.getCurrentBranch(projectRoot)
-            ?: activity.pluginString(R.string.no_branch)
-        val commit = GitUtils.getCurrentCommit(projectRoot)
-            ?: activity.pluginString(R.string.no_commit)
-
-        layoutGitBox.addView(
-            activity.textView(
-                activity.pluginString(R.string.git_info, branch, commit),
-                11f,
-                CodeAssistTheme.TEXT_SECONDARY
-            ).apply {
-                setPadding(0, 0, 0, CodeAssistTheme.dp(activity, 5))
-            }
-        )
-
-        cbUseGit = activity.checkBox(activity.pluginString(R.string.read_from_git)).apply {
-            isChecked = currentConfig.useGit
-            setOnCheckedChangeListener { _, checked ->
-                spinnerBranches.visibility = if (checked) View.VISIBLE else View.GONE
-                etCommitHash.visibility = if (checked) View.VISIBLE else View.GONE
-                if (!isUpdatingUI) markAsCustom()
-            }
-        }
-        layoutGitBox.addView(cbUseGit)
-
-        val branches = GitUtils.getBranches(projectRoot)
-        spinnerBranches = Spinner(activity).apply {
-            adapter = activity.spinnerAdapter(listOf(currentDirectoryLabel()) + branches)
-            visibility = if (currentConfig.useGit) View.VISIBLE else View.GONE
-            background = CodeAssistTheme.roundedBg(
-                activity,
-                CodeAssistTheme.SURFACE_RAISED,
-                8f,
-                CodeAssistTheme.OUTLINE
-            )
-            setPopupBackgroundDrawable(ColorDrawable(CodeAssistTheme.SURFACE_RAISED))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                CodeAssistTheme.dp(activity, 42)
-            ).apply {
-                topMargin = CodeAssistTheme.dp(activity, 8)
-            }
-        }
-        layoutGitBox.addView(spinnerBranches)
-
-        etCommitHash = activity.editText(currentConfig.gitRef ?: "").apply {
-            hint = activity.pluginString(R.string.commit_hash_hint)
-            visibility = if (currentConfig.useGit) View.VISIBLE else View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                CodeAssistTheme.dp(activity, 42)
-            ).apply {
-                topMargin = CodeAssistTheme.dp(activity, 8)
-            }
-        }
-        layoutGitBox.addView(etCommitHash)
     }
 
     private fun getPresetList(): MutableList<String> = mutableListOf(customPresetLabel()).apply {
