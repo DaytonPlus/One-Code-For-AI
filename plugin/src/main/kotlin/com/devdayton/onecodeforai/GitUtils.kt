@@ -101,7 +101,7 @@ object GitUtils {
                         hash = commit.name,
                         shortHash = commit.name.take(7),
                         author = commit.authorIdent.name,
-                        date = commit.authorIdent.getWhen().toString(),
+                        date = java.util.Date.from(commit.authorIdent.whenAsInstant).toString(),
                         message = commit.shortMessage
                     )
                 )

@@ -591,6 +591,7 @@ class ConfigurationDialog(
                 (activity.resources.displayMetrics.widthPixels * 0.94f).toInt(),
                 (activity.resources.displayMetrics.heightPixels * 0.88f).toInt()
             )
+            @Suppress("DEPRECATION")
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
 
