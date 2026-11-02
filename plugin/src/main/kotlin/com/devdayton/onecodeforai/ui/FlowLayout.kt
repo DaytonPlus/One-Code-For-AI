@@ -1,4 +1,6 @@
-package com.devdayton.onecodeforai
+package com.devdayton.onecodeforai.ui
+
+import com.devdayton.onecodeforai.ui.CodeAssistTheme
 
 import android.content.Context
 import android.util.AttributeSet

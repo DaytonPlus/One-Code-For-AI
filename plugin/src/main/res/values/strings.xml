@@ -52,12 +52,14 @@
     <string name="no_inclusions">No additional extensions</string>
     <string name="no_exclusions">No custom exclusions</string>
     <string name="no_gitignore_rules">No rules found in .gitignore</string>
+    <string name="tree_scan_error">Unable to scan the project tree: %1$s</string>
     <string name="no_tree_matches">No files match the filters</string>
 
     <string name="show_tree">Show file tree</string>
     <string name="action_reload">Reload</string>
 
     <!-- ===== Tag dialogs ===== -->
+    <string name="preset_name_reserved">That name is reserved for a built-in profile.</string>
     <string name="preset_name_hint">Profile name</string>
     <string name="save">Save</string>
     <string name="delete">Delete</string>
@@ -216,6 +218,18 @@
     <string name="help_a3">If you are inside a subfolder, tap the "Go to project root" action. Also, make sure the Git integration is enabled in CodeAssist\'s plugin settings.</string>
     <string name="help_q4">Where are the files saved?</string>
     <string name="help_a4">Exported files are saved in your device\'s storage under the path: Downloads/OneCodeForAI.</string>
+    <string name="help_q5">Are binary files excluded automatically?</string>
+    <string name="help_a5">Yes. Binary detection is enabled by default and can be turned off in the global preferences (Binaries section). When disabled, binary files are included as-is and may produce an unreadable dump.</string>
+    <string name="help_q6">What does the maximum size mean?</string>
+    <string name="help_a6">It is a per-file limit expressed in kilobytes. Files larger than the limit are skipped, not truncated. The value is remembered across sessions.</string>
+    <string name="help_q7">Can I export a branch, tag, or commit?</string>
+    <string name="help_a7">Yes, when the project is a Git repository. Open the reference picker from the dialog, choose a local or remote branch, a tag, or a recent commit, and preview the diff against the working tree before exporting.</string>
+    <string name="help_q8">Can I reuse my filters across projects?</string>
+    <string name="help_a8">Yes. Profiles store inclusions, exclusions, size limit, and the other filter properties. Built-in profiles cover Android/Kotlin, Web, Python, and plain text; custom profiles are persisted across launches.</string>
+    <string name="help_q9">Will I lose my profiles or preferences after an update?</string>
+    <string name="help_a9">No. Preference keys, JSON property names, and profile names are preserved across versions. Custom profiles and the last saved state remain available after installing a new APK.</string>
+    <string name="help_q10">The plugin does not appear in CodeAssist. What do I do?</string>
+    <string name="help_a10">Confirm that the plugin is enabled in the CodeAssist plugins section, then restart the host. If it still does not appear, verify that the installed build targets CodeAssist Plugin API 4.</string>
     
     <!-- Code sample -->
     <string name="code_sample">// Turn any folder into AI context\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ ready for ChatGPT</string>

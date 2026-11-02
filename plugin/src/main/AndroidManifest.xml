@@ -9,7 +9,7 @@
         <!-- How CodeAssist finds this app at all: it queries the package manager for this action,
              then reads the manifest out of the resource the meta-data points at. -->
         <activity
-            android:name=".PluginInfoActivity"
+            android:name=".OneCodeForAIInfoActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
             android:label="@string/app_name">

@@ -1,82 +1,146 @@
-# One Code For AI - CodeAssist Plugin
+# One Code For AI
 
-A robust Android plugin for the CodeAssist IDE that compiles your project's source code into a single, structured `.txt` file. This tool is specifically designed to generate context for Large Language Models (LLMs) such as ChatGPT, Claude, and Gemini, eliminating the need to copy and paste files individually.
+**Prepare clean, reviewable technical context for AI-assisted programming — in one file.**
 
-## Overview
+One Code For AI is a **CodeAssist** plugin that scans your project, applies smart filtering, and generates a single, well-structured `.txt` dump containing a directory tree and the selected file contents. Drop it into any LLM or code-review tool and start working immediately.
 
-One Code For AI scans your project directory, applies intelligent filtering, and generates a comprehensive code dump. The output includes a visual directory tree followed by the contents of each allowed file, formatted for optimal AI comprehension.
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Min SDK](https://img.shields.io/badge/API-26%2B-brightgreen.svg)
+![Target SDK](https://img.shields.io/badge/Target_SDK-36-informational.svg)
+![Java](https://img.shields.io/badge/Java-17-orange.svg)
+![Kotlin](https://img.shields.io/badge/Kotlin-JVM-purple.svg)
+![Platform](https://img.shields.io/badge/CodeAssist_Plugin_API-4-lightgrey.svg)
+![Version](https://img.shields.io/badge/Version-1.0.71-success.svg)
+![Status](https://img.shields.io/badge/Status-Early_development-yellow.svg)
+
+> **Status:** early development. The source code will be published in this repository soon. This README documents the project's scope, features, and planned architecture ahead of the initial code drop.
+
+---
+
+## Table of Contents
+
+- [Why One Code For AI?](#why-one-code-for-ai)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Planned Architecture](#planned-architecture)
+- [Roadmap](#roadmap)
+- [Requirements](#requirements)
+- [License](#license)
+
+---
+
+## Why One Code For AI?
+
+Large language models and code-review tools work best when they receive the **right context** — not the whole repository. One Code For AI gives you precise control over what gets included:
+
+- **Filters that make sense** — by extension, name, relative path, or glob pattern (`*`, `?`, `**`).
+- **Respects your project** — root `.gitignore`, binary detection, per-file size limits, and manual path exclusion.
+- **Works on Git snapshots** — export a branch, tag, or commit without touching your working tree.
+- **Human-friendly output** — a readable directory tree plus clearly delimited file sections.
+
+No more copy-pasting files one by one.
+
+---
 
 ## Features
 
-- **Single-File Generation:** Aggregates your entire project or specific subdirectories into one text file.
-- **Git Integration (JGit):** Export files directly from specific Git branches, tags, or commits without altering your current working tree.
-- **Advanced Filtering:**
-  - Respect `.gitignore` rules automatically.
-  - Filter by file extension (inclusions and exclusions).
-  - Exclude binary files and set maximum file size limits.
-- **Interactive File Tree:** Visualize the project structure and manually exclude specific directories or files before exporting.
-- **Real-time Statistics:** Estimates total files, byte size, and token count to ensure you stay within your AI model's context window.
-- **Export Profiles:** Save custom filter configurations for different project types (e.g., Android, Web, Python).
-- **Native UI/UX:** Fully integrated with CodeAssist's dark theme, offering a seamless and responsive user experience.
-- **Direct Sharing:** Export to local storage (`Downloads/OneCodeForAI`) or share the generated file directly to other applications.
+### Export & Filtering
+- Export an entire project or a selected folder.
+- Automatic Git root detection when inside a repository.
+- Inclusion and exclusion rules by **extension**, **name**, **relative path**, and **glob pattern** (`*`, `?`, `**`).
+- Root `.gitignore` support (including negation rules such as `!notes.md`).
+- Automatic binary-file exclusion.
+- Per-file size limit (KB).
+- Manual path exclusion for individual files or whole directories.
+
+### Project Tree & Statistics
+- Interactive project tree view with file/folder selection, expand/collapse, manual reload, and live statistics (files, bytes, tokens).
+- **Token estimation** — approximately 4 UTF-8 bytes per token (labelled as an estimate in the UI).
+
+### Git Integration
+- List and resolve **local and remote branches**, **tags**, and **recent commits**.
+- Export the current state of any reference.
+- **Diff preview** against the working tree before exporting.
+
+### Profiles & Preferences
+- Built-in profiles for **Android/Kotlin**, **Web**, **Python**, and **plain text**.
+- Persistent custom profiles with last-saved state restored on next launch.
+- Global preferences for Git, tree/statistics, `.gitignore`, and binaries.
+
+### Output & Sharing
+- Export to `Downloads/OneCodeForAI`.
+- Share the generated file through the native Android chooser.
+
+### Localization
+- Full UI available in **English** and **Spanish** — including the plugin info page, help, FAQ, and guide.
+
+---
+
+## Tech Stack
+
+| Category | Technology |
+|---|---|
+| Language | Kotlin (JVM) |
+| Min SDK | 26 — Android 8.0 Oreo |
+| Compile / Target SDK | 36 |
+| Java language level | 17 |
+| Host platform | CodeAssist Plugin API **4** |
+| Git access | JGit `7.8.0.202609011348-r` |
+| Module format | CodeAssist module (`plugin/module.toml`) |
+
+> The project deliberately avoids a parallel Gradle project and introduces no new UI dependencies.
+
+---
+
+## Planned Architecture
+
+The plugin is organized into **three packages** with a single responsibility each, plus the plugin entry point and the info activity. This keeps the core logic fully testable outside of Android and the Plugin API.
+
+> **Note:** the layout below reflects the planned structure of the source code, not files currently present in this repository.
+
+| Layer | Purpose | Rules |
+|---|---|---|
+| **`core/`** | Pure Kotlin logic: filtering, tree serialization, dump generation, JGit adapter, presets persistence. | **No** `android.*`, `Context`, `Activity`, views, or Plugin API imports. Flat package — no single-file subpackages. |
+| **`android/`** | Host access and file delivery: reflection on host `Application`/`Activity`, async coordination, `MediaStore`, notifications, `Toast`, and share chooser. | May depend on Android and the Plugin API. |
+| **`ui/`** | Configuration dialog, settings page, interactive tree, Git reference picker, diff view, theme, and shared layout helpers. | Programmatic Android views only — no XML layouts. |
+| **Root** | Entry point (`OneCodeForAIPlugin`) and info page (`OneCodeForAIInfoActivity`). | Registers action + settings page, resolves selected folder, reads global preferences, coordinates dialog ↔ export. |
+
+### Key design decisions
+
+- **Single source of truth for filtering.** Preview and export both consult `FileFilter`. The `includePath(...)` API lets the same rules apply to files coming from a Git reference that may not exist in the working tree.
+- **Streaming export.** Bounded read/write buffers; the tree is written progressively using iterative traversal.
+- **Single-session Git reading.** `GitUtils.withSnapshot` enumerates the chosen reference's blobs inside a single JGit session — no repeated repo opens.
+- **Compatible persistence.** Every existing preference key, JSON property, and profile name is preserved across updates.
+
+---
+
+## Roadmap
+
+- [ ] Publish the source code in this repository
+- [ ] Provide a sample `.txt` dump in `docs/samples/`
+- [ ] Publish the plugin on the CodeAssist plugin registry
+- [ ] v1.0.71 — first public release
+
+---
 
 ## Requirements
 
-- Android 8.0 (API 26) or higher.
-- CodeAssist IDE installed on the device.
-- CodeAssist Plugin API version 4.
+- **Android** — API 26 (Android 8.0 Oreo) or higher.
+- **CodeAssist** — with **Plugin API 4** support.
+- **Java** — 17 (for compiling the plugin module).
+- **Compile SDK / Target SDK** — 36.
+- **JGit** — `org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r`.
 
-## Installation
-
-1. Download the latest `.apk` release from this repository.
-2. Install the APK on your Android device. You may need to allow installation from unknown sources.
-3. Open CodeAssist.
-4. Navigate to **Settings > Plugins > Installed**.
-5. Enable **One Code For AI**.
-6. Restart CodeAssist to ensure the plugin initializes correctly.
-
-## Usage
-
-1. Open a project in CodeAssist.
-2. Open the project file tree.
-3. Long-press on any folder or file.
-4. Select **"One Code For AI: generate .txt"** from the context menu.
-5. Configure your export profile:
-   - Adjust inclusions/exclusions.
-   - Set maximum file size.
-   - Toggle Git integration to read from a specific commit or branch.
-   - Use the interactive tree to deselect specific paths.
-6. Tap **Export to Downloads** or **Share file**.
-7. If sharing, select your preferred AI application.
-
-## Technical Details
-
-The plugin is built using Kotlin and integrates directly with the CodeAssist host environment via the Plugin API. Git operations are handled natively via JGit, ensuring full compatibility with Android's runtime environment without relying on external system binaries. File parsing and filtering algorithms are optimized to handle large repositories efficiently.
+---
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
-```text
-MIT License
+MIT License — see [LICENSE](LICENSE) for the full text.
 
 Copyright (c) 2026 DaytonPlus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+---
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+<p align="center">
+  <sub>Built with ❤️ for the CodeAssist community.</sub>
+</p>

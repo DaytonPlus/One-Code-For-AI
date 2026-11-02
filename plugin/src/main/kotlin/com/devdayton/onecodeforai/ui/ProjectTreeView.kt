@@ -1,4 +1,12 @@
-package com.devdayton.onecodeforai
+package com.devdayton.onecodeforai.ui
+
+import com.devdayton.onecodeforai.R
+import com.devdayton.onecodeforai.core.FileFilter
+import com.devdayton.onecodeforai.core.ExtensionStats
+import com.devdayton.onecodeforai.core.FilterConfig
+import com.devdayton.onecodeforai.core.PreviewStats
+import com.devdayton.onecodeforai.ui.UiFactory
+import com.devdayton.onecodeforai.ui.CodeAssistTheme
 
 import android.app.Activity
 import android.content.Context
@@ -16,8 +24,9 @@ import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import com.devdayton.onecodeforai.UiFactory.pluginString
+import com.devdayton.onecodeforai.ui.UiFactory.pluginString
 import java.io.File
+import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicLong
 
 class ProjectTreeView(
@@ -26,6 +35,11 @@ class ProjectTreeView(
     private val onExcludedPathsChanged: (List<String>) -> Unit,
     private val onStatsChanged: (PreviewStats) -> Unit
 ) {
+    private companion object {
+        const val PROGRESS_FILE_INTERVAL = 200
+        const val PROGRESS_INTERVAL_MS = 120L
+    }
+
     private var currentConfig: FilterConfig = FilterConfig()
     private var rootNode: TreeNode? = null
     private val expandedPaths = mutableSetOf<String>()
@@ -106,42 +120,60 @@ class ProjectTreeView(
     fun scanAsync(
         config: FilterConfig,
         onProgress: (scannedFiles: Int) -> Unit,
-        onComplete: (TreeNode) -> Unit
+        onComplete: (TreeNode) -> Unit,
+        onError: (Exception) -> Unit = {}
     ) {
-        currentConfig = config
+        val normalizedConfig = config.normalized()
+        currentConfig = normalizedConfig
         val myToken = scanToken.incrementAndGet()
         Thread {
             try {
-                val filter = FileFilter(projectRoot, config)
+                val filter = FileFilter(projectRoot, normalizedConfig)
                 val rootName = projectRoot.name.ifBlank { "root" }
                 val root = TreeNode(projectRoot, true, 0, "", rootName).apply { expanded = true }
 
                 var scanned = 0
                 var lastProgressAt = 0L
+                val pendingDirectories = ArrayDeque<TreeNode>()
+                pendingDirectories.addLast(root)
 
-                fun walk(node: TreeNode) {
-                    if (scanToken.get() != myToken) return
-                    val files = node.file.listFiles()?.sortedWith(
-                        compareBy<File> { !it.isDirectory }.thenBy { it.name.lowercase() }
-                    ) ?: return
+                // Iterative depth-first traversal avoids stack overflows on deeply nested trees.
+                while (pendingDirectories.isNotEmpty()) {
+                    if (scanToken.get() != myToken) return@Thread
+                    val node = pendingDirectories.removeLast()
+                    val files = node.file.listFiles()
+                        ?.sortedWith(
+                            compareBy<File> { !it.isDirectory }
+                                .thenBy { it.name.lowercase() }
+                        )
+                        ?: continue
+                    val childDirectories = mutableListOf<TreeNode>()
+
                     for (file in files) {
-                        if (scanToken.get() != myToken) return
-                        val rel = if (node.relativePath.isEmpty()) file.name
-                                  else "${node.relativePath}/${file.name}"
-                        val selfExcluded = config.excludedPaths.any { it == rel }
+                        if (scanToken.get() != myToken) return@Thread
+                        val relativePath = if (node.relativePath.isEmpty()) {
+                            file.name
+                        } else {
+                            "${node.relativePath}/${file.name}"
+                        }
+                        val selfExcluded = normalizedConfig.excludedPaths.any { it == relativePath }
                         val ancestorExcluded = node.selfExcluded || node.ancestorExcluded
 
                         if (file.isDirectory) {
                             if (!filter.include(file, respectExcludedPaths = false)) continue
-                            val child = TreeNode(file, true, node.depth + 1, rel, file.name).apply {
+                            val child = TreeNode(
+                                file, true, node.depth + 1, relativePath, file.name
+                            ).apply {
                                 this.selfExcluded = selfExcluded
                                 this.ancestorExcluded = ancestorExcluded
-                                this.expanded = expandedPaths.contains(rel)
+                                this.expanded = expandedPaths.contains(relativePath)
                             }
-                            walk(child)
                             node.children.add(child)
+                            childDirectories.add(child)
                         } else if (filter.include(file, respectExcludedPaths = false)) {
-                            val child = TreeNode(file, false, node.depth + 1, rel, file.name).apply {
+                            val child = TreeNode(
+                                file, false, node.depth + 1, relativePath, file.name
+                            ).apply {
                                 this.selfExcluded = selfExcluded
                                 this.ancestorExcluded = ancestorExcluded
                             }
@@ -149,18 +181,20 @@ class ProjectTreeView(
 
                             scanned++
                             val now = System.currentTimeMillis()
-                            if (scanned % 200 == 0 || now - lastProgressAt > 120L) {
+                            if (scanned % PROGRESS_FILE_INTERVAL == 0 ||
+                                now - lastProgressAt > PROGRESS_INTERVAL_MS
+                            ) {
                                 lastProgressAt = now
-                                val c = scanned
+                                val count = scanned
                                 activity.runOnUiThread {
-                                    if (scanToken.get() == myToken) onProgress(c)
+                                    if (scanToken.get() == myToken) onProgress(count)
                                 }
                             }
                         }
                     }
-                }
 
-                walk(root)
+                    childDirectories.asReversed().forEach(pendingDirectories::addLast)
+                }
 
                 if (scanToken.get() != myToken) return@Thread
                 val finalRoot = root
@@ -170,7 +204,12 @@ class ProjectTreeView(
                         onComplete(finalRoot)
                     }
                 }
-            } catch (_: Throwable) {
+            } catch (error: Exception) {
+                if (scanToken.get() == myToken) {
+                    activity.runOnUiThread {
+                        if (scanToken.get() == myToken) onError(error)
+                    }
+                }
             }
         }.apply {
             isDaemon = true

@@ -52,12 +52,14 @@
     <string name="no_inclusions">Sin extensiones adicionales</string>
     <string name="no_exclusions">Sin exclusiones personalizadas</string>
     <string name="no_gitignore_rules">No se encontraron reglas en .gitignore</string>
+    <string name="tree_scan_error">No se pudo analizar el árbol: %1$s</string>
     <string name="no_tree_matches">Sin archivos que coincidan con los filtros</string>
 
     <string name="show_tree">Mostrar árbol de archivos</string>
     <string name="action_reload">Recargar</string>
 
     <!-- ===== Tag dialogs ===== -->
+    <string name="preset_name_reserved">Ese nombre pertenece a un perfil integrado.</string>
     <string name="preset_name_hint">Nombre del perfil</string>
     <string name="save">Guardar</string>
     <string name="delete">Eliminar</string>
@@ -217,7 +219,18 @@
     <string name="help_a3">Si estás dentro de una subcarpeta, toca la acción "Ir a la raíz del proyecto". Además, asegúrate de que la integración con Git esté activada en los ajustes del plugin en CodeAssist.</string>
     <string name="help_q4">¿Dónde se guardan los archivos?</string>
     <string name="help_a4">Los archivos exportados se guardan en el almacenamiento de tu dispositivo en la ruta: Descargas/OneCodeForAI.</string>
-    
+    <string name="help_q5">¿Los archivos binarios se excluyen automáticamente?</string>
+    <string name="help_a5">Sí. La detección de binarios está activada por defecto y puede desactivarse en las preferencias globales (sección Binarios). Si se desactiva, los binarios se incluyen tal cual y pueden producir un volcado ilegible.</string>
+    <string name="help_q6">¿Qué significa el tamaño máximo?</string>
+    <string name="help_a6">Es un límite por archivo expresado en kilobytes. Los archivos que lo superan se omiten, no se truncan. El valor se recuerda entre sesiones.</string>
+    <string name="help_q7">¿Puedo exportar una rama, etiqueta o commit?</string>
+    <string name="help_a7">Sí, cuando el proyecto es un repositorio Git. Abre el selector de referencias desde el diálogo, elige una rama local o remota, una etiqueta o un commit reciente, y previsualiza el diff contra el árbol de trabajo antes de exportar.</string>
+    <string name="help_q8">¿Puedo reutilizar mis filtros entre proyectos?</string>
+    <string name="help_a8">Sí. Los perfiles guardan las inclusiones, exclusiones, límite de tamaño y el resto de propiedades. Hay perfiles integrados para Android/Kotlin, Web, Python y texto plano; los personalizados se conservan entre arranques.</string>
+    <string name="help_q9">¿Perderé mis perfiles o preferencias tras una actualización?</string>
+    <string name="help_a9">No. Las claves de preferencias, los nombres de propiedades JSON y los nombres de perfil se conservan entre versiones. Los perfiles personalizados y el último estado guardado siguen disponibles tras instalar un APK nuevo.</string>
+    <string name="help_q10">El plugin no aparece en CodeAssist. ¿Qué hago?</string>
+    <string name="help_a10">Confirma que el plugin está habilitado en la sección de plugins de CodeAssist y reinicia el host. Si sigue sin aparecer, verifica que la build instalada apunte a la API de plugins 4 de CodeAssist.</string>
     <!-- Code sample -->
     <string name="code_sample">// Convierte cualquier carpeta en contexto para IA\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ listo para ChatGPT</string>
 </resources>

@@ -1,3 +1,3 @@
-# Keep minification off for a plugin. The IDE instantiates the entry point by the class name in
-# res/raw/codeassist_plugin.toml, and R8 would rename it.
--keep class ** { *; }
+# Only the classes discovered reflectively by the IDE/Android runtime need stable names.
+-keep class com.devdayton.onecodeforai.plugin.OneCodeForAIPlugin { public <init>(); }
+-keep class com.devdayton.onecodeforai.ui.info.PluginInfoActivity { *; }

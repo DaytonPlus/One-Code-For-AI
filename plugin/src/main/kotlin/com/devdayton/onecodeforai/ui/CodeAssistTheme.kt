@@ -1,4 +1,4 @@
-package com.devdayton.onecodeforai
+package com.devdayton.onecodeforai.ui
 
 import android.content.Context
 import android.graphics.Color

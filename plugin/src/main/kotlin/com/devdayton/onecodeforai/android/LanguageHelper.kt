@@ -1,9 +1,9 @@
-package com.devdayton.onecodeforai
+package com.devdayton.onecodeforai.android
 
-import android.app.Activity
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
+import com.devdayton.onecodeforai.android.HostEnvironment
 import java.util.Locale
 
 /**
@@ -47,23 +47,6 @@ object LanguageHelper {
         return base.createConfigurationContext(config)
     }
 
-    /**
-     * Encuentra la Activity del host vía reflexión (mismo patrón que ya usa
-     * OneCodeForAIPlugin.getCurrentActivity()).
-     */
-    fun findHostActivity(): Activity? = try {
-        val atClass = Class.forName("android.app.ActivityThread")
-        val at = atClass.getMethod("currentActivityThread").invoke(null)
-        val field = atClass.getDeclaredField("mActivities").apply { isAccessible = true }
-        @Suppress("UNCHECKED_CAST")
-        val activities = field.get(at) as Map<*, *>
-        var found: Activity? = null
-        for (record in activities.values) {
-            val actField = record?.javaClass?.getDeclaredField("activity")
-            actField?.isAccessible = true
-            val activity = actField?.get(record) as? Activity
-            if (activity != null && !activity.isFinishing) { found = activity; break }
-        }
-        found
-    } catch (_: Exception) { null }
+    /** Returns the host IDE activity through the centralized host adapter. */
+    fun findHostActivity() = HostEnvironment.currentActivity()
 }
