@@ -649,7 +649,14 @@ class ConfigurationDialog(
         })
         chip.addView(activity.textView(
             activity.pluginString(labelRes), 11f, CodeAssistTheme.TEXT_PRIMARY, true
-        ).apply { setPadding(0, CodeAssistTheme.dp(activity, 6), 0, 0) })
+        ).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, CodeAssistTheme.dp(activity, 6), 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        })
         attachPressScale(chip)
         return chip
     }

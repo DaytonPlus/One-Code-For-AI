@@ -248,10 +248,7 @@
     <!-- ===== Acciones de notificación ===== -->
     <string name="notification_channel_actions">Resultados de One Code</string>
     <string name="notification_ready_title">Contexto listo</string>
-    <string name="notification_action_share">Compartir</string>
-    <string name="notification_action_save">Guardar</string>
-    <string name="notification_action_regenerate">Regenerar</string>
-
+    
     <!-- Code sample -->
     <string name="code_sample">// Convierte cualquier carpeta en contexto para IA\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ listo para ChatGPT</string>
 </resources>

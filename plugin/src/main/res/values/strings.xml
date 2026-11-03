@@ -247,10 +247,7 @@
     <!-- ===== Notification actions ===== -->
     <string name="notification_channel_actions">One Code results</string>
     <string name="notification_ready_title">Context ready</string>
-    <string name="notification_action_share">Share</string>
-    <string name="notification_action_save">Save</string>
-    <string name="notification_action_regenerate">Regenerate</string>
-
+    
     <!-- Code sample -->
     <string name="code_sample">// Turn any folder into AI context\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ ready for ChatGPT</string>
 </resources>

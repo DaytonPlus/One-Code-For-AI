@@ -97,7 +97,7 @@ class FlowLayout @JvmOverloads constructor(
             val totalWidth = childWidth + lp.leftMargin + lp.rightMargin
             val totalHeight = childHeight + lp.topMargin + lp.bottomMargin
 
-            if (hasChildInLine && x - paddingLeft + horizontalSpacing + totalWidth > contentWidth) {
+            if (hasChildInLine && x - paddingLeft + totalWidth > contentWidth) {
                 x = paddingLeft
                 y += lineHeight + verticalSpacing
                 lineHeight = 0

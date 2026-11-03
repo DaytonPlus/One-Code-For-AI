@@ -3,7 +3,6 @@ package com.devdayton.onecodeforai.android
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -13,13 +12,11 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
-import com.devdayton.onecodeforai.ExportActionReceiver
 import com.devdayton.onecodeforai.R
 import com.devdayton.onecodeforai.core.CodeDumpGenerator
 import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.FileProgressListener
 import com.devdayton.onecodeforai.core.FilterConfig
-import com.devdayton.onecodeforai.core.FilterConfigCodec
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
 import java.io.File
 import java.io.IOException
@@ -145,7 +142,7 @@ class ExportCoordinator(
 
             logger("[OK] File written: $outputUri")
             runCatching {
-                showCompletionNotification(context, outputUri, fileName, root, config, action)
+                showCompletionNotification(context, fileName)
             }
             ExportStateHolder.complete(outputUri, fileName, finalFiles, finalBytes)
 
@@ -412,22 +409,9 @@ class ExportCoordinator(
         )
     }
 
-    private fun showCompletionNotification(
-        context: Context,
-        uri: Uri,
-        fileName: String,
-        root: File,
-        config: FilterConfig,
-        lastAction: ExportAction
-    ) {
+    private fun showCompletionNotification(context: Context, fileName: String) {
         ensureChannel(context, ACTIONS_CHANNEL_ID, R.string.notification_channel_actions, NotificationManager.IMPORTANCE_DEFAULT)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val configJson = FilterConfigCodec.toJson(config)
-        val rootPath = root.absolutePath
-        val sharePend = buildActionPending(context, ExportActionReceiver.ACTION_SHARE, uri, rootPath, configJson, lastAction)
-        val savePend = buildActionPending(context, ExportActionReceiver.ACTION_SAVE, uri, rootPath, configJson, lastAction)
-        val regenPend = buildActionPending(context, ExportActionReceiver.ACTION_REGENERATE, uri, rootPath, configJson, lastAction)
-
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(context, ACTIONS_CHANNEL_ID)
         } else { @Suppress("DEPRECATION") Notification.Builder(context) }
@@ -437,25 +421,8 @@ class ExportCoordinator(
                 .setContentText(fileName)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setAutoCancel(true)
-                .addAction(Notification.Action.Builder(null, context.pluginString(R.string.notification_action_share), sharePend).build())
-                .addAction(Notification.Action.Builder(null, context.pluginString(R.string.notification_action_save), savePend).build())
-                .addAction(Notification.Action.Builder(null, context.pluginString(R.string.notification_action_regenerate), regenPend).build())
                 .build()
         )
-    }
-
-    private fun buildActionPending(
-        context: Context, action: String, uri: Uri, rootPath: String, configJson: String, lastAction: ExportAction
-    ): PendingIntent {
-        val intent = Intent(context, ExportActionReceiver::class.java).apply {
-            this.action = action
-            putExtra(ExportActionReceiver.EXTRA_FILE_URI, uri.toString())
-            putExtra(ExportActionReceiver.EXTRA_ROOT_PATH, rootPath)
-            putExtra(ExportActionReceiver.EXTRA_CONFIG_JSON, configJson)
-            putExtra(ExportActionReceiver.EXTRA_LAST_ACTION, lastAction.name)
-        }
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        return PendingIntent.getBroadcast(context, action.hashCode(), intent, flags)
     }
 
     companion object {
