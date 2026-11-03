@@ -114,6 +114,17 @@ class FileFilter(
 
         walk(root)
     }
+    
+    /**
+     * Returns the number of files that would be included with the current
+     * configuration. Used to drive the determinate progress bar in the
+     * generation panel and the notification text.
+     *
+     * The walk is streamed: only one directory's children are held in memory
+     * at a time. The cost is one extra filesystem traversal, which is far
+     * cheaper than the actual export and lets us show accurate progress.
+     */
+    fun countEligibleFiles(): Int = walkIncludedFiles().count()
 
     /** Root .gitignore rules available for display in the configuration UI. */
     fun loadGitignoreRules(): List<String> {

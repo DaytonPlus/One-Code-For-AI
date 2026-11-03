@@ -3,6 +3,7 @@ package com.devdayton.onecodeforai.android
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -10,14 +11,15 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.os.Handler
-import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Toast
+import com.devdayton.onecodeforai.ExportActionReceiver
 import com.devdayton.onecodeforai.R
 import com.devdayton.onecodeforai.core.CodeDumpGenerator
 import com.devdayton.onecodeforai.core.FileFilter
+import com.devdayton.onecodeforai.core.FileProgressListener
 import com.devdayton.onecodeforai.core.FilterConfig
+import com.devdayton.onecodeforai.core.FilterConfigCodec
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
 import java.io.File
 import java.io.IOException
@@ -26,123 +28,163 @@ import java.io.Writer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
+
+/** The user's intent for a given export run. */
+enum class ExportAction {
+    /** Produce a file under the static share name; do NOT auto-share. */
+    GENERATE,
+    /** Produce a uniquely-named, timestamped file in Downloads. */
+    SAVE,
+    /** Produce a file under the static share name; auto-open the system share chooser. */
+    SHARE
+}
 
 /**
- * Coordinates long-running export operations and Android-specific delivery mechanisms.
- * This class does not own any UI state and can be reused across different plugin invocations.
+ * Coordinates long-running export operations and Android delivery.
+ * All transitions flow through [ExportStateHolder]. Cancellation is
+ * cooperative; logging uses bracketed severity tags ([INFO], [OK], [WARN],
+ * [ERROR], [CANCEL], [CLEANUP]).
  */
 class ExportCoordinator(
     private val contextProvider: () -> Context?,
     private val logger: (String) -> Unit
 ) {
-    /**
-     * Starts the export process in a background worker thread to avoid blocking the UI thread.
-     *
-     * @param root The root directory of the project to be exported.
-     * @param config The filter configuration defining which files to include or exclude.
-     * @param shareAfterExport If true, the file is generated with a static name and shared via an Intent.
-     * If false, a unique filename is generated and saved to the Downloads directory.
-     */
-    fun export(root: File, config: FilterConfig, shareAfterExport: Boolean) {
-        Thread({ runExport(root, config, shareAfterExport) }, WORKER_THREAD_NAME).apply {
-            isDaemon = true
-            start()
+    private val isCancelled = AtomicBoolean(false)
+
+    @Volatile
+    private var workerThread: Thread? = null
+
+    fun export(root: File, config: FilterConfig, action: ExportAction): Boolean {
+        if (!globalExportLock.compareAndSet(false, true)) {
+            logger("[WARN] Export already in progress; duplicate request ignored.")
+            return false
         }
+        isCancelled.set(false)
+        activeCoordinator = this
+        ExportStateHolder.begin(action, root.absolutePath)
+
+        workerThread = Thread({
+            try { runExport(root, config, action) }
+            finally {
+                globalExportLock.set(false)
+                if (activeCoordinator === this) activeCoordinator = null
+                workerThread = null
+            }
+        }, WORKER_THREAD_NAME).apply { isDaemon = true; start() }
+        return true
     }
 
-    /**
-     * Executes the core export logic: handles file generation, storage delivery, and user notifications.
-     * This method runs on a background thread.
-     */
-    private fun runExport(root: File, config: FilterConfig, shareAfterExport: Boolean) {
+    fun cancel() {
+        if (!globalExportLock.get()) return
+        isCancelled.set(true)
+        workerThread?.interrupt()
+        logger("[CANCEL] Cancellation requested by user.")
+    }
+
+    private fun runExport(root: File, config: FilterConfig, action: ExportAction) {
         val context = contextProvider()
         if (context == null) {
-            logger("❌ Critical error: Unable to obtain application context.")
+            ExportStateHolder.fail("Unable to obtain application context.")
+            logger("[ERROR] Application context unavailable; aborting export.")
             return
         }
 
         try {
             val actionLabel = context.pluginString(
-                if (shareAfterExport) R.string.action_save_share_share else R.string.action_save_share
+                when (action) {
+                    ExportAction.SHARE -> R.string.action_save_share_share
+                    ExportAction.SAVE -> R.string.action_save_share
+                    ExportAction.GENERATE -> R.string.action_generate
+                }
             )
-            logger(context.pluginString(R.string.starting_generation, actionLabel))
-            
-            // Notifications are optional on newer Android versions; export must still work
-            // when the host application has not been granted notification permission.
-            runCatching {
-                showProgressNotification(context, context.pluginString(R.string.generating_dump))
-            }
+            logger("[INFO] Starting export ($actionLabel).")
 
-            // If sharing, use a static filename to overwrite the previous temporary file.
-            // If saving, generate a unique filename based on project metadata and timestamp.
-            val fileName = if (shareAfterExport) {
-                SHARE_FILE_NAME
-            } else {
-                generateSmartFileName(root)
-            }
-            
-            logger("📄 Preparing file: $fileName")
+            runCatching { showProgressNotification(context, context.pluginString(R.string.generating_dump)) }
+            runCatching { cleanupDuplicateShareFiles(context) }
 
-            // Write to Downloads using MediaStore
+            val fileName = when (action) {
+                ExportAction.SHARE, ExportAction.GENERATE -> SHARE_FILE_NAME
+                ExportAction.SAVE -> generateSmartFileName(root)
+            }
+            logger("[INFO] Target filename: $fileName")
+
+            var lastReportedAt = 0L
+            var finalFiles = 0
+            var finalBytes = 0L
+
             val outputUri = writeToDownloads(context, fileName) { writer ->
-                generateContent(root, config, writer)
+                generateContent(root, config, writer) { processed, total, _, bytesProcessed ->
+                    if (isCancelled.get()) throw InterruptedException("Export cancelled by user.")
+                    finalFiles = processed
+                    finalBytes = bytesProcessed
+                    val now = System.currentTimeMillis()
+                    if (now - lastReportedAt > PROGRESS_THROTTLE_MS || processed == total) {
+                        lastReportedAt = now
+                        val message = if (total > 0) {
+                            context.pluginString(R.string.processing_progress, processed, total)
+                        } else context.pluginString(R.string.preparing_export)
+                        ExportStateHolder.updateProgress(message, processed, total)
+                    }
+                }
             }
 
-            runCatching { hideProgressNotification(context) }
-            
-            if (outputUri == null) {
-                logger("❌ Error: Generated URI is null. File write failed.")
-                showToast(context, context.pluginString(R.string.could_not_create))
+            if (isCancelled.get()) {
+                runCatching { hideProgressNotification(context) }
+                ExportStateHolder.reset()
                 return
             }
 
-            logger("✅ File successfully created/updated. URI: $outputUri")
+            runCatching { hideProgressNotification(context) }
 
-            mainHandler.post {
-                if (shareAfterExport) {
-                    logger("🚀 Launching Share Intent...")
-                    shareFile(context, outputUri, fileName)
-                } else {
-                    val message = context.pluginString(R.string.saved_to_downloads, fileName)
-                    logger(message)
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                }
+            if (outputUri == null) {
+                ExportStateHolder.fail("File write failed.")
+                logger("[ERROR] MediaStore returned a null URI; export aborted.")
+                return
             }
+
+            logger("[OK] File written: $outputUri")
+            runCatching {
+                showCompletionNotification(context, outputUri, fileName, root, config, action)
+            }
+            ExportStateHolder.complete(outputUri, fileName, finalFiles, finalBytes)
+
+            if (action == ExportAction.SHARE) {
+                logger("[INFO] Launching system share chooser.")
+                shareFile(context, outputUri, fileName)
+            }
+        } catch (error: InterruptedException) {
+            runCatching { hideProgressNotification(context) }
+            logger("[CANCEL] Export cancelled before completion.")
+            ExportStateHolder.reset()
         } catch (error: Exception) {
             runCatching { hideProgressNotification(context) }
-            val message = context.pluginString(
-                R.string.general_error,
-                error.message ?: context.pluginString(R.string.unknown_error)
-            )
-            logger("💥 General exception in runExport: $message")
+            val message = error.message ?: context.pluginString(R.string.unknown_error)
+            logger("[ERROR] Unhandled exception during export: $message")
             error.printStackTrace()
-            runCatching {
-                showErrorNotification(context, error.message ?: context.pluginString(R.string.unknown_error))
-            }
+            runCatching { showErrorNotification(context, message) }
+            ExportStateHolder.fail(message)
         }
     }
 
-    /**
-     * Extracts the project dump generation logic for reuse across different storage methods.
-     */
-    private fun generateContent(root: File, config: FilterConfig, writer: Writer) {
+    private fun generateContent(
+        root: File,
+        config: FilterConfig,
+        writer: Writer,
+        onFileProgress: FileProgressListener
+    ) {
         val filter = FileFilter(root, config)
         val selectedRef = if (config.useGit) {
             config.gitRef?.trim()?.takeIf(String::isNotEmpty)
-                ?: throw IllegalStateException("Git export is enabled but no reference was selected.")
-        } else {
-            null
-        }
-        CodeDumpGenerator(root, filter, selectedRef).generateTo(writer)
+                ?: throw IllegalStateException("Git export enabled but no reference selected.")
+        } else null
+        CodeDumpGenerator(root, filter, selectedRef, onFileProgress).generateTo(writer)
     }
 
-    /**
-     * Writes atomically to the public Downloads directory.
-     * If the file already exists, it overwrites the existing file directly using "wt" (write-truncate) mode.
-     * This strategy prevents Android from creating unwanted "(1)", "(2)" suffixes.
-     *
-     * @return The Uri of the saved file, or null if the operation failed.
-     */
+    // ------------------------------------------------------------------
+    // MediaStore write + cleanup (unchanged semantics)
+    // ------------------------------------------------------------------
+
     private fun writeToDownloads(
         context: Context,
         fileName: String,
@@ -151,64 +193,52 @@ class ExportCoordinator(
         val resolver = context.contentResolver
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val relativePath = Environment.DIRECTORY_DOWNLOADS + "/" + DOWNLOAD_DIRECTORY
-            
-            // 1. Check if the file already exists.
-            // IMPORTANT: We query ONLY by DISPLAY_NAME. Matching RELATIVE_PATH fails because
-            // MediaStore appends a trailing slash (e.g., "Download/OneCodeForAI/") to the internal path.
             val projection = arrayOf(MediaStore.MediaColumns._ID)
             val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
             val selectionArgs = arrayOf(fileName)
-            
+
             var existingUri: Uri? = null
-            resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, selectionArgs, null)?.use { cursor ->
+            resolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, selectionArgs, null
+            )?.use { cursor ->
                 if (cursor.moveToFirst()) {
-                    val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
-                    val id = cursor.getLong(idColumn)
+                    val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
                     existingUri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
                 }
             }
 
             if (existingUri != null) {
-                // 2a. If it exists, OVERWRITE it directly using "wt" (write-truncate) mode
                 try {
-                    logger("♻️ Overwriting existing file in Downloads...")
-                    resolver.openOutputStream(existingUri!!, "wt")?.use { stream ->
+                    logger("[INFO] Overwriting existing file in Downloads.")
+                    resolver.openOutputStream(existingUri, "wt")?.use { stream ->
                         OutputStreamWriter(stream, Charsets.UTF_8).use(content)
                     }
-                    // Update modified time so file managers show the new date
-                    val updateValues = ContentValues().apply {
+                    resolver.update(existingUri, ContentValues().apply {
                         put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis() / 1000)
-                    }
-                    resolver.update(existingUri!!, updateValues, null, null)
+                    }, null, null)
                     return existingUri
                 } catch (e: Exception) {
-                    logger("⚠️ Failed to overwrite, deleting and recreating: ${e.message}")
-                    // If overwrite fails (e.g., file was deleted externally), fall back to delete+insert
-                    resolver.delete(existingUri!!, null, null)
+                    logger("[WARN] Overwrite failed; falling back to delete+insert. Cause: ${e.message}")
+                    resolver.delete(existingUri, null, null)
                 }
             }
 
-            // 2b. If it doesn't exist (or overwrite failed), CREATE a new file
-            logger("✨ Creating new file in Downloads...")
+            logger("[INFO] Creating new file in Downloads.")
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
                 put(MediaStore.MediaColumns.MIME_TYPE, MIME_TEXT)
                 put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
-
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
             try {
-                val stream = resolver.openOutputStream(uri)
-                    ?: throw IOException("MediaStore did not provide an output stream.")
-                stream.use { output ->
-                    OutputStreamWriter(output, Charsets.UTF_8).use(content)
-                }
-                val completed = ContentValues().apply {
-                    put(MediaStore.MediaColumns.IS_PENDING, 0)
-                }
-                if (resolver.update(uri, completed, null, null) <= 0) {
-                    throw IOException("MediaStore could not finalize the exported file.")
+                resolver.openOutputStream(uri)?.use { stream ->
+                    OutputStreamWriter(stream, Charsets.UTF_8).use(content)
+                } ?: throw IOException("MediaStore did not provide an output stream.")
+                if (resolver.update(uri, ContentValues().apply {
+                        put(MediaStore.MediaColumns.IS_PENDING, 0)
+                    }, null, null) <= 0) {
+                    throw IOException("MediaStore could not finalize the file.")
                 }
                 uri
             } catch (error: Exception) {
@@ -216,20 +246,15 @@ class ExportCoordinator(
                 throw error
             }
         } else {
-            // Fallback for Android 9 (API 28) and below (Java File API)
             @Suppress("DEPRECATION")
             val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val targetDirectory = File(downloads, DOWNLOAD_DIRECTORY)
             if (!targetDirectory.exists() && !targetDirectory.mkdirs()) {
                 throw IOException("Unable to create ${targetDirectory.path}")
             }
-
             val file = File(targetDirectory, fileName)
             try {
-                // Java File outputStream overwrites by default
-                file.outputStream().use { output ->
-                    OutputStreamWriter(output, Charsets.UTF_8).use(content)
-                }
+                file.outputStream().use { output -> OutputStreamWriter(output, Charsets.UTF_8).use(content) }
                 val values = ContentValues().apply {
                     put(MediaStore.MediaColumns.DATA, file.absolutePath)
                     put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
@@ -244,10 +269,80 @@ class ExportCoordinator(
         }
     }
 
-    /**
-     * Launches the system share sheet with the generated file.
-     * Grants temporary read permission to the receiving application.
-     */
+    private fun cleanupDuplicateShareFiles(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        val resolver = context.contentResolver
+        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
+        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?"
+        val selectionArgs = arrayOf("$SHARE_FILE_BASE%")
+        val duplicatePattern = Regex("""^${Regex.escape(SHARE_FILE_BASE)}( \(\d+\))?\.txt$""")
+
+        val toDelete = mutableListOf<Uri>()
+        resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, selectionArgs, null)
+            ?.use { cursor ->
+                val idIdx = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+                val nameIdx = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameIdx) ?: continue
+                    if (duplicatePattern.matches(name)) {
+                        toDelete += ContentUris.withAppendedId(
+                            MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(idIdx)
+                        )
+                    }
+                }
+            }
+        toDelete.forEach { uri ->
+            runCatching {
+                resolver.delete(uri, null, null)
+                logger("[CLEANUP] Removed duplicate share file: $uri")
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Filename + share
+    // ------------------------------------------------------------------
+
+    private fun generateSmartFileName(folder: File): String {
+        val appIdentifier = findAppIdentifier(folder)
+        val folderName = sanitizeFileName(folder.name)
+        val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
+        val prefix = if (appIdentifier.isBlank() || appIdentifier == folderName) {
+            folderName
+        } else "${sanitizeFileName(appIdentifier)}_$folderName"
+        return "${prefix}_$timestamp.txt"
+    }
+
+    private fun findAppIdentifier(folder: File): String {
+        var current: File? = folder
+        repeat(MAX_IDENTIFIER_PARENT_LEVELS) {
+            val directory = current ?: return ""
+            listOf(
+                File(directory, "src/main/AndroidManifest.xml"),
+                File(directory, "AndroidManifest.xml")
+            ).firstOrNull(File::isFile)?.let { manifest ->
+                runCatching { manifest.readText(Charsets.UTF_8) }.getOrNull()?.let { src ->
+                    PACKAGE_PATTERN.find(src)?.groupValues?.getOrNull(1)?.let { return it }
+                }
+            }
+            listOf("module.toml", "build.gradle.kts", "build.gradle")
+                .map { File(directory, it) }
+                .firstOrNull(File::isFile)
+                ?.let { cfg ->
+                    runCatching { cfg.readText(Charsets.UTF_8) }.getOrNull()?.let { src ->
+                        NAMESPACE_PATTERN.find(src)?.groupValues?.getOrNull(1)?.let { return it }
+                    }
+                }
+            current = directory.parentFile
+        }
+        return ""
+    }
+
+    private fun sanitizeFileName(value: String): String = value.trim()
+        .replace(Regex("\\s+"), "-")
+        .replace(Regex("""[\\/:*?"<>|]"""), "")
+        .ifBlank { "dump" }
+
     private fun shareFile(context: Context, uri: Uri, fileName: String) {
         try {
             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -258,152 +353,149 @@ class ExportCoordinator(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             val chooser = Intent.createChooser(intent, context.pluginString(R.string.share_with)).apply {
-                // NEW_TASK is necessary when launching from an Application context.
-                // Note: This intentionally moves the host app to the background while the share sheet is open.
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(chooser)
-            logger("✅ Share Intent launched successfully.")
+            logger("[OK] Share chooser launched.")
         } catch (error: Exception) {
-            logger("❌ Error launching Share Intent: ${error.message}")
-            showToast(context, context.pluginString(R.string.share_error, error.message ?: ""))
+            logger("[ERROR] Failed to launch share chooser: ${error.message}")
+            Toast.makeText(
+                context,
+                context.pluginString(R.string.share_error, error.message ?: ""),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
-    /**
-     * Generates a unique filename based on the project identifier and a timestamp.
-     * Falls back to the folder name if no app identifier (package/namespace) is found.
-     */
-    private fun generateSmartFileName(folder: File): String {
-        val appIdentifier = findAppIdentifier(folder)
-        val folderName = sanitizeFileName(folder.name)
-        val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
-        val prefix = if (appIdentifier.isBlank() || appIdentifier == folderName) {
-            folderName
-        } else {
-            "${sanitizeFileName(appIdentifier)}_$folderName"
-        }
-        return "${prefix}_$timestamp.txt"
+    // ------------------------------------------------------------------
+    // Notifications
+    // ------------------------------------------------------------------
+
+    private fun ensureChannel(context: Context, id: String, nameRes: Int, importance: Int) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .createNotificationChannel(NotificationChannel(id, context.pluginString(nameRes), importance))
     }
 
-    /**
-     * Attempts to find a package name or namespace within the project structure
-     * to use as a descriptive prefix for the export file.
-     */
-    private fun findAppIdentifier(folder: File): String {
-        var current: File? = folder
-        repeat(MAX_IDENTIFIER_PARENT_LEVELS) {
-            val directory = current ?: return ""
-            val manifestCandidates = listOf(
-                File(directory, "src/main/AndroidManifest.xml"),
-                File(directory, "AndroidManifest.xml")
-            )
-            manifestCandidates.firstOrNull(File::isFile)?.let { manifest ->
-                runCatching { manifest.readText(Charsets.UTF_8) }.getOrNull()?.let { source ->
-                    PACKAGE_PATTERN.find(source)?.groupValues?.getOrNull(1)?.let { return it }
-                }
-            }
-
-            listOf("module.toml", "build.gradle.kts", "build.gradle")
-                .map { File(directory, it) }
-                .firstOrNull(File::isFile)
-                ?.let { configFile ->
-                    runCatching { configFile.readText(Charsets.UTF_8) }.getOrNull()?.let { source ->
-                        NAMESPACE_PATTERN.find(source)?.groupValues?.getOrNull(1)?.let { return it }
-                    }
-                }
-            current = directory.parentFile
-        }
-        return ""
-    }
-
-    /** Sanitizes a string to ensure it is a valid filename across common filesystems. */
-    private fun sanitizeFileName(value: String): String = value.trim()
-        .replace(Regex("\\s+"), "-")
-        .replace(Regex("""[\\/:*?"<>|]"""), "")
-        .ifBlank { "dump" }
-
-    /** Displays an ongoing progress notification to inform the user about the export status. */
     private fun showProgressNotification(context: Context, message: String) {
+        ensureChannel(context, PROGRESS_CHANNEL_ID, R.string.notification_channel, NotificationManager.IMPORTANCE_LOW)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    PROGRESS_CHANNEL_ID,
-                    context.pluginString(R.string.notification_channel),
-                    NotificationManager.IMPORTANCE_LOW
-                )
-            )
-        }
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(context, PROGRESS_CHANNEL_ID)
-        } else {
-            @Suppress("DEPRECATION")
-            Notification.Builder(context)
-        }
+        } else { @Suppress("DEPRECATION") Notification.Builder(context) }
         manager.notify(
             PROGRESS_NOTIFICATION_ID,
             builder.setContentTitle(context.pluginString(R.string.notification_progress_title))
                 .setContentText(message)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setProgress(0, 0, true)
-                .setOngoing(true)
-                .build()
+                .setProgress(0, 0, true).setOngoing(true).build()
         )
     }
 
-    /** Dismisses the progress notification. */
     private fun hideProgressNotification(context: Context) {
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .cancel(PROGRESS_NOTIFICATION_ID)
     }
 
-    /** Displays a high-priority notification in case the export fails. */
     private fun showErrorNotification(context: Context, message: String) {
+        ensureChannel(context, ERROR_CHANNEL_ID, R.string.notification_channel_err, NotificationManager.IMPORTANCE_HIGH)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    ERROR_CHANNEL_ID,
-                    context.pluginString(R.string.notification_channel_err),
-                    NotificationManager.IMPORTANCE_HIGH
-                )
-            )
-        }
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(context, ERROR_CHANNEL_ID)
-        } else {
-            @Suppress("DEPRECATION")
-            Notification.Builder(context)
-        }
+        } else { @Suppress("DEPRECATION") Notification.Builder(context) }
         manager.notify(
             ERROR_NOTIFICATION_ID,
             builder.setContentTitle(context.pluginString(R.string.error_notification_title))
                 .setContentText(message)
                 .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setAutoCancel(true).build()
+        )
+    }
+
+    private fun showCompletionNotification(
+        context: Context,
+        uri: Uri,
+        fileName: String,
+        root: File,
+        config: FilterConfig,
+        lastAction: ExportAction
+    ) {
+        ensureChannel(context, ACTIONS_CHANNEL_ID, R.string.notification_channel_actions, NotificationManager.IMPORTANCE_DEFAULT)
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val configJson = FilterConfigCodec.toJson(config)
+        val rootPath = root.absolutePath
+        val sharePend = buildActionPending(context, ExportActionReceiver.ACTION_SHARE, uri, rootPath, configJson, lastAction)
+        val savePend = buildActionPending(context, ExportActionReceiver.ACTION_SAVE, uri, rootPath, configJson, lastAction)
+        val regenPend = buildActionPending(context, ExportActionReceiver.ACTION_REGENERATE, uri, rootPath, configJson, lastAction)
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(context, ACTIONS_CHANNEL_ID)
+        } else { @Suppress("DEPRECATION") Notification.Builder(context) }
+        manager.notify(
+            COMPLETION_NOTIFICATION_ID,
+            builder.setContentTitle(context.pluginString(R.string.notification_ready_title))
+                .setContentText(fileName)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setAutoCancel(true)
+                .addAction(Notification.Action.Builder(null, context.pluginString(R.string.notification_action_share), sharePend).build())
+                .addAction(Notification.Action.Builder(null, context.pluginString(R.string.notification_action_save), savePend).build())
+                .addAction(Notification.Action.Builder(null, context.pluginString(R.string.notification_action_regenerate), regenPend).build())
                 .build()
         )
     }
 
-    /** Displays a Toast message on the main thread. */
-    private fun showToast(context: Context, message: String) {
-        mainHandler.post { Toast.makeText(context, message, Toast.LENGTH_LONG).show() }
+    private fun buildActionPending(
+        context: Context, action: String, uri: Uri, rootPath: String, configJson: String, lastAction: ExportAction
+    ): PendingIntent {
+        val intent = Intent(context, ExportActionReceiver::class.java).apply {
+            this.action = action
+            putExtra(ExportActionReceiver.EXTRA_FILE_URI, uri.toString())
+            putExtra(ExportActionReceiver.EXTRA_ROOT_PATH, rootPath)
+            putExtra(ExportActionReceiver.EXTRA_CONFIG_JSON, configJson)
+            putExtra(ExportActionReceiver.EXTRA_LAST_ACTION, lastAction.name)
+        }
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return PendingIntent.getBroadcast(context, action.hashCode(), intent, flags)
     }
 
-    private companion object {
-        const val MIME_TEXT = "text/plain"
-        const val DOWNLOAD_DIRECTORY = "OneCodeForAI"
-        const val SHARE_FILE_NAME = "OneCodeForAI_Share_Latest.txt"
-        const val PROGRESS_CHANNEL_ID = "onecode_progress"
-        const val ERROR_CHANNEL_ID = "onecode_progress_error"
-        const val PROGRESS_NOTIFICATION_ID = 1001
-        const val ERROR_NOTIFICATION_ID = PROGRESS_NOTIFICATION_ID + 1
-        const val WORKER_THREAD_NAME = "OneCodeForAI-export"
-        const val MAX_IDENTIFIER_PARENT_LEVELS = 8
+    companion object {
+        private val globalExportLock = AtomicBoolean(false)
 
-        val mainHandler = Handler(Looper.getMainLooper())
-        val PACKAGE_PATTERN = Regex("""package\s*=\s*[\"']([^\"']+)[\"']""")
-        val NAMESPACE_PATTERN = Regex("""namespace\s*=\s*[\"']([^\"']+)[\"']""")
+        @Volatile
+        private var activeCoordinator: ExportCoordinator? = null
+
+        fun cancelCurrent() { activeCoordinator?.cancel() }
+        fun isBusy(): Boolean = globalExportLock.get()
+
+        fun shareFile(context: Context, uri: Uri, fileName: String) {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = MIME_TEXT
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, fileName)
+                clipData = android.content.ClipData.newUri(context.contentResolver, fileName, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val chooser = Intent.createChooser(intent, context.pluginString(R.string.share_with)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+        }
+
+        private const val MIME_TEXT = "text/plain"
+        private const val DOWNLOAD_DIRECTORY = "OneCodeForAI"
+        const val SHARE_FILE_NAME = "OneCodeForAI_Share_Latest.txt"
+        private const val SHARE_FILE_BASE = "OneCodeForAI_Share_Latest"
+        private const val PROGRESS_CHANNEL_ID = "onecode_progress"
+        private const val ERROR_CHANNEL_ID = "onecode_progress_error"
+        private const val ACTIONS_CHANNEL_ID = "onecode_actions"
+        private const val PROGRESS_NOTIFICATION_ID = 1001
+        private const val ERROR_NOTIFICATION_ID = PROGRESS_NOTIFICATION_ID + 1
+        private const val COMPLETION_NOTIFICATION_ID = PROGRESS_NOTIFICATION_ID + 2
+        private const val WORKER_THREAD_NAME = "OneCodeForAI-export"
+        private const val MAX_IDENTIFIER_PARENT_LEVELS = 8
+        private const val PROGRESS_THROTTLE_MS = 120L
+
+        private val PACKAGE_PATTERN = Regex("""package\s*=\s*["']([^"']+)["']""")
+        private val NAMESPACE_PATTERN = Regex("""namespace\s*=\s*["']([^"']+)["']""")
     }
 }

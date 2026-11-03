@@ -4,11 +4,13 @@ package com.devdayton.onecodeforai.core
  * Immutable configuration for a project export.
  *
  * The property names are intentionally stable: user profiles written by previous
- * versions are stored as JSON using these keys.
+ * versions are stored as JSON using these keys. New fields are added with
+ * backward-compatible defaults (see [useMaxSize]).
  */
 data class FilterConfig(
     val excludeBinaries: Boolean = true,
     val respectGitignore: Boolean = true,
+    val useMaxSize: Boolean = true,
     val maxSizeKb: Int = DEFAULT_MAX_SIZE_KB,
     val inclusions: List<String> = emptyList(),
     val exclusions: List<String> = emptyList(),
@@ -16,14 +18,14 @@ data class FilterConfig(
     val gitRef: String? = null,
     val excludedPaths: List<String> = emptyList()
 ) {
-    /** A positive, overflow-safe byte limit used by file filters. */
-    val maxFileSizeBytes: Long
-        get() = maxSizeKb.coerceAtLeast(1).toLong() * BYTES_PER_KB
-
     /**
-     * Removes duplicate and blank rules and normalizes paths without mutating
-     * the instance. Existing JSON data remains backward-compatible.
+     * A positive, overflow-safe byte limit used by file filters.
+     * When [useMaxSize] is `false`, the filter never rejects a file for size.
      */
+    val maxFileSizeBytes: Long
+        get() = if (!useMaxSize) Long.MAX_VALUE
+                else maxSizeKb.coerceAtLeast(1).toLong() * BYTES_PER_KB
+
     fun normalized(): FilterConfig = copy(
         maxSizeKb = maxSizeKb.coerceAtLeast(1),
         inclusions = inclusions.map(String::trim).filter(String::isNotEmpty).distinctBy { it.lowercase() },

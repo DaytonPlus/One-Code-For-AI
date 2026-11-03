@@ -6,7 +6,6 @@ import android.os.Looper
 import com.devdayton.onecodeforai.R
 import com.devdayton.onecodeforai.core.GitUtils
 import com.devdayton.onecodeforai.core.FilterConfig
-import com.devdayton.onecodeforai.android.ExportCoordinator
 import com.devdayton.onecodeforai.android.HostEnvironment
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
 import com.devdayton.onecodeforai.ui.ConfigurationDialog
@@ -26,6 +25,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  * This class is deliberately limited to host integration and orchestration. File traversal,
  * Git operations, export and Android delivery live in independent components.
+ *
+ * Export orchestration is *not* done here: [ConfigurationDialog] owns its own
+ * [com.devdayton.onecodeforai.android.ExportCoordinator] and publishes progress
+ * through [com.devdayton.onecodeforai.android.ExportStateHolder]. This entry
+ * point just resolves the target folder and opens the configuration screen.
  */
 class OneCodeForAIPlugin : Plugin {
 
@@ -85,7 +89,13 @@ class OneCodeForAIPlugin : Plugin {
         return showConfigurationDialog(projectRoot, logInfo)
     }
 
-    /** Creates the screen on the main thread and prevents duplicate dialog instances. */
+    /**
+     * Creates the configuration screen on the main thread and prevents duplicate
+     * dialog instances. Export is driven entirely by the dialog itself, so this
+     * method no longer wires an [com.devdayton.onecodeforai.android.ExportCoordinator]
+     * callback — it only forwards [logInfo] so the dialog can log through the
+     * plugin's logger.
+     */
     private fun showConfigurationDialog(
         projectRoot: File,
         logInfo: (String) -> Unit
@@ -121,12 +131,7 @@ class OneCodeForAIPlugin : Plugin {
                     gitEnabledGlobally = gitEnabled,
                     treeEnabledGlobally = treeEnabled,
                     initialConfig = initialConfig,
-                    onExport = { config, isShare ->
-                        ExportCoordinator(
-                            contextProvider = HostEnvironment::applicationContext,
-                            logger = logInfo,
-                        ).export(projectRoot, config, isShare)
-                    },
+                    logInfo = logInfo,
                     onDismiss = { dialogVisible.set(false) },
                     onChangeRoot = { newRoot ->
                         // The current dialog dismisses itself before this callback is invoked.

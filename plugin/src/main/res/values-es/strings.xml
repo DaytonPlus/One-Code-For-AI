@@ -33,9 +33,9 @@
     <string name="action_expand">Expandir</string>
     <string name="action_collapse">Colapsar</string>
 
-    <string name="action_export">Exportar a Descargas</string>
-    <string name="action_share">Compartir archivo</string>
-    <string name="export_description">Se generará un único archivo .txt con los archivos permitidos por los filtros.</string>
+    <!-- ===== Botón generar ===== -->
+    <string name="action_generate">Generar contexto</string>
+    <string name="generate_description">Se generará un único archivo .txt y se guardará en Descargas.</string>
 
     <string name="section_stats">Estadísticas de contexto</string>
     <string name="calculating">Calculando…</string>
@@ -85,7 +85,7 @@
     <string name="failed_creation">❌ Falló la creación del archivo.</string>
     <string name="could_not_create">❌ No se pudo crear el archivo.</string>
     <string name="sharing">Compartiendo: %1$s</string>
-    <string name="saved_to_downloads">✅ Guardado en Descargas/OneCodeForAI: %1$s</string>
+    <string name="saved_to_downloads">Guardado en Descargas/OneCodeForAI: %1$s</string>
     <string name="general_error">❌ Error general: %1$s</string>
     <string name="unknown_error">Error desconocido</string>
     <string name="share_with">Compartir volcado con:</string>
@@ -231,6 +231,27 @@
     <string name="help_a9">No. Las claves de preferencias, los nombres de propiedades JSON y los nombres de perfil se conservan entre versiones. Los perfiles personalizados y el último estado guardado siguen disponibles tras instalar un APK nuevo.</string>
     <string name="help_q10">El plugin no aparece en CodeAssist. ¿Qué hago?</string>
     <string name="help_a10">Confirma que el plugin está habilitado en la sección de plugins de CodeAssist y reinicia el host. Si sigue sin aparecer, verifica que la build instalada apunte a la API de plugins 4 de CodeAssist.</string>
+
+    <!-- ===== Sección de progreso inline ===== -->
+    <string name="generating_context">Generando contexto…</string>
+    <string name="preparing_export">Preparando…</string>
+    <string name="processing_progress">Procesando: %1$d/%2$d archivos</string>
+    <string name="generation_complete">¡Generación completada!</string>
+    <string name="generation_failed">Fallo en la generación</string>
+    <string name="generation_minimize_hint">Puedes minimizar este diálogo. La generación continúa en segundo plano.</string>
+    <string name="export_already_running">Ya hay una exportación en curso.</string>
+    <string name="action_share_result">Compartir</string>
+    <string name="action_save_result">Guardar</string>
+    <string name="action_regenerate">Regenerar</string>
+    <string name="action_edit_settings">Editar configuración</string>
+
+    <!-- ===== Acciones de notificación ===== -->
+    <string name="notification_channel_actions">Resultados de One Code</string>
+    <string name="notification_ready_title">Contexto listo</string>
+    <string name="notification_action_share">Compartir</string>
+    <string name="notification_action_save">Guardar</string>
+    <string name="notification_action_regenerate">Regenerar</string>
+
     <!-- Code sample -->
     <string name="code_sample">// Convierte cualquier carpeta en contexto para IA\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ listo para ChatGPT</string>
 </resources>

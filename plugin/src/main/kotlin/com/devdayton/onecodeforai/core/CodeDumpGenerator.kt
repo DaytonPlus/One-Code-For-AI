@@ -1,58 +1,58 @@
 package com.devdayton.onecodeforai.core
 
-import com.devdayton.onecodeforai.core.FileFilter
-import com.devdayton.onecodeforai.core.GitUtils
-import com.devdayton.onecodeforai.core.DirectoryTree
 import java.io.File
 import java.io.IOException
 import java.io.Writer
 
 /**
- * Generates the textual project snapshot.
- *
- * File contents are copied through bounded buffers; the complete project is never
- * held in memory. When [gitRef] is supplied, both the tree and the file contents
- * come from that Git snapshot rather than the current working directory.
+ * Callback contract for per-file progress. Invoked once per file after the
+ * file has been fully written. [bytesProcessed] is cumulative (sum of file
+ * lengths seen so far), so callers can display a live byte counter alongside
+ * the file counter.
  */
+fun interface FileProgressListener {
+    fun onProgress(processed: Int, total: Int, currentPath: String, bytesProcessed: Long)
+}
+
 class CodeDumpGenerator(
     private val root: File,
     private val filter: FileFilter = FileFilter(root),
-    private val gitRef: String? = null
+    private val gitRef: String? = null,
+    private val onProgress: FileProgressListener? = null
 ) {
     companion object {
         private const val SEPARATOR = "================================================\n"
         private const val BUFFER_SIZE = 8 * 1024
     }
 
-    /** Writes a complete dump to [writer], leaving stream ownership to the caller. */
     @Throws(IOException::class)
     fun generateTo(writer: Writer) {
         require(root.isDirectory) { "Project root is not a directory: ${root.path}" }
         val selectedRef = gitRef?.trim()?.takeIf(String::isNotEmpty)
-
-        if (selectedRef == null) {
-            generateWorkingTree(writer)
-        } else {
-            generateGitSnapshot(writer, selectedRef)
-        }
+        if (selectedRef == null) generateWorkingTree(writer) else generateGitSnapshot(writer, selectedRef)
     }
 
     private fun generateWorkingTree(writer: Writer) {
         DirectoryTree(root, filter).writeTo(writer)
+        val total = filter.countEligibleFiles()
 
-        filter.walkIncludedFiles()
-            .forEach { file ->
-                ensureActive()
-                val relativePath = relativePath(file)
-                writeFileHeader(writer, relativePath)
-                try {
-                    file.bufferedReader(Charsets.UTF_8, BUFFER_SIZE).use { reader ->
-                        copyNormalizedText(reader, writer)
-                    }
-                } catch (error: Exception) {
-                    writer.write("[File read error: ${error.message ?: error.javaClass.simpleName}]\n")
+        var processed = 0
+        var bytesAccum = 0L
+        filter.walkIncludedFiles().forEach { file ->
+            ensureActive()
+            val relativePath = relativePath(file)
+            writeFileHeader(writer, relativePath)
+            try {
+                file.bufferedReader(Charsets.UTF_8, BUFFER_SIZE).use { reader ->
+                    copyNormalizedText(reader, writer)
                 }
+            } catch (error: Exception) {
+                writer.write("[File read error: ${error.message ?: error.javaClass.simpleName}]\n")
             }
+            processed++
+            bytesAccum += file.length()
+            onProgress?.onProgress(processed, total, relativePath, bytesAccum)
+        }
     }
 
     private fun generateGitSnapshot(writer: Writer, ref: String) {
@@ -64,15 +64,20 @@ class CodeDumpGenerator(
                     sizeBytes = file.size
                 )
             }
-
             DirectoryTree(root, filter).writePathsTo(writer, includedFiles.map { it.path })
 
+            val total = includedFiles.size
+            var processed = 0
+            var bytesAccum = 0L
             includedFiles.forEach { file ->
                 ensureActive()
                 writeFileHeader(writer, file.path)
                 if (!snapshot.writeFileContent(file.path, writer)) {
                     writer.write("[Git read error: ${file.path}]\n")
                 }
+                processed++
+                bytesAccum += file.size
+                onProgress?.onProgress(processed, total, file.path, bytesAccum)
             }
         }
     }
@@ -102,7 +107,6 @@ class CodeDumpGenerator(
         val buffer = CharArray(BUFFER_SIZE)
         var pendingCarriageReturn = false
         var lastWasNewline = false
-
         while (true) {
             val count = reader.read(buffer)
             if (count < 0) break
@@ -114,19 +118,11 @@ class CodeDumpGenerator(
                     pendingCarriageReturn = false
                     if (char == '\n') continue
                 }
-                if (char == '\r') {
-                    pendingCarriageReturn = true
-                } else {
-                    writer.write(char.code)
-                    lastWasNewline = char == '\n'
-                }
+                if (char == '\r') pendingCarriageReturn = true
+                else { writer.write(char.code); lastWasNewline = char == '\n' }
             }
         }
-
-        if (pendingCarriageReturn) {
-            writer.write('\n'.code)
-            lastWasNewline = true
-        }
+        if (pendingCarriageReturn) { writer.write('\n'.code); lastWasNewline = true }
         if (!lastWasNewline) writer.write('\n'.code)
     }
 }

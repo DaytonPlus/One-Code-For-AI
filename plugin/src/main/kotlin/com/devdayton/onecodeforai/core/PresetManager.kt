@@ -108,6 +108,7 @@ class PresetManager(context: Context) {
     private fun configToJson(config: FilterConfig): JSONObject = JSONObject().apply {
         put("excludeBinaries", config.excludeBinaries)
         put("respectGitignore", config.respectGitignore)
+        put("useMaxSize", config.useMaxSize)
         put("maxSizeKb", config.maxSizeKb)
         put("inclusions", JSONArray(config.inclusions))
         put("exclusions", JSONArray(config.exclusions))
@@ -119,6 +120,7 @@ class PresetManager(context: Context) {
     private fun jsonToConfig(json: JSONObject): FilterConfig = FilterConfig(
         excludeBinaries = json.optBoolean("excludeBinaries", true),
         respectGitignore = json.optBoolean("respectGitignore", true),
+        useMaxSize = json.optBoolean("useMaxSize", true),
         maxSizeKb = json.optInt("maxSizeKb", FilterConfig.DEFAULT_MAX_SIZE_KB),
         inclusions = json.readStringList("inclusions"),
         exclusions = json.readStringList("exclusions"),
