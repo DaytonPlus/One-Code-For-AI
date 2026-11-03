@@ -1,96 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="512"
-    android:viewportHeight="512">
+    android:viewportWidth="108"
+    android:viewportHeight="108">
 
-    <!-- Fondo Base (TechPanel) -->
-    <path
-        android:pathData="M100,60 L412,60 L452,100 L452,412 L412,452 L100,452 L60,412 L60,100 Z"
-        android:strokeWidth="6"
-        android:strokeColor="#FF8C42"
-        android:fillColor="#00000000">
-        <aapt:attr name="android:strokeColor">
-            <gradient
-                android:type="linear"
-                android:startX="0"
-                android:startY="0"
-                android:endX="0"
-                android:endY="512"
-                android:startColor="#4DFF8C42"
-                android:endColor="#33FF8C42" />
-        </aapt:attr>
-    </path>
+    <!-- Scaled to 78% around the center: keeps every stroke inside the
+         guaranteed 66dp safe circle, regardless of the launcher mask. -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.78"
+        android:scaleY="0.78">
 
-    <!-- Marco Interior -->
-    <path
-        android:pathData="M110,70 L402,70 L442,110 L442,402 L402,442 L110,442 L70,402 L70,110 Z"
-        android:strokeWidth="2"
-        android:strokeColor="#33FF8C42"
-        android:fillColor="#00000000" />
+        <!-- Soft glow halo behind the sparkle -->
+        <path
+            android:pathData="M54,54 m-22,0 a22,22 0 1,1 44,0 a22,22 0 1,1 -44,0"
+            android:fillColor="#1FD99460" />
 
-    <!-- Ornamento: Esquinas (Ticks) -->
-    <path
-        android:pathData="M80,120 L80,80 L120,80"
-        android:strokeWidth="6"
-        android:strokeColor="#FF8C42"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M432,392 L432,432 L392,432"
-        android:strokeWidth="6"
-        android:strokeColor="#FF8C42"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M256,80 L256,90"
-        android:strokeWidth="4"
-        android:strokeColor="#FF8C42"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M256,422 L256,432"
-        android:strokeWidth="4"
-        android:strokeColor="#FF8C42"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000" />
+        <!-- Left angle bracket -->
+        <path
+            android:pathData="M34,36 L22,54 L34,72"
+            android:strokeColor="#D99460"
+            android:strokeWidth="8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000" />
 
-    <!-- Ornamento: Diamantes -->
-    <path
-        android:pathData="M420,90 L430,100 L420,110 L410,100 Z"
-        android:fillColor="#FF8C42" />
-    <path
-        android:pathData="M92,412 L102,422 L92,432 L82,422 Z"
-        android:fillColor="#FF8C42" />
+        <!-- Right angle bracket -->
+        <path
+            android:pathData="M74,36 L86,54 L74,72"
+            android:strokeColor="#D99460"
+            android:strokeWidth="8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000" />
 
-    <!-- Símbolo Central: Code Brackets (< >) -->
-    <path
-        android:pathData="M180,170 L100,256 L180,342"
-        android:strokeWidth="20"
-        android:strokeColor="#FF8C42"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M332,170 L412,256 L332,342"
-        android:strokeWidth="20"
-        android:strokeColor="#FF8C42"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
-
-    <!-- Símbolo Central: AI Sparkle / Rocket -->
-    <path
-        android:pathData="M256,140 C256,220 292,256 372,256 C292,256 256,292 256,372 C256,292 220,256 140,256 C220,256 256,220 256,140 Z"
-        android:fillColor="#A855F7" />
-
-    <!-- Nodo Central Verde -->
-    <path
-        android:pathData="M256,234 A22,22 0 1,1 255.9,234 Z"
-        android:fillColor="#4ADE80" />
-
+        <!-- Central AI sparkle -->
+        <path
+            android:pathData="M54,38
+                              C54,46 62,54 70,54
+                              C62,54 54,62 54,70
+                              C54,62 46,54 38,54
+                              C46,54 54,46 54,38 Z"
+            android:fillColor="#FFFFFF" />
+    </group>
 </vector>
