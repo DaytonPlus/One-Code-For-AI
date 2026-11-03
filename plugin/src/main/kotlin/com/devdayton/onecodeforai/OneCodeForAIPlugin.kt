@@ -158,7 +158,7 @@ class OneCodeForAIPlugin : Plugin {
         const val KEY_EXCLUDE_BINARIES = "exclude_binaries"
         const val KEY_GIT_ENABLED = "git_enabled"
         const val KEY_TREE_ENABLED = "tree_enabled"
-        const val DEFAULT_ACTION_LABEL = "One Code For AI: generate .txt"
+        const val DEFAULT_ACTION_LABEL = "Generate Context TXT (Share/Export)"
         const val ROOT_SWITCH_DELAY_MS = 250L
     }
 }

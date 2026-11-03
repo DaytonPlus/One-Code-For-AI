@@ -10,7 +10,7 @@ One Code For AI is a **CodeAssist** plugin that scans your project, applies smar
 ![Java](https://img.shields.io/badge/Java-17-orange.svg)
 ![Kotlin](https://img.shields.io/badge/Kotlin-JVM-purple.svg)
 ![Platform](https://img.shields.io/badge/CodeAssist_Plugin_API-4-lightgrey.svg)
-![Version](https://img.shields.io/badge/Version-1.0.75-success.svg)
+![Version](https://img.shields.io/badge/Version-1.0.76-success.svg)
 ![Status](https://img.shields.io/badge/Status-Early_development-yellow.svg)
 
 > **Status:** early development. The source code will be published in this repository soon. This README documents the project's scope, features, and planned architecture ahead of the initial code drop.
