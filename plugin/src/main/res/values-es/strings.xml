@@ -73,7 +73,7 @@
     <string name="custom_preset">Personalizado</string>
 
     <!-- ===== Plugin messages ===== -->
-    <string name="action_label">One Code For AI: generar .txt</string>
+    <string name="action_label">Generar Contexto TXT (Compartir/Exportar)</string>
     <string name="dialog_already_open">⏳ La ventana de configuración ya está abierta.</string>
     <string name="no_folder_selected">❌ No hay carpeta seleccionada.</string>
     <string name="select_valid_folder">❌ Selecciona una carpeta válida.</string>

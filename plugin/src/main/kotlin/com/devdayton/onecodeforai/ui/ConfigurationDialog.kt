@@ -769,7 +769,7 @@ class ConfigurationDialog(
     }
 
     // -------- Action chip handlers ---------
-
+    
     private fun onShareResultClicked() {
         val snap = ExportStateHolder.snapshot
         val uri = snap.uri ?: return
@@ -787,7 +787,6 @@ class ConfigurationDialog(
     private fun onSaveResultClicked() {
         val snap = ExportStateHolder.snapshot
         val uri = snap.uri ?: return
-        
         if (!exportCoordinator.export(
                 root = projectRoot,
                 config = currentConfig,
@@ -805,8 +804,7 @@ class ConfigurationDialog(
 
     private fun onRegenerateClicked() {
         readUIValues()
-        val action = ExportStateHolder.snapshot.lastAction ?: ExportAction.GENERATE
-        startExport(action)
+        startExport(ExportAction.GENERATE)
     }
 
     // ==================================================================

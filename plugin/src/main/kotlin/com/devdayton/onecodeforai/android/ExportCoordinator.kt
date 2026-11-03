@@ -33,7 +33,7 @@ enum class ExportAction {
     GENERATE,
     /** Produce a uniquely-named, timestamped file in Downloads. */
     SAVE,
-    /** Produce a file under the static share name; auto-open the system share chooser. */
+    /** Produce a uniquely-named, timestamped file in Downloads and auto-open the share chooser. */
     SHARE
 }
 
@@ -114,15 +114,15 @@ class ExportCoordinator(
             val initialMessage = if (sourceUri != null) context.pluginString(R.string.preparing_export) else context.pluginString(R.string.generating_dump)
             runCatching { showProgressNotification(context, initialMessage) }
             
-            // Solo limpiamos duplicados si estamos generando de cero. 
-            // Si estamos guardando un archivo existente, no queremos borrar el origen.
+            // Si estamos generando de cero, limpiamos los archivos base duplicados
             if (sourceUri == null) {
                 runCatching { cleanupDuplicateShareFiles(context) }
             }
 
-            val fileName = when (action) {
-                ExportAction.SHARE, ExportAction.GENERATE -> SHARE_FILE_NAME
-                ExportAction.SAVE -> generateSmartFileName(root)
+            val fileName = if (action == ExportAction.GENERATE) {
+                SHARE_FILE_NAME
+            } else {
+                generateSmartFileName(root)
             }
             logger("[INFO] Target filename: $fileName")
 
@@ -132,7 +132,7 @@ class ExportCoordinator(
 
             val outputUri = writeToDownloads(context, fileName) { writer ->
                 if (sourceUri != null) {
-                    // Modo copia (Guardar): solo copiar bytes, sin reescanear el proyecto
+                    // Modo copia: no reescaneamos el proyecto, solo copiamos los datos
                     copyFromUri(context, sourceUri, writer)
                 } else {
                     // Modo generación
@@ -219,7 +219,7 @@ class ExportCoordinator(
     }
 
     // ------------------------------------------------------------------
-    // MediaStore write + cleanup
+    // MediaStore write + cleanup (unchanged semantics)
     // ------------------------------------------------------------------
 
     private fun writeToDownloads(

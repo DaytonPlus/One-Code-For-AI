@@ -73,7 +73,7 @@
     <string name="custom_preset">Custom</string>
 
     <!-- ===== Plugin messages ===== -->
-    <string name="action_label">One Code For AI: generate .txt</string>
+    <string name="action_label">Generate Context TXT (Share/Export)</string>
     <string name="dialog_already_open">⏳ The configuration window is already open.</string>
     <string name="no_folder_selected">❌ No folder selected.</string>
     <string name="select_valid_folder">❌ Select a valid folder.</string>
