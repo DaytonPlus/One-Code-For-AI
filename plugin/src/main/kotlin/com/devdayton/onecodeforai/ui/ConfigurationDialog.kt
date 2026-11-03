@@ -785,8 +785,22 @@ class ConfigurationDialog(
     }
 
     private fun onSaveResultClicked() {
-        readUIValues()
-        startExport(ExportAction.SAVE)
+        val snap = ExportStateHolder.snapshot
+        val uri = snap.uri ?: return
+        
+        if (!exportCoordinator.export(
+                root = projectRoot,
+                config = currentConfig,
+                action = ExportAction.SAVE,
+                sourceUri = uri,
+                sourceFilesCount = snap.filesCount,
+                sourceTotalBytes = snap.totalBytes
+            )
+        ) {
+            Toast.makeText(
+                activity, activity.pluginString(R.string.export_already_running), Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun onRegenerateClicked() {

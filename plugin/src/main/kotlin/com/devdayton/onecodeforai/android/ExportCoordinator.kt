@@ -52,7 +52,14 @@ class ExportCoordinator(
     @Volatile
     private var workerThread: Thread? = null
 
-    fun export(root: File, config: FilterConfig, action: ExportAction): Boolean {
+    fun export(
+        root: File, 
+        config: FilterConfig, 
+        action: ExportAction,
+        sourceUri: Uri? = null,
+        sourceFilesCount: Int = 0,
+        sourceTotalBytes: Long = 0L
+    ): Boolean {
         if (!globalExportLock.compareAndSet(false, true)) {
             logger("[WARN] Export already in progress; duplicate request ignored.")
             return false
@@ -62,7 +69,7 @@ class ExportCoordinator(
         ExportStateHolder.begin(action, root.absolutePath)
 
         workerThread = Thread({
-            try { runExport(root, config, action) }
+            try { runExport(root, config, action, sourceUri, sourceFilesCount, sourceTotalBytes) }
             finally {
                 globalExportLock.set(false)
                 if (activeCoordinator === this) activeCoordinator = null
@@ -79,7 +86,14 @@ class ExportCoordinator(
         logger("[CANCEL] Cancellation requested by user.")
     }
 
-    private fun runExport(root: File, config: FilterConfig, action: ExportAction) {
+    private fun runExport(
+        root: File, 
+        config: FilterConfig, 
+        action: ExportAction,
+        sourceUri: Uri?,
+        sourceFilesCount: Int,
+        sourceTotalBytes: Long
+    ) {
         val context = contextProvider()
         if (context == null) {
             ExportStateHolder.fail("Unable to obtain application context.")
@@ -97,8 +111,14 @@ class ExportCoordinator(
             )
             logger("[INFO] Starting export ($actionLabel).")
 
-            runCatching { showProgressNotification(context, context.pluginString(R.string.generating_dump)) }
-            runCatching { cleanupDuplicateShareFiles(context) }
+            val initialMessage = if (sourceUri != null) context.pluginString(R.string.preparing_export) else context.pluginString(R.string.generating_dump)
+            runCatching { showProgressNotification(context, initialMessage) }
+            
+            // Solo limpiamos duplicados si estamos generando de cero. 
+            // Si estamos guardando un archivo existente, no queremos borrar el origen.
+            if (sourceUri == null) {
+                runCatching { cleanupDuplicateShareFiles(context) }
+            }
 
             val fileName = when (action) {
                 ExportAction.SHARE, ExportAction.GENERATE -> SHARE_FILE_NAME
@@ -107,21 +127,27 @@ class ExportCoordinator(
             logger("[INFO] Target filename: $fileName")
 
             var lastReportedAt = 0L
-            var finalFiles = 0
-            var finalBytes = 0L
+            var finalFiles = sourceFilesCount
+            var finalBytes = sourceTotalBytes
 
             val outputUri = writeToDownloads(context, fileName) { writer ->
-                generateContent(root, config, writer) { processed, total, _, bytesProcessed ->
-                    if (isCancelled.get()) throw InterruptedException("Export cancelled by user.")
-                    finalFiles = processed
-                    finalBytes = bytesProcessed
-                    val now = System.currentTimeMillis()
-                    if (now - lastReportedAt > PROGRESS_THROTTLE_MS || processed == total) {
-                        lastReportedAt = now
-                        val message = if (total > 0) {
-                            context.pluginString(R.string.processing_progress, processed, total)
-                        } else context.pluginString(R.string.preparing_export)
-                        ExportStateHolder.updateProgress(message, processed, total)
+                if (sourceUri != null) {
+                    // Modo copia (Guardar): solo copiar bytes, sin reescanear el proyecto
+                    copyFromUri(context, sourceUri, writer)
+                } else {
+                    // Modo generación
+                    generateContent(root, config, writer) { processed, total, _, bytesProcessed ->
+                        if (isCancelled.get()) throw InterruptedException("Export cancelled by user.")
+                        finalFiles = processed
+                        finalBytes = bytesProcessed
+                        val now = System.currentTimeMillis()
+                        if (now - lastReportedAt > PROGRESS_THROTTLE_MS || processed == total) {
+                            lastReportedAt = now
+                            val message = if (total > 0) {
+                                context.pluginString(R.string.processing_progress, processed, total)
+                            } else context.pluginString(R.string.preparing_export)
+                            ExportStateHolder.updateProgress(message, processed, total)
+                        }
                     }
                 }
             }
@@ -178,8 +204,22 @@ class ExportCoordinator(
         CodeDumpGenerator(root, filter, selectedRef, onFileProgress).generateTo(writer)
     }
 
+    private fun copyFromUri(context: Context, sourceUri: Uri, writer: Writer) {
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            input.bufferedReader(Charsets.UTF_8).use { reader ->
+                val buffer = CharArray(8 * 1024)
+                var count = reader.read(buffer)
+                while (count >= 0) {
+                    if (isCancelled.get()) throw InterruptedException("Export cancelled by user.")
+                    writer.write(buffer, 0, count)
+                    count = reader.read(buffer)
+                }
+            }
+        } ?: throw IOException("Could not open source URI.")
+    }
+
     // ------------------------------------------------------------------
-    // MediaStore write + cleanup (unchanged semantics)
+    // MediaStore write + cleanup
     // ------------------------------------------------------------------
 
     private fun writeToDownloads(
