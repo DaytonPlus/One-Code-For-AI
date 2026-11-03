@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">CodeAssist OCForAI</string>
+    <string name="app_name">CodeAssist OCFAI</string>
 
     <!-- ===== Config dialog ===== -->
     <string name="dialog_subtitle">GENERADOR DE CONTEXTO  •  %1$s</string>
