@@ -689,11 +689,21 @@ class ConfigurationDialog(
         progressIcon.setImageDrawable(activity.loadPluginDrawable(R.drawable.ic_tech_rocket))
         progressIcon.setColorFilter(CodeAssistTheme.ACCENT)
         progressTitle.text = activity.pluginString(R.string.generating_context)
-        progressSubtitle.text = snapshot.message.ifBlank { activity.pluginString(R.string.preparing_export) }
+        val baseMessage = snapshot.message.ifBlank { activity.pluginString(R.string.preparing_export) }
+        progressSubtitle.text = if (snapshot.bytesTotal > 0L && snapshot.bytesProcessed > 0L) {
+            "$baseMessage  ·  ${formatSize(snapshot.bytesProcessed)} / ${formatSize(snapshot.bytesTotal)}"
+        } else baseMessage
         progressBar.visibility = View.VISIBLE
         progressMinimizeHint.visibility = View.VISIBLE
         progressStats.visibility = View.GONE
-        if (snapshot.total > 0 && snapshot.processed > 0) {
+        if (snapshot.bytesTotal > 0L && snapshot.bytesProcessed > 0L) {
+            // La barra avanza por bytes; la escala fija evita límites de Int en ProgressBar.
+            val scale = 10_000L
+            val ratio = (snapshot.bytesProcessed.coerceAtMost(snapshot.bytesTotal) * scale) / snapshot.bytesTotal
+            progressBar.isIndeterminate = false
+            progressBar.max = scale.toInt()
+            progressBar.progress = ratio.toInt()
+        } else if (snapshot.total > 0 && snapshot.processed > 0) {
             progressBar.isIndeterminate = false
             progressBar.max = snapshot.total
             progressBar.progress = snapshot.processed

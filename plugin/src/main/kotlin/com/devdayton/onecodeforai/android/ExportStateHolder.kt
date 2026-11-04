@@ -14,6 +14,8 @@ object ExportStateHolder {
         val message: String = "",
         val processed: Int = 0,
         val total: Int = 0,
+        val bytesProcessed: Long = 0L,
+        val bytesTotal: Long = 0L,
         val uri: Uri? = null,
         val fileName: String? = null,
         val lastAction: ExportAction? = null,
@@ -51,10 +53,24 @@ object ExportStateHolder {
         )
     }
 
-    fun updateProgress(message: String, processed: Int, total: Int) {
+    fun updateProgress(
+        message: String,
+        processed: Int,
+        total: Int,
+        bytesProcessed: Long,
+        bytesTotal: Long
+    ) {
         val current = snapshot
         if (current.state != State.RUNNING) return
-        publish(current.copy(message = message, processed = processed, total = total))
+        publish(
+            current.copy(
+                message = message,
+                processed = processed,
+                total = total,
+                bytesProcessed = bytesProcessed,
+                bytesTotal = bytesTotal
+            )
+        )
     }
 
     fun complete(uri: Uri, fileName: String, filesCount: Int, totalBytes: Long) {

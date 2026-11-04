@@ -7,11 +7,11 @@ import java.io.Writer
 /**
  * Callback contract for per-file progress. Invoked once per file after the
  * file has been fully written. [bytesProcessed] is cumulative (sum of file
- * lengths seen so far), so callers can display a live byte counter alongside
- * the file counter.
+ * lengths seen so far) and [totalBytes] is the sum of all eligible file
+ * lengths, so callers can show a byte-based progress alongside the file counter.
  */
 fun interface FileProgressListener {
-    fun onProgress(processed: Int, total: Int, currentPath: String, bytesProcessed: Long)
+    fun onProgress(processed: Int, total: Int, currentPath: String, bytesProcessed: Long, totalBytes: Long)
 }
 
 class CodeDumpGenerator(
@@ -34,11 +34,13 @@ class CodeDumpGenerator(
 
     private fun generateWorkingTree(writer: Writer) {
         DirectoryTree(root, filter).writeTo(writer)
-        val total = filter.countEligibleFiles()
+        val files = filter.walkIncludedFiles().toList()
+        val total = files.size
+        val totalBytes = files.sumOf { it.length() }
 
         var processed = 0
         var bytesAccum = 0L
-        filter.walkIncludedFiles().forEach { file ->
+        files.forEach { file ->
             ensureActive()
             val relativePath = relativePath(file)
             writeFileHeader(writer, relativePath)
@@ -51,7 +53,7 @@ class CodeDumpGenerator(
             }
             processed++
             bytesAccum += file.length()
-            onProgress?.onProgress(processed, total, relativePath, bytesAccum)
+            onProgress?.onProgress(processed, total, relativePath, bytesAccum, totalBytes)
         }
     }
 
@@ -67,6 +69,7 @@ class CodeDumpGenerator(
             DirectoryTree(root, filter).writePathsTo(writer, includedFiles.map { it.path })
 
             val total = includedFiles.size
+            val totalBytes = includedFiles.sumOf { it.size }
             var processed = 0
             var bytesAccum = 0L
             includedFiles.forEach { file ->
@@ -77,7 +80,7 @@ class CodeDumpGenerator(
                 }
                 processed++
                 bytesAccum += file.size
-                onProgress?.onProgress(processed, total, file.path, bytesAccum)
+                onProgress?.onProgress(processed, total, file.path, bytesAccum, totalBytes)
             }
         }
     }

@@ -136,7 +136,7 @@ class ExportCoordinator(
                     copyFromUri(context, sourceUri, writer)
                 } else {
                     // Modo generación
-                    generateContent(root, config, writer) { processed, total, _, bytesProcessed ->
+                    generateContent(root, config, writer) { processed, total, _, bytesProcessed, bytesTotal ->
                         if (isCancelled.get()) throw InterruptedException("Export cancelled by user.")
                         finalFiles = processed
                         finalBytes = bytesProcessed
@@ -146,7 +146,7 @@ class ExportCoordinator(
                             val message = if (total > 0) {
                                 context.pluginString(R.string.processing_progress, processed, total)
                             } else context.pluginString(R.string.preparing_export)
-                            ExportStateHolder.updateProgress(message, processed, total)
+                            ExportStateHolder.updateProgress(message, processed, total, bytesProcessed, bytesTotal)
                         }
                     }
                 }

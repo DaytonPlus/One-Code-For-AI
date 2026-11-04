@@ -363,7 +363,7 @@ class ProjectTreeView(
                 setPadding(0, 0, 0, 0)
                 gravity = Gravity.CENTER
                 includeFontPadding = false
-                text = null
+                text = ""
                 compoundDrawablePadding = 0
                 scaleX = 0.78f
                 scaleY = 0.78f
