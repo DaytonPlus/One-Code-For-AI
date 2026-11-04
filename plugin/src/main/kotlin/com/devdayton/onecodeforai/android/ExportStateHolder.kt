@@ -99,12 +99,16 @@ object ExportStateHolder {
      * Marks the start of an export owned by [action] on [rootPath]. Resets
      * any prior progress or result fields so observers never see a mixed state
      * from the previous run.
+     *
+     * [Snapshot.message] is left blank on purpose: at this point no [Context]
+     * is available to resolve `R.string.*`, so the configuration UI substitutes
+     * a translated "Preparing…" until the first real progress tick arrives.
      */
     fun begin(action: ExportAction, rootPath: String) {
         publish(
             Snapshot(
                 state = State.RUNNING,
-                message = "Preparing…",
+                message = "",
                 lastAction = action,
                 rootPath = rootPath
             )

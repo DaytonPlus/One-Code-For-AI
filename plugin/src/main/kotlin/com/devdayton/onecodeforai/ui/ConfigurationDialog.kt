@@ -672,8 +672,8 @@ class ConfigurationDialog(
             visibility = View.GONE
             setPadding(0, CodeAssistTheme.dp(activity, 6), 0, 0)
         }
-        progressActionsRow.addView(makeActionChip(R.drawable.ic_tech_share, R.string.action_share_result) { onShareResultClicked() })
-        progressActionsRow.addView(makeActionChip(R.drawable.ic_tech_download, R.string.action_save_result) { onSaveResultClicked() })
+        progressActionsRow.addView(makeActionChip(R.drawable.ic_tech_share, R.string.action_share) { onShareResultClicked() })
+        progressActionsRow.addView(makeActionChip(R.drawable.ic_tech_download, R.string.action_save) { onSaveResultClicked() })
         progressActionsRow.addView(makeActionChip(R.drawable.ic_tech_refresh, R.string.action_regenerate) { onRegenerateClicked() })
         panel.addView(progressActionsRow)
 
@@ -1529,11 +1529,17 @@ class ConfigurationDialog(
             .setView(input)
             .setPositiveButton(activity.pluginString(R.string.save)) { _, _ ->
                 val name = input.text.toString().trim()
+                val caseConflict = presetManager.getUserPresetNames()
+                    .firstOrNull { it.equals(name, ignoreCase = true) && it != name }
                 when {
                     name.isBlank() || name.equals(customPresetLabel(), ignoreCase = true) -> Unit
                     presetManager.isBuiltInPresetName(name) ->
                         Toast.makeText(activity,
                             activity.pluginString(R.string.preset_name_reserved),
+                            Toast.LENGTH_LONG).show()
+                    caseConflict != null ->
+                        Toast.makeText(activity,
+                            activity.pluginString(R.string.preset_name_duplicate, name),
                             Toast.LENGTH_LONG).show()
                     else -> runCatching {
                         readUIValues()

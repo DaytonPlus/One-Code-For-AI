@@ -131,8 +131,8 @@ class ExportCoordinator(
         try {
             val actionLabel = context.pluginString(
                 when (action) {
-                    ExportAction.SHARE -> R.string.action_save_share_share
-                    ExportAction.SAVE -> R.string.action_save_share
+                    ExportAction.SHARE -> R.string.action_share
+                    ExportAction.SAVE -> R.string.action_save
                     ExportAction.GENERATE -> R.string.action_generate
                 }
             )
@@ -193,7 +193,7 @@ class ExportCoordinator(
             runCatching { hideProgressNotification(context) }
 
             if (outputUri == null) {
-                ExportStateHolder.fail("File write failed.")
+                ExportStateHolder.fail(context.pluginString(R.string.error_file_write_failed))
                 logger("[ERROR] MediaStore returned a null URI; export aborted.")
                 return
             }
@@ -214,8 +214,8 @@ class ExportCoordinator(
             ExportStateHolder.reset()
         } catch (error: Exception) {
             runCatching { hideProgressNotification(context) }
-            val message = error.message ?: context.pluginString(R.string.unknown_error)
-            logger("[ERROR] Unhandled exception during export: $message")
+            val message = resolveErrorMessage(context, error)
+            logger("[ERROR] Unhandled exception during export: ${error.message ?: message}")
             error.printStackTrace()
             runCatching { showErrorNotification(context, message) }
             ExportStateHolder.fail(message)
@@ -258,6 +258,60 @@ class ExportCoordinator(
                 }
             }
         } ?: throw IOException("Could not open source URI.")
+    }
+    
+    /**
+     * Translates an exception raised by the `core/` layer into a localized,
+     * user-facing message.
+     *
+     * `CodeDumpGenerator`, `FileFilter`, and `GitUtils` are pure Kotlin: they
+     * cannot resolve `R.string.*` and therefore signal failures with English
+     * exception messages. This method is the single Android-aware boundary where
+     * those messages are matched and mapped to translated resources, which keeps
+     * `core/` unit-testable and free of `android.*` imports while still giving the
+     * user a localized error notification.
+     *
+     * Matching is exact-equality or prefix-based, mirroring the literals produced
+     * by the throw sites. Anything unrecognized is returned verbatim so an
+     * unexpected failure is never masked; an empty message falls back to
+     * [R.string.unknown_error].
+     *
+     * The inline `[File read error: …]` and `[Git read error: …]` markers that are
+     * written **inside the `.txt` dump** deliberately bypass this method: they are
+     * part of the generated content and stay in English for the consuming model.
+     */
+    private fun resolveErrorMessage(context: Context, error: Exception): String {
+        val msg = error.message.orEmpty()
+        return when {
+            msg.startsWith("Project root is not a directory: ") ->
+                context.pluginString(
+                    R.string.error_project_root_not_dir,
+                    msg.removePrefix("Project root is not a directory: ")
+                )
+            msg == "The selected folder is not a readable Git repository." ->
+                context.pluginString(R.string.error_git_repo_unreadable)
+            msg.startsWith("Git reference '") && msg.endsWith("' could not be resolved.") ->
+                context.pluginString(
+                    R.string.error_git_ref_unresolved,
+                    msg.removePrefix("Git reference '").removeSuffix("' could not be resolved.")
+                )
+            msg == "Git export enabled but no reference selected." ->
+                context.pluginString(R.string.error_git_export_no_ref)
+            msg == "Could not open source URI." ->
+                context.pluginString(R.string.error_source_uri_unreadable)
+            msg == "MediaStore did not provide an output stream." ->
+                context.pluginString(R.string.error_output_stream_unavailable)
+            msg == "MediaStore could not finalize the file." ->
+                context.pluginString(R.string.error_media_store_finalize)
+            msg.startsWith("Unable to create ") ->
+                context.pluginString(
+                    R.string.error_downloads_dir_create,
+                    msg.removePrefix("Unable to create ")
+                )
+            error is IOException -> context.pluginString(R.string.error_file_write_failed)
+            msg.isNotBlank() -> msg
+            else -> context.pluginString(R.string.unknown_error)
+        }
     }
 
     // ------------------------------------------------------------------

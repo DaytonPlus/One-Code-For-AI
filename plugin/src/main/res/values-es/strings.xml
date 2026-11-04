@@ -1,184 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ===== App identity ===== -->
     <string name="app_name">CodeAssist OCFAI</string>
 
-    <!-- ===== Config dialog ===== -->
-    <string name="dialog_subtitle">GENERADOR DE CONTEXTO  •  %1$s</string>
+    <!-- ===== Common ===== -->
     <string name="close">Cerrar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="accept">Aceptar</string>
+    <string name="save">Guardar</string>
+    <string name="delete">Eliminar</string>
 
+    <!-- ===== Config dialog ===== -->
+    <!-- > Header -->
+    <string name="dialog_subtitle">GENERADOR DE CONTEXTO  •  %1$s</string>
+
+    <!-- > Profiles -->
     <string name="section_presets">Perfil de exportación</string>
     <string name="save_preset">Guardar perfil</string>
     <string name="delete_preset">Eliminar perfil</string>
+    <string name="delete_preset_message">¿Eliminar el perfil \"%1$s\"? Esta acción no se puede deshacer.</string>
+    <string name="custom_preset">Personalizado</string>
+    <string name="preset_name_hint">Nombre del perfil</string>
+    <string name="preset_name_reserved">Ese nombre pertenece a un perfil integrado.</string>
+    <string name="preset_name_duplicate">Ya existe un perfil con el nombre \"%1$s\".</string>
 
+    <!-- > Base filters -->
     <string name="section_base_filters">Filtros base</string>
     <string name="exclude_binaries">Excluir archivos binarios</string>
     <string name="respect_gitignore">Respetar reglas de .gitignore</string>
     <string name="max_size">Tamaño máximo</string>
     <string name="kb_suffix"> KB</string>
 
+    <!-- > Inclusions, exclusions, .gitignore -->
     <string name="section_inclusions">Inclusiones</string>
     <string name="section_exclusions">Exclusiones</string>
-    <string name="action_add">＋ Añadir</string>
     <string name="section_gitignore_rules">Reglas detectadas en .gitignore</string>
+    <string name="no_inclusions">Sin extensiones adicionales</string>
+    <string name="no_exclusions">Sin exclusiones personalizadas</string>
+    <string name="no_gitignore_rules">No se encontraron reglas en .gitignore</string>
+    <string name="add_inclusion_title">Añadir inclusión</string>
+    <string name="add_exclusion_title">Añadir exclusión</string>
+    <string name="edit_extension">Editar extensión</string>
+    <string name="delete_rule">Eliminar regla</string>
+    <string name="extension_hint">Ej.: kt, json, src/config</string>
+    <string name="action_add">＋ Añadir</string>
 
+    <!-- > Version control (config dialog) -->
     <string name="section_version_control">Control de versiones</string>
     <string name="git_info">Rama: %1$s  ·  Commit: %2$s</string>
     <string name="no_branch">sin rama</string>
     <string name="no_commit">sin commit</string>
     <string name="read_from_git">Leer desde una referencia Git</string>
-    <string name="commit_hash_hint">Hash de commit (opcional)</string>
-    <string name="current_directory">Actual (Directorio)</string>
-
-    <string name="section_tree">Árbol de archivos</string>
-    <string name="action_expand">Expandir</string>
-    <string name="action_collapse">Colapsar</string>
-
-    <!-- ===== Botón generar ===== -->
-    <string name="action_generate">Generar contexto</string>
-    <string name="generate_description">Se generará un único archivo .txt y se guardará en Descargas.</string>
-
-    <string name="section_stats">Estadísticas de contexto</string>
-    <string name="calculating">Calculando…</string>
-    <string name="analyzing">Analizando…</string>
-    <string name="analyzing_files">Analizando… %1$d archivos</string>
-    <string name="cancel">Cancelar</string>
-    <string name="canceled_retry">Cancelado. Toca un filtro para reintentar.</string>
-
-    <string name="stats_empty">Sin archivos · 0 tokens · 0 B</string>
-    <string name="stats_files_many">%1$d archivos</string>
-    <string name="stats_files_one">%1$d archivo</string>
-    <string name="stats_tokens">~%1$s tokens</string>
-
-    <string name="no_inclusions">Sin extensiones adicionales</string>
-    <string name="no_exclusions">Sin exclusiones personalizadas</string>
-    <string name="no_gitignore_rules">No se encontraron reglas en .gitignore</string>
-    <string name="tree_scan_error">No se pudo analizar el árbol: %1$s</string>
-    <string name="no_tree_matches">Sin archivos que coincidan con los filtros</string>
-
-    <string name="show_tree">Mostrar árbol de archivos</string>
-    <string name="action_reload">Recargar</string>
-
-    <!-- ===== Tag dialogs ===== -->
-    <string name="preset_name_reserved">Ese nombre pertenece a un perfil integrado.</string>
-    <string name="preset_name_hint">Nombre del perfil</string>
-    <string name="save">Guardar</string>
-    <string name="delete">Eliminar</string>
-    <string name="delete_preset_message">¿Eliminar el perfil \"%1$s\"? Esta acción no se puede deshacer.</string>
-    <string name="edit_extension">Editar extensión</string>
-    <string name="delete_rule">Eliminar regla</string>
-    <string name="add_inclusion_title">Añadir inclusión</string>
-    <string name="add_exclusion_title">Añadir exclusión</string>
-    <string name="extension_hint">Ej.: kt, json, src/config</string>
-    <string name="accept">Aceptar</string>
-    <string name="custom_preset">Personalizado</string>
-
-    <!-- ===== Plugin messages ===== -->
-    <string name="action_label">Generar Contexto TXT (Compartir/Exportar)</string>
-    <string name="dialog_already_open">⏳ La ventana de configuración ya está abierta.</string>
-    <string name="no_folder_selected">❌ No hay carpeta seleccionada.</string>
-    <string name="select_valid_folder">❌ Selecciona una carpeta válida.</string>
-    <string name="error_opening_dialog">❌ Error: no se pudo abrir la ventana.</string>
-    <string name="opening_config">⚙️ Abriendo configuración...</string>
-    <string name="starting_generation">Iniciando generación (%1$s)...</string>
-    <string name="generating_dump">Generando volcado de código...</string>
-    <string name="filename_log">Nombre de archivo: %1$s</string>
-    <string name="failed_creation">❌ Falló la creación del archivo.</string>
-    <string name="could_not_create">❌ No se pudo crear el archivo.</string>
-    <string name="sharing">Compartiendo: %1$s</string>
-    <string name="saved_to_downloads">Guardado en Descargas/OneCodeForAI: %1$s</string>
-    <string name="general_error">❌ Error general: %1$s</string>
-    <string name="unknown_error">Error desconocido</string>
-    <string name="share_with">Compartir volcado con:</string>
-    <string name="share_error">❌ Error al compartir: %1$s</string>
-
-    <string name="notification_progress_title">One Code For AI</string>
-    <string name="notification_channel">One Code</string>
-    <string name="notification_channel_err">One Code Err</string>
-    <string name="error_notification_title">Error en One Code</string>
-
-    <string name="action_save_share">Guardar</string>
-    <string name="action_save_share_share">Compartir</string>
-
-    <!-- ===== Settings page ===== -->
-    <string name="settings_gitignore">Respetar .gitignore</string>
-    <string name="settings_gitignore_desc">Ignora los archivos listados en .gitignore</string>
-    <string name="settings_binaries">Excluir binarios</string>
-    <string name="settings_binaries_desc">Filtra imágenes, vídeos, etc.</string>
-    <string name="settings_git">Integración con Git</string>
-    <string name="settings_git_desc">Permite elegir rama o commit</string>
-    <string name="settings_tree">Árbol y estadísticas</string>
-    <string name="settings_tree_desc">Muestra el árbol de archivos y el conteo de tokens. Desactívalo en proyectos grandes si no lo necesitas.</string>
-
-    <!-- ===== PluginInfoActivity / guide ===== -->
-    <string name="info_title">INFO</string>
-    <string name="guide_title">GUÍA</string>
-    <string name="guide_header_title">Guía de instalación</string>
-    <string name="guide_header_subtitle">Sigue estos pasos para activar One Code For AI en tu IDE.</string>
-    <string name="guide_section_steps">Pasos</string>
-    <string name="guide_step1_title">Descarga el APK</string>
-    <string name="guide_step1_desc">Consigue el archivo .apk más reciente desde el repositorio oficial o el canal de distribución.</string>
-    <string name="guide_step2_title">Instala la aplicación</string>
-    <string name="guide_step2_desc">Abre el archivo APK en tu dispositivo y acepta la instalación desde fuentes desconocidas si el sistema lo solicita.</string>
-    <string name="guide_step3_title">Abre CodeAssist</string>
-    <string name="guide_step3_desc">Una vez instalado, inicia la aplicación CodeAssist en tu dispositivo.</string>
-    <string name="guide_step4_title">Activa el plugin</string>
-    <string name="guide_step4_desc">Ve a Ajustes → Plugins → Instalados y activa el plugin One Code For AI. Se cargará automáticamente.</string>
-    <string name="guide_step5_title">Reinicia el IDE</string>
-    <string name="guide_step5_desc">Cierra y vuelve a abrir CodeAssist para asegurar que todos los componentes se hayan cargado correctamente.</string>
-    <string name="guide_back_home">Volver al inicio</string>
-    <string name="guide_install_button">Guía de instalación</string>
-
-    <string name="info_subtitle">Plugin para CodeAssist</string>
-    <string name="open_codeassist">Abrir CodeAssist</string>
-    <string name="features_title">Características</string>
-    <string name="integration_title">Integración con CodeAssist</string>
-    <string name="tech_info_title">Información técnica</string>
-    <string name="links_title">Enlaces</string>
-    <string name="creator_dev">Desarrollador independiente</string>
-    <string name="footer_made_with">Hecho con ❤️ para la comunidad</string>
-    <string name="codeassist_not_installed">CodeAssist no está instalado</string>
-    <string name="codeassist_open_error">No se pudo abrir CodeAssist</string>
-    <string name="no_app_for_link">No hay app para abrir enlaces</string>
-
-    <!-- Badges -->
-    <string name="badge_open_source">Código abierto</string>
-    <string name="badge_ai_ready">Listo para IA</string>
-
-    <!-- Features -->
-    <string name="feature_1">Un único .txt con todo el código de tu proyecto</string>
-    <string name="feature_2">Exporta desde cualquier rama o commit de Git</string>
-    <string name="feature_3">Perfiles predefinidos: Android, Web, Python, Texto</string>
-    <string name="feature_4">Comparte el archivo con ChatGPT, Claude, Gemini</string>
-    <string name="feature_5">Filtros por extensión y reglas de .gitignore</string>
-    <string name="feature_6">Interfaz integrada con el tema oscuro de CodeAssist</string>
-
-    <!-- Integration steps -->
-    <string name="step_1_title">Abre un proyecto</string>
-    <string name="step_1_desc">Toca el árbol de archivos del proyecto en CodeAssist</string>
-    <string name="step_2_title">Mantén pulsada una carpeta</string>
-    <string name="step_2_desc">Se abrirá el menú contextual de opciones</string>
-    <string name="step_3_title">Elige One Code For AI</string>
-    <string name="step_3_desc">Aparecerá la opción para generar el volcado</string>
-    <string name="step_4_title">Exporta o comparte</string>
-    <string name="step_4_desc">Guarda el .txt en Descargas o envíalo a tu IA</string>
-
-    <!-- Technical info -->
-    <string name="tech_info_package">Paquete</string>
-    <string name="tech_info_version">Versión</string>
-    <string name="tech_info_apk">APK</string>
-    <string name="tech_info_min_sdk">SDK mínimo</string>
-    <string name="tech_info_target_sdk">SDK objetivo</string>
-    <string name="tech_info_language">Idioma</string>
-    <string name="tech_info_status">Estado</string>
-    <string name="tech_info_status_stable">● Estable</string>
-
-    <!-- Links -->
-    <string name="link_repository">Repositorio de GitHub</string>
-    <string name="link_report_bug">Informar de un problema</string>
-    <string name="link_license">Licencia MIT</string>
-
-    <!-- Git -->
-    <string name="git_not_repo">Esta carpeta no es un repositorio Git</string>
     <string name="git_refresh">Actualizar info de Git</string>
     <string name="git_uncommitted_changes">⚠ %1$d cambios sin confirmar</string>
     <string name="git_ref_hint">Ej.: main, v1.0.0, abc1234</string>
@@ -188,6 +60,10 @@
     <string name="git_resolved_as">Resuelto: %1$s</string>
     <string name="git_ref_invalid">Referencia Git inválida</string>
     <string name="git_ref_empty">Introduce o selecciona una referencia Git</string>
+    <string name="git_not_repo">Esta carpeta no es un repositorio Git</string>
+    <string name="git_open_parent_root">Ir a la raíz del proyecto: %1$s</string>
+
+    <!-- > Git reference picker -->
     <string name="git_pick_ref_title">Seleccionar una referencia Git</string>
     <string name="git_tab_branches">Ramas</string>
     <string name="git_tab_tags">Etiquetas</string>
@@ -199,24 +75,167 @@
     <string name="git_no_commits">No se encontraron commits</string>
     <string name="git_current_marker">actual</string>
     <string name="git_remote_marker">remota</string>
+
+    <!-- > Git diff preview -->
     <string name="git_diff_title">Diff: %1$s → árbol de trabajo</string>
     <string name="git_diff_stats">%1$d archivos · +%2$d −%3$d</string>
     <string name="git_diff_no_changes">No se detectaron cambios</string>
     <string name="git_diff_content">Contenido del diff</string>
-    <string name="git_open_parent_root">Ir a la raíz del proyecto: %1$s</string>
 
-    <!-- Help Section -->
+    <!-- > File tree -->
+    <string name="section_tree">Árbol de archivos</string>
+    <string name="show_tree">Mostrar árbol de archivos</string>
+    <string name="action_expand">Expandir</string>
+    <string name="action_collapse">Colapsar</string>
+    <string name="action_reload">Recargar</string>
+    <string name="analyzing">Analizando…</string>
+    <string name="analyzing_files">Analizando… %1$d archivos</string>
+    <string name="canceled_retry">Cancelado. Toca un filtro para reintentar.</string>
+    <string name="tree_scan_error">No se pudo analizar el árbol: %1$s</string>
+    <string name="no_tree_matches">Sin archivos que coincidan con los filtros</string>
+
+    <!-- > Generate -->
+    <string name="action_generate">Generar contexto</string>
+    <string name="generate_description">Se generará un único archivo .txt y se guardará en Descargas.</string>
+
+    <!-- ===== Inline progress / result ===== -->
+    <string name="generating_context">Generando contexto…</string>
+    <string name="preparing_export">Preparando…</string>
+    <string name="processing_progress">Procesando: %1$d/%2$d archivos</string>
+    <string name="generation_complete">¡Generación completada!</string>
+    <string name="generation_failed">Fallo en la generación</string>
+    <string name="generation_minimize_hint">Puedes minimizar este diálogo. La generación continúa en segundo plano.</string>
+    <string name="saved_to_downloads">Guardado en Descargas/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Ya hay una exportación en curso.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Guardar</string>
+    <string name="action_share">Compartir</string>
+    <string name="action_regenerate">Regenerar</string>
+    <string name="action_edit_settings">Editar configuración</string>
+
+    <!-- > Result statistics -->
+    <string name="stats_files_one">%1$d archivo</string>
+    <string name="stats_files_many">%1$d archivos</string>
+    <string name="stats_tokens">~%1$s tokens</string>
+
+    <!-- ===== Plugin entry point (context menu) ===== -->
+    <string name="action_label">Generar Contexto TXT (Compartir/Exportar)</string>
+    <string name="dialog_already_open">⏳ La ventana de configuración ya está abierta.</string>
+    <string name="no_folder_selected">❌ No hay carpeta seleccionada.</string>
+    <string name="select_valid_folder">❌ Selecciona una carpeta válida.</string>
+    <string name="error_opening_dialog">❌ Error: no se pudo abrir la ventana.</string>
+    <string name="opening_config">⚙️ Abriendo configuración...</string>
+
+    <!-- ===== Export errors ===== -->
+    <!-- Mostrados por ExportCoordinator.resolveErrorMessage() cuando falla
+         una exportación en segundo plano. Los marcadores inline que se
+         escriben dentro del .txt se mantienen en inglés por diseño. -->
+    <string name="error_file_write_failed">Error al escribir el archivo.</string>
+    <string name="error_source_uri_unreadable">No se pudo abrir el archivo de origen.</string>
+    <string name="error_output_stream_unavailable">El destino no proporcionó un flujo de salida.</string>
+    <string name="error_media_store_finalize">No se pudo finalizar el archivo de destino.</string>
+    <string name="error_downloads_dir_create">No se pudo crear la carpeta Descargas: %1$s</string>
+    <string name="error_project_root_not_dir">La raíz del proyecto no es una carpeta: %1$s</string>
+    <string name="error_git_repo_unreadable">La carpeta seleccionada no es un repositorio Git legible.</string>
+    <string name="error_git_ref_unresolved">No se pudo resolver la referencia Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">La exportación Git está activada pero no se seleccionó ninguna referencia.</string>
+    <string name="unknown_error">Error desconocido</string>
+
+    <!-- ===== Sharing ===== -->
+    <string name="share_with">Compartir volcado con:</string>
+    <string name="share_error">❌ Error al compartir: %1$s</string>
+
+    <!-- ===== Notifications ===== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Contexto listo</string>
+    <string name="error_notification_title">Error en One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Err</string>
+    <string name="notification_channel_actions">Resultados de One Code</string>
+    <string name="generating_dump">Generando volcado de código...</string>
+
+    <!-- ===== Settings page ===== -->
+    <string name="settings_gitignore">Respetar .gitignore</string>
+    <string name="settings_gitignore_desc">Ignora los archivos listados en .gitignore</string>
+    <string name="settings_binaries">Excluir binarios</string>
+    <string name="settings_binaries_desc">Filtra imágenes, vídeos, etc.</string>
+    <string name="settings_git">Integración con Git</string>
+    <string name="settings_git_desc">Permite elegir rama o commit</string>
+    <string name="settings_tree">Árbol y estadísticas</string>
+    <string name="settings_tree_desc">Muestra el árbol de archivos y el conteo de tokens. Desactívalo en proyectos grandes si no lo necesitas.</string>
+
+    <!-- ===== Info activity ===== -->
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">Plugin para CodeAssist</string>
+    <string name="open_codeassist">Abrir CodeAssist</string>
+    <string name="footer_made_with">Hecho con ❤️ para la comunidad</string>
+    <string name="creator_dev">Desarrollador independiente</string>
+    <string name="codeassist_not_installed">CodeAssist no está instalado</string>
+    <string name="codeassist_open_error">No se pudo abrir CodeAssist</string>
+    <string name="no_app_for_link">No hay app para abrir enlaces</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Guía de instalación</string>
+    <string name="guide_header_subtitle">Sigue estos pasos para activar One Code For AI en tu IDE.</string>
+    <string name="guide_step1_title">Descarga el APK</string>
+    <string name="guide_step1_desc">Consigue el archivo .apk más reciente desde el repositorio oficial o el canal de distribución.</string>
+    <string name="guide_step2_title">Instala la aplicación</string>
+    <string name="guide_step2_desc">Abre el archivo APK en tu dispositivo y acepta la instalación desde fuentes desconocidas si el sistema lo solicita.</string>
+    <string name="guide_step3_title">Abre CodeAssist</string>
+    <string name="guide_step3_desc">Una vez instalado, inicia la aplicación CodeAssist en tu dispositivo.</string>
+    <string name="guide_step4_title">Activa el plugin</string>
+    <string name="guide_step4_desc">Ve a Ajustes → Plugins → Instalados y activa el plugin One Code For AI. Se cargará automáticamente.</string>
+    <string name="guide_step5_title">Reinicia el IDE</string>
+    <string name="guide_step5_desc">Cierra y vuelve a abrir CodeAssist para asegurar que todos los componentes se hayan cargado correctamente.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Integración con CodeAssist</string>
+    <string name="step_1_title">Abre un proyecto</string>
+    <string name="step_1_desc">Toca el árbol de archivos del proyecto en CodeAssist</string>
+    <string name="step_2_title">Mantén pulsada una carpeta</string>
+    <string name="step_2_desc">Se abrirá el menú contextual de opciones</string>
+    <string name="step_3_title">Elige One Code For AI</string>
+    <string name="step_3_desc">Aparecerá la opción para generar el volcado</string>
+    <string name="step_4_title">Exporta o comparte</string>
+    <string name="step_4_desc">Guarda el .txt en Descargas o envíalo a tu IA</string>
+
+    <!-- > Features -->
+    <string name="features_title">Características</string>
+    <string name="feature_1">Un único .txt con todo el código de tu proyecto</string>
+    <string name="feature_2">Exporta desde cualquier rama o commit de Git</string>
+    <string name="feature_3">Perfiles predefinidos: Android, Web, Python, Texto</string>
+    <string name="feature_4">Comparte el archivo con ChatGPT, Claude, Gemini</string>
+    <string name="feature_5">Filtros por extensión y reglas de .gitignore</string>
+    <string name="feature_6">Interfaz integrada con el tema oscuro de CodeAssist</string>
+
+    <!-- > Links -->
+    <string name="links_title">Enlaces</string>
+    <string name="link_repository">Repositorio de GitHub</string>
+    <string name="link_report_bug">Informar de un problema</string>
+    <string name="link_license">Licencia MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Información técnica</string>
+    <string name="tech_info_version">Versión</string>
+    <string name="tech_info_package">Paquete</string>
+    <string name="tech_info_min_sdk">SDK mínimo</string>
+    <string name="tech_info_target_sdk">SDK objetivo</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Idioma</string>
+    <string name="tech_info_status">Estado</string>
+    <string name="tech_info_status_stable">● Estable</string>
+
+    <!-- > Help & FAQ -->
     <string name="help_title">AYUDA Y FAQ</string>
-    <string name="help_header_title">Preguntas Frecuentes</string>
     <string name="help_header_subtitle">Encuentra respuestas a problemas comunes y aprende a sacar el máximo provecho del plugin.</string>
-    <string name="help_button">Ayuda y FAQ</string>
-    <string name="help_back_home">Volver al inicio</string>
     <string name="help_q1">¿Por qué el archivo generado está vacío o le faltan archivos?</string>
-    <string name="help_a1">Revisa tus filtros. Asegúrate de que las extensiones estén en la sección "Inclusiones", o verifica que el límite de tamaño máximo no sea muy bajo. También, asegúrate de que las reglas de .gitignore no estén excluyendo tu código.</string>
+    <string name="help_a1">Revisa tus filtros. Asegúrate de que las extensiones estén en la sección \"Inclusiones\", o verifica que el límite de tamaño máximo no sea muy bajo. También, asegúrate de que las reglas de .gitignore no estén excluyendo tu código.</string>
     <string name="help_q2">¿Cómo uso esto con ChatGPT o Claude?</string>
-    <string name="help_a2">Toca "Compartir archivo" en lugar de "Exportar". Selecciona tu app de IA (ChatGPT, Claude, etc.) en el menú de compartir. Luego puedes pedirle a la IA: "Aquí está el código de mi proyecto, por favor revísalo...".</string>
+    <string name="help_a2">Toca \"Compartir archivo\" en lugar de \"Exportar\". Selecciona tu app de IA (ChatGPT, Claude, etc.) en el menú de compartir. Luego puedes pedirle a la IA: \"Aquí está el código de mi proyecto, por favor revísalo...\".</string>
     <string name="help_q3">La sección de Git dice que no es un repositorio.</string>
-    <string name="help_a3">Si estás dentro de una subcarpeta, toca la acción "Ir a la raíz del proyecto". Además, asegúrate de que la integración con Git esté activada en los ajustes del plugin en CodeAssist.</string>
+    <string name="help_a3">Si estás dentro de una subcarpeta, toca la acción \"Ir a la raíz del proyecto\". Además, asegúrate de que la integración con Git esté activada en los ajustes del plugin en CodeAssist.</string>
     <string name="help_q4">¿Dónde se guardan los archivos?</string>
     <string name="help_a4">Los archivos exportados se guardan en el almacenamiento de tu dispositivo en la ruta: Descargas/OneCodeForAI.</string>
     <string name="help_q5">¿Los archivos binarios se excluyen automáticamente?</string>
@@ -231,24 +250,4 @@
     <string name="help_a9">No. Las claves de preferencias, los nombres de propiedades JSON y los nombres de perfil se conservan entre versiones. Los perfiles personalizados y el último estado guardado siguen disponibles tras instalar un APK nuevo.</string>
     <string name="help_q10">El plugin no aparece en CodeAssist. ¿Qué hago?</string>
     <string name="help_a10">Confirma que el plugin está habilitado en la sección de plugins de CodeAssist y reinicia el host. Si sigue sin aparecer, verifica que la build instalada apunte a la API de plugins 4 de CodeAssist.</string>
-
-    <!-- ===== Sección de progreso inline ===== -->
-    <string name="generating_context">Generando contexto…</string>
-    <string name="preparing_export">Preparando…</string>
-    <string name="processing_progress">Procesando: %1$d/%2$d archivos</string>
-    <string name="generation_complete">¡Generación completada!</string>
-    <string name="generation_failed">Fallo en la generación</string>
-    <string name="generation_minimize_hint">Puedes minimizar este diálogo. La generación continúa en segundo plano.</string>
-    <string name="export_already_running">Ya hay una exportación en curso.</string>
-    <string name="action_share_result">Compartir</string>
-    <string name="action_save_result">Guardar</string>
-    <string name="action_regenerate">Regenerar</string>
-    <string name="action_edit_settings">Editar configuración</string>
-
-    <!-- ===== Acciones de notificación ===== -->
-    <string name="notification_channel_actions">Resultados de One Code</string>
-    <string name="notification_ready_title">Contexto listo</string>
-    
-    <!-- Code sample -->
-    <string name="code_sample">// Convierte cualquier carpeta en contexto para IA\nval project = Folder(\"my-app\")\nproject.export(\n    filters = ANDROID,\n    destination = \"Downloads/\"\n)\n\n// → my-app_2026-10-30.txt\n// → 12,847 tokens ✨ listo para ChatGPT</string>
 </resources>
