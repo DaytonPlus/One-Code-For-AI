@@ -179,10 +179,9 @@ class ConfigurationDialog(
         // Always attach the dismiss handler before we show anything, so a user
         // dismissing the loading state still runs cleanup.
         dialog.setOnDismissListener { handleDismiss(dialog) }
-        dialog.setOnShowListener { configureDialogWindow(dialog) }
-
         // 1) Immediate loading view so the dialog appears at once.
         dialog.setContentView(buildLoadingView())
+        configureDialogWindow(dialog)
         dialog.show()
 
         // 2) Load heavy data in background, then build the real UI on Main.
@@ -198,33 +197,115 @@ class ConfigurationDialog(
         }, "OneCode-dialog-init").apply { isDaemon = true; start() }
     }
 
-    private fun buildLoadingView(): View = LinearLayout(activity).apply {
-        orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER
-        setPadding(
-            CodeAssistTheme.dp(activity, 32),
-            CodeAssistTheme.dp(activity, 64),
-            CodeAssistTheme.dp(activity, 32),
-            CodeAssistTheme.dp(activity, 64)
-        )
-        background = CodeAssistTheme.roundedBg(
-            activity, CodeAssistTheme.BG, 15f, CodeAssistTheme.OUTLINE
-        )
-        addView(ProgressBar(activity).apply {
+    /**
+     * Skeleton shown while the real dialog content loads in the background.
+     *
+     * Mirrors the rough geometry of the finished UI — header with two text bars,
+     * a divider, and three stacked panels — so the transition to the real content
+     * reads as a reveal rather than a layout jump. A single accent spinner sits
+     * where the close button will land, which is the only piece of real UI the
+     * skeleton hints at.
+     *
+     * Deliberately does **not** call `pluginString(...)`: resolving any string
+     * forces creation of the plugin package context, which is precisely the cost
+     * this loading state exists to hide. Shapes only, no text.
+     */
+    private fun buildLoadingView(): View {
+        val outer = FrameLayout(activity).apply {
+            setPadding(dp(18), dp(16), dp(18), dp(18))
+            background = CodeAssistTheme.roundedBg(
+                activity, CodeAssistTheme.BG, 15f, CodeAssistTheme.OUTLINE
+            )
+        }
+
+        val content = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        // --- Header skeleton: title bar + subtitle bar + spinner (close slot) ---
+        val header = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titleColumn = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        titleColumn.addView(skeletonBar(dp(140), dp(16), radius = 4f))
+        titleColumn.addView(skeletonBar(dp(200), dp(10), radius = 3f, topMargin = dp(8)))
+        header.addView(titleColumn)
+        header.addView(ProgressBar(activity).apply {
             isIndeterminate = true
             indeterminateTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
+            layoutParams = LinearLayout.LayoutParams(dp(28), dp(28))
+        })
+        content.addView(header)
+
+        // --- Divider ---
+        content.addView(View(activity).apply {
+            setBackgroundColor(CodeAssistTheme.OUTLINE)
             layoutParams = LinearLayout.LayoutParams(
-                CodeAssistTheme.dp(activity, 34), CodeAssistTheme.dp(activity, 34)
-            )
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
+            ).apply {
+                topMargin = dp(13)
+                bottomMargin = dp(3)
+            }
         })
-        addView(activity.textView(
-            activity.pluginString(R.string.preparing_export),
-            12f, CodeAssistTheme.TEXT_SECONDARY
-        ).apply {
-            gravity = Gravity.CENTER
-            setPadding(0, CodeAssistTheme.dp(activity, 12), 0, 0)
-        })
+
+        // --- Two fixed-size section skeletons ---
+        repeat(2) {
+            content.addView(skeletonBar(dp(110), dp(10), radius = 3f, topMargin = dp(18)))
+            val panel = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = CodeAssistTheme.roundedBg(activity, CodeAssistTheme.SURFACE, 10f, null)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(8) }
+            }
+            panel.addView(skeletonBar(ViewGroup.LayoutParams.MATCH_PARENT, dp(14), radius = 4f))
+            panel.addView(skeletonBar(dp(180), dp(14), radius = 4f, topMargin = dp(10)))
+            content.addView(panel)
+        }
+
+        // --- Flex section: fills the remaining vertical space so the skeleton
+        //     reaches the bottom of the dialog instead of leaving a dead gap. ---
+        content.addView(skeletonBar(dp(110), dp(10), radius = 3f, topMargin = dp(18)))
+        val flexPanel = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = CodeAssistTheme.roundedBg(activity, CodeAssistTheme.SURFACE, 10f, null)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+            ).apply { topMargin = dp(8) }
+        }
+        flexPanel.addView(skeletonBar(ViewGroup.LayoutParams.MATCH_PARENT, dp(14), radius = 4f))
+        flexPanel.addView(skeletonBar(dp(180), dp(14), radius = 4f, topMargin = dp(10)))
+        content.addView(flexPanel)
+
+        outer.addView(content)
+        return outer
     }
+
+    /** A single rounded gray bar used by the loading skeleton. */
+    private fun skeletonBar(
+        width: Int,
+        height: Int,
+        radius: Float,
+        topMargin: Int = 0
+    ): View = View(activity).apply {
+        background = CodeAssistTheme.roundedBg(activity, CodeAssistTheme.SURFACE_RAISED, radius)
+        layoutParams = LinearLayout.LayoutParams(width, height).apply {
+            this.topMargin = topMargin
+        }
+    }
+
+    /** Local shorthand for [CodeAssistTheme.dp] so the skeleton reads cleanly. */
+    private fun dp(value: Int): Int = CodeAssistTheme.dp(activity, value)
 
     private fun configureDialogWindow(dialog: Dialog) {
         dialog.window?.apply {
