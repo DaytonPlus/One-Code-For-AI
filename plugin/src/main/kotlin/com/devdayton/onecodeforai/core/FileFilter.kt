@@ -3,6 +3,7 @@ package com.devdayton.onecodeforai.core
 import com.devdayton.onecodeforai.core.FilterConfig
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Single source of truth for deciding which project entries are part of an export.
@@ -13,6 +14,12 @@ import java.nio.file.Files
  * The implementation is deliberately filesystem-based and does not follow
  * symbolic links. This prevents cycles and avoids exporting data outside the
  * selected project root.
+ *
+ * [PERF] The `.gitignore` file is read and parsed at most once per
+ * `(absolutePath, lastModified)` pair, shared through [gitignoreCache].
+ * Before, every `FileFilter` instance re-read and re-parsed the file, and
+ * `ConfigurationDialog` + `ProjectTreeView.scanAsync` both created instances
+ * (and rescanned on every filter change).
  */
 class FileFilter(
     root: File,
@@ -29,7 +36,7 @@ class FileFilter(
     )
 
     private val ignoreRules: List<IgnoreRule> by lazy(LazyThreadSafetyMode.NONE) {
-        if (this.config.respectGitignore) readIgnoreRules() else emptyList()
+        if (this.config.respectGitignore) loadIgnoreRules() else emptyList()
     }
 
     /**
@@ -114,31 +121,19 @@ class FileFilter(
 
         walk(root)
     }
-    
+
     /**
      * Returns the number of files that would be included with the current
      * configuration. Used to drive the determinate progress bar in the
      * generation panel and the notification text.
-     *
-     * The walk is streamed: only one directory's children are held in memory
-     * at a time. The cost is one extra filesystem traversal, which is far
-     * cheaper than the actual export and lets us show accurate progress.
      */
     fun countEligibleFiles(): Int = walkIncludedFiles().count()
 
     /** Root .gitignore rules available for display in the configuration UI. */
-    fun loadGitignoreRules(): List<String> {
-        val gitignore = File(root, ".gitignore")
-        if (!gitignore.isFile) return emptyList()
+    fun loadGitignoreRules(): List<String> =
+        readGitignoreEntry()?.rawRules ?: emptyList()
 
-        return runCatching {
-            gitignore.readLines(Charsets.UTF_8)
-                .map(String::trim)
-                .filter { it.isNotEmpty() && !it.startsWith('#') && !it.startsWith('!') }
-                .map { it.removePrefix("/").removeSuffix("/") }
-                .distinct()
-        }.getOrDefault(emptyList())
-    }
+    // ------------------------------------------------------------------
 
     private fun relativePathOf(file: File): String? = runCatching {
         val canonical = file.canonicalFile
@@ -181,16 +176,36 @@ class FileFilter(
         return ignored
     }
 
-    private fun readIgnoreRules(): List<IgnoreRule> {
-        val gitignore = File(root, ".gitignore")
-        if (!gitignore.isFile) return emptyList()
+    private fun loadIgnoreRules(): List<IgnoreRule> =
+        readGitignoreEntry()?.parsedRules ?: emptyList()
 
-        return runCatching {
-            gitignore.readLines(Charsets.UTF_8)
-                .map(String::trim)
-                .filter { it.isNotEmpty() && !it.startsWith('#') }
-                .mapNotNull(IgnoreRule::parse)
-        }.getOrDefault(emptyList())
+    private fun readGitignoreEntry(): GitignoreCacheEntry? {
+        val gitignore = File(root, ".gitignore")
+        if (!gitignore.isFile) return null
+
+        val mtime = gitignore.lastModified()
+        val key = gitignore.absolutePath
+
+        // Camino rápido: ya cacheado y el fichero no cambió.
+        gitignoreCache[key]?.let { entry ->
+            if (entry.mtime == mtime) return entry
+        }
+
+        // Lectura + parseo de una sola pasada.
+        val lines = runCatching { gitignore.readLines(Charsets.UTF_8) }
+            .getOrDefault(emptyList())
+        val filtered = lines
+            .map(String::trim)
+            .filter { it.isNotEmpty() && !it.startsWith('#') }
+        val parsedRules = filtered.mapNotNull(IgnoreRule::parse)
+        val rawRules = filtered
+            .filter { !it.startsWith('!') }
+            .map { it.removePrefix("/").removeSuffix("/") }
+            .distinct()
+
+        val entry = GitignoreCacheEntry(mtime, rawRules, parsedRules)
+        gitignoreCache[key] = entry
+        return entry
     }
 
     private fun matchesAny(
@@ -257,7 +272,22 @@ class FileFilter(
         }
     }
 
+    /** [PERF] Caché compartida por todas las instancias; invalidada por mtime. */
+    private data class GitignoreCacheEntry(
+        val mtime: Long,
+        val rawRules: List<String>,
+        val parsedRules: List<IgnoreRule>
+    )
+
     companion object {
+        private val gitignoreCache = ConcurrentHashMap<String, GitignoreCacheEntry>()
+
+        /** [PERF] Permite forzar la recarga si el fichero cambió fuera del mtime esperado. */
+        fun invalidateGitignoreCache(root: File) {
+            val gitignore = File(root.canonicalFile, ".gitignore")
+            gitignoreCache.remove(gitignore.absolutePath)
+        }
+
         private val BINARY_EXTENSIONS = setOf(
             "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg", "tiff",
             "mp4", "mkv", "webm", "avi", "mov", "m4v", "mp3", "wav", "ogg", "flac",

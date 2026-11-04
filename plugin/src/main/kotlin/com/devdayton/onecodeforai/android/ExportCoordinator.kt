@@ -38,10 +38,22 @@ enum class ExportAction {
 }
 
 /**
- * Coordinates long-running export operations and Android delivery.
- * All transitions flow through [ExportStateHolder]. Cancellation is
- * cooperative; logging uses bracketed severity tags ([INFO], [OK], [WARN],
- * [ERROR], [CANCEL], [CLEANUP]).
+ * Coordinates long-running export operations and their Android delivery.
+ *
+ * All state transitions flow through [ExportStateHolder]; the UI observes that
+ * singleton and re-renders whatever state currently exists, which is what lets
+ * the dialog be dismissed and reopened mid-export without losing progress.
+ *
+ * Cancellation is cooperative: [cancel] interrupts the worker thread and
+ * [CodeDumpGenerator] checks `Thread.isInterrupted` between files, so large
+ * exports unwind promptly without leaving partial files behind.
+ *
+ * A single process-wide lock ([Companion.globalExportLock]) prevents concurrent
+ * runs regardless of whether the request originates from the dialog, a
+ * notification action, or a future entry point.
+ *
+ * Logging uses bracketed severity tags ([INFO], [OK], [WARN], [ERROR],
+ * [CANCEL], [CLEANUP]) so log lines can be filtered by severity in the IDE.
  */
 class ExportCoordinator(
     private val contextProvider: () -> Context?,
@@ -52,6 +64,15 @@ class ExportCoordinator(
     @Volatile
     private var workerThread: Thread? = null
 
+    /**
+     * Starts an export on a background thread and returns `true` when the
+     * request was accepted. Returns `false` immediately if another export is
+     * already running; callers should surface a toast in that case.
+     *
+     * When [sourceUri] is provided, the operation copies that file into a new
+     * timestamped destination instead of re-scanning the project — used by the
+     * "Save" action after generation completes.
+     */
     fun export(
         root: File, 
         config: FilterConfig, 
@@ -79,6 +100,7 @@ class ExportCoordinator(
         return true
     }
 
+    /** Requests cooperative cancellation of the current export, if any. */
     fun cancel() {
         if (!globalExportLock.get()) return
         isCancelled.set(true)
@@ -86,6 +108,11 @@ class ExportCoordinator(
         logger("[CANCEL] Cancellation requested by user.")
     }
 
+    /**
+     * Body of the worker thread. Every failure path routes through
+     * [ExportStateHolder.fail] and a system notification, so the user always
+     * sees an explanation even if the dialog was dismissed.
+     */
     private fun runExport(
         root: File, 
         config: FilterConfig, 
@@ -114,7 +141,9 @@ class ExportCoordinator(
             val initialMessage = if (sourceUri != null) context.pluginString(R.string.preparing_export) else context.pluginString(R.string.generating_dump)
             runCatching { showProgressNotification(context, initialMessage) }
             
-            // Si estamos generando de cero, limpiamos los archivos base duplicados
+            // When generating from scratch, remove any leftover duplicate share
+            // files before writing so the user only ever sees a single file in
+            // Downloads/OneCodeForAI after a SHARE run.
             if (sourceUri == null) {
                 runCatching { cleanupDuplicateShareFiles(context) }
             }
@@ -132,10 +161,13 @@ class ExportCoordinator(
 
             val outputUri = writeToDownloads(context, fileName) { writer ->
                 if (sourceUri != null) {
-                    // Modo copia: no reescaneamos el proyecto, solo copiamos los datos
+                    // Copy mode: the source file was already produced, so we
+                    // only stream it into the new destination without
+                    // re-scanning the project.
                     copyFromUri(context, sourceUri, writer)
                 } else {
-                    // Modo generación
+                    // Generation mode: walk the working tree (or the selected
+                    // Git snapshot) and write the dump incrementally.
                     generateContent(root, config, writer) { processed, total, _, bytesProcessed, bytesTotal ->
                         if (isCancelled.get()) throw InterruptedException("Export cancelled by user.")
                         finalFiles = processed
@@ -190,6 +222,15 @@ class ExportCoordinator(
         }
     }
 
+    /**
+     * Streams the filtered project into [writer].
+     *
+     * When [FilterConfig.useGit] is enabled, the selected ref is resolved to a
+     * snapshot before generation starts; an invalid or empty ref aborts the
+     * export rather than silently falling back to the working tree, so a
+     * misconfigured profile cannot produce a dump that does not match the
+     * branch the user selected.
+     */
     private fun generateContent(
         root: File,
         config: FilterConfig,
@@ -204,6 +245,7 @@ class ExportCoordinator(
         CodeDumpGenerator(root, filter, selectedRef, onFileProgress).generateTo(writer)
     }
 
+    /** Streams an already-generated file into the destination writer. */
     private fun copyFromUri(context: Context, sourceUri: Uri, writer: Writer) {
         context.contentResolver.openInputStream(sourceUri)?.use { input ->
             input.bufferedReader(Charsets.UTF_8).use { reader ->
@@ -219,9 +261,18 @@ class ExportCoordinator(
     }
 
     // ------------------------------------------------------------------
-    // MediaStore write + cleanup (unchanged semantics)
+    // MediaStore write + cleanup
     // ------------------------------------------------------------------
 
+    /**
+     * Writes [content] to `Downloads/OneCodeForAI/<fileName>` through
+     * MediaStore on API 29+, and through the legacy public-Downloads path on
+     * older devices.
+     *
+     * On API 29+, if a file with the same name already exists it is truncated
+     * in place rather than deleted first, because the delete+insert fallback
+     * can create media entries that are briefly visible to other apps.
+     */
     private fun writeToDownloads(
         context: Context,
         fileName: String,
@@ -306,6 +357,14 @@ class ExportCoordinator(
         }
     }
 
+    /**
+     * Removes any `OneCodeForAI_Share_Latest*.txt` files left behind by previous
+     * SHARE runs so the canonical file is the only one visible.
+     *
+     * Only files matching the base name (optionally suffixed by ` (n)`, which is
+     * how MediaStore de-duplicates names) are removed; timestamped SAVE files
+     * are intentionally preserved.
+     */
     private fun cleanupDuplicateShareFiles(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         val resolver = context.contentResolver
@@ -340,6 +399,13 @@ class ExportCoordinator(
     // Filename + share
     // ------------------------------------------------------------------
 
+    /**
+     * Builds a timestamped, filesystem-safe name for SAVE and SHARE runs.
+     *
+     * The app identifier (package/namespace from the manifest or Gradle
+     * config) is prepended when available, so multiple projects exported to
+     * the same Downloads folder stay distinguishable.
+     */
     private fun generateSmartFileName(folder: File): String {
         val appIdentifier = findAppIdentifier(folder)
         val folderName = sanitizeFileName(folder.name)
@@ -350,6 +416,14 @@ class ExportCoordinator(
         return "${prefix}_$timestamp.txt"
     }
 
+    /**
+     * Looks for a package identifier by walking up to
+     * [MAX_IDENTIFIER_PARENT_LEVELS] parents and checking, in order:
+     * `src/main/AndroidManifest.xml`, `AndroidManifest.xml`, then build files
+     * for a `namespace` declaration.
+     *
+     * Returns `""` when nothing is found; callers fall back to the folder name.
+     */
     private fun findAppIdentifier(folder: File): String {
         var current: File? = folder
         repeat(MAX_IDENTIFIER_PARENT_LEVELS) {
@@ -375,11 +449,13 @@ class ExportCoordinator(
         return ""
     }
 
+    /** Replaces whitespace with dashes and strips characters invalid on FAT/exFAT. */
     private fun sanitizeFileName(value: String): String = value.trim()
         .replace(Regex("\\s+"), "-")
         .replace(Regex("""[\\/:*?"<>|]"""), "")
         .ifBlank { "dump" }
 
+    /** Opens the system share chooser for [uri]. Logs and toasts on failure. */
     private fun shareFile(context: Context, uri: Uri, fileName: String) {
         try {
             val intent = Intent(Intent.ACTION_SEND).apply {
@@ -408,6 +484,7 @@ class ExportCoordinator(
     // Notifications
     // ------------------------------------------------------------------
 
+    /** Creates a notification channel if the platform requires it; no-op below API 26. */
     private fun ensureChannel(context: Context, id: String, nameRes: Int, importance: Int) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
@@ -471,9 +548,16 @@ class ExportCoordinator(
         @Volatile
         private var activeCoordinator: ExportCoordinator? = null
 
+        /** Cancels the export owned by whichever coordinator is currently active. */
         fun cancelCurrent() { activeCoordinator?.cancel() }
+
+        /** Returns `true` while any coordinator is running an export. */
         fun isBusy(): Boolean = globalExportLock.get()
 
+        /**
+         * Static share helper used by callers that already hold a valid
+         * `content://` URI (e.g. the "Share" chip in the result panel).
+         */
         fun shareFile(context: Context, uri: Uri, fileName: String) {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = MIME_TEXT

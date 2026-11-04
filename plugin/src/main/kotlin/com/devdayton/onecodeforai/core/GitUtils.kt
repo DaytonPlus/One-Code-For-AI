@@ -17,11 +17,19 @@ import java.io.File
 import java.io.Writer
 
 /**
- * Encapsulates all JGit access. Every operation opens and closes its repository
- * inside the same call, preventing leaked file handles on Android.
+ * Encapsulates all JGit access for the plugin.
+ *
+ * Every operation opens and closes its repository inside the same call, so no
+ * file handle is leaked to the caller and the plugin never holds a stale
+ * `Repository` across UI events.
+ *
+ * All operations are synchronous and may block on disk I/O. Callers running on
+ * the UI thread must dispatch to a background executor (see
+ * `ExportCoordinator`, `ConfigurationDialog`, and `OneCodeForAIPlugin`).
  */
 object GitUtils {
 
+    /** Opens a repository, runs [block], and always closes the repository. */
     private inline fun <T> withGit(directory: File, block: (Git) -> T): T? {
         val git = openGit(directory) ?: return null
         return try {
@@ -33,15 +41,29 @@ object GitUtils {
         }
     }
 
-    /** Supports normal repositories, nested project folders and .git worktree files. */
+    /**
+     * Resolves a `Git` handle for [directory], walking up until a `.git` entry
+     * is found. Supports:
+     *  - normal repositories (a `.git` directory),
+     *  - worktrees and submodules (a `.git` file pointing at the real dir),
+     *  - project folders nested inside a larger repository.
+     *
+     * Returns `null` when the folder is not part of any repository or the
+     * repository cannot be opened.
+     */
     private fun openGit(directory: File): Git? = runCatching {
         val builder = FileRepositoryBuilder().findGitDir(directory.canonicalFile)
         if (builder.gitDir == null) return null
         Git(builder.build())
     }.getOrNull()
 
+    /** Returns `true` if [dir] is inside a readable Git repository. */
     fun isGitRepo(dir: File): Boolean = withGit(dir) { true } ?: false
 
+    /**
+     * Walks parent directories from [startDir] and returns the closest one that
+     * contains a `.git` marker, or `null` if none exists.
+     */
     fun findGitRoot(startDir: File): File? {
         var current: File? = if (startDir.isFile) startDir.parentFile else startDir
         while (current != null) {
@@ -56,14 +78,21 @@ object GitUtils {
     // Repository metadata and references
     // ---------------------------------------------------------------------
 
+    /** Current branch name without the `refs/heads/` prefix, or `null` in detached HEAD. */
     fun getCurrentBranch(dir: File): String? = withGit(dir) { git ->
         git.repository.fullBranch?.removePrefix(Constants.R_HEADS)
     }
 
+    /** First seven characters of the HEAD commit hash, or `null` for an empty repository. */
     fun getCurrentCommit(dir: File): String? = withGit(dir) { git ->
         git.repository.resolve(Constants.HEAD)?.name?.take(7)
     }
 
+    /**
+     * Lists local and remote branches, sorted case-insensitively by name.
+     * Remote `HEAD` aliases (e.g. `origin/HEAD`) are filtered out because they
+     * are pointers to another branch, not checkable targets.
+     */
     fun getBranches(dir: File): List<BranchInfo> = withGit(dir) { git ->
         val currentBranch = git.repository.fullBranch?.removePrefix(Constants.R_HEADS)
         val local = git.branchList().call().map { ref ->
@@ -78,6 +107,7 @@ object GitUtils {
         (local + remote).distinctBy(BranchInfo::name).sortedBy { it.name.lowercase() }
     } ?: emptyList()
 
+    /** Lists tags with their abbreviated target hash, sorted case-insensitively. */
     fun getTags(dir: File): List<TagInfo> = withGit(dir) { git ->
         git.tagList().call().map { ref ->
             TagInfo(
@@ -87,6 +117,12 @@ object GitUtils {
         }.sortedBy { it.name.lowercase() }
     } ?: emptyList()
 
+    /**
+     * Returns the most recent commits reachable from [ref], newest first.
+     * When [ref] is `null` or blank, walks from HEAD.
+     *
+     * [limit] is clamped to `1..500` to keep the reference picker responsive.
+     */
     fun getRecentCommits(dir: File, ref: String? = null, limit: Int = 60): List<CommitInfo> =
         withGit(dir) { git ->
             val command = git.log().setMaxCount(limit.coerceIn(1, 500))
@@ -106,10 +142,16 @@ object GitUtils {
         message = commit.shortMessage
     )
 
+    /**
+     * Resolves [ref] to its commit and returns the abbreviated hash, or `null`
+     * when the reference does not exist. Peeling with `^{commit}` makes tags
+     * and annotated tags resolve to the commit they point at.
+     */
     fun resolveRefShort(dir: File, ref: String): String? = withGit(dir) { git ->
         git.repository.resolve("${ref.trim()}^{commit}")?.name?.take(7)
     }
 
+    /** Returns `true` if [ref] resolves to a commit in the repository. */
     fun refExists(dir: File, ref: String): Boolean = resolveRefShort(dir, ref) != null
 
     data class RepoInfo(
@@ -120,6 +162,14 @@ object GitUtils {
         val hasUncommittedChanges: Boolean
     )
 
+    /**
+     * Snapshot of the repository state used to render the Git section in the
+     * configuration dialog.
+     *
+     * `hasUncommittedChanges` reflects both tracked modifications and untracked
+     * files; the caller may want to show a warning before exporting a snapshot
+     * that differs from the working tree.
+     */
     fun getRepoInfo(dir: File): RepoInfo? = withGit(dir) { git ->
         val repository = git.repository
         val fullBranch = repository.fullBranch
@@ -140,6 +190,7 @@ object GitUtils {
         )
     }
 
+    /** Number of tracked modifications plus untracked files, for the warning badge. */
     fun countUncommittedChanges(dir: File): Int = withGit(dir) { git ->
         val status = git.status().call()
         status.uncommittedChanges.size + status.untracked.size
@@ -152,12 +203,12 @@ object GitUtils {
     data class GitSnapshotFile(val path: String, val size: Long)
 
     /**
-     * Opens one repository session for a complete Git export. Keeping the
-     * repository open across tree enumeration and blob streaming avoids
-     * reopening JGit once per file in large projects.
+     * Opens a single repository session for a complete Git export.
      *
-     * Exceptions from [operation] are propagated so an export can report the
-     * actual I/O failure instead of silently emitting a partial snapshot.
+     * Keeping the repository open across tree enumeration and blob streaming
+     * avoids reopening JGit once per file in large projects. Exceptions raised
+     * by [operation] propagate so the export can report the actual I/O failure
+     * rather than silently emitting a partial snapshot.
      */
     @Throws(java.io.IOException::class)
     fun <T> withSnapshot(
@@ -177,18 +228,18 @@ object GitUtils {
         }
     }
 
-    /** Lists regular blobs from the selected ref, not from the working tree. */
+    /** Lists the regular blobs of [ref], or `null` when the repository or ref cannot be opened. */
     fun listFilesAtRef(dir: File, ref: String): List<GitSnapshotFile>? = runCatching {
         withSnapshot(dir, ref) { snapshot -> snapshot.listFiles() }
     }.getOrNull()
 
-    /** Streams a file from a Git object into the caller-owned writer. */
+    /** Streams a single file from [ref] into [writer]. Returns `false` on any failure. */
     fun writeFileContent(dir: File, ref: String, path: String, writer: Writer): Boolean =
         runCatching {
             withSnapshot(dir, ref) { snapshot -> snapshot.writeFileContent(path, writer) }
         }.getOrDefault(false)
 
-    /** Compatibility helper retained for callers that require a String. */
+    /** Convenience wrapper returning the blob as a String; retained for callers that need it. */
     fun getFileContent(dir: File, ref: String, path: String): String? {
         val output = StringBuilder()
         val writer = object : Writer() {
@@ -201,12 +252,23 @@ object GitUtils {
         return if (writeFileContent(dir, ref, path, writer)) output.toString() else null
     }
 
-    /** A read-only view over one resolved Git tree; valid only inside withSnapshot. */
+    /**
+     * Read-only view over one resolved Git tree.
+     *
+     * Instances are only valid inside [withSnapshot]: the underlying repository
+     * is closed when the callback returns, so any reference retained by the
+     * caller will fail on subsequent use.
+     */
     class GitSnapshot internal constructor(
         private val repository: org.eclipse.jgit.lib.Repository,
         private val ref: String,
         private val treeId: org.eclipse.jgit.lib.ObjectId
     ) {
+        /**
+         * Walks the tree recursively and returns every regular blob. Submodules
+         * (gitlinks) and symlinks are skipped: neither is safe to include in a
+         * dump, and both would break the caller's path-to-content assumptions.
+         */
         fun listFiles(): List<GitSnapshotFile> {
             val files = mutableListOf<GitSnapshotFile>()
             TreeWalk(repository).use { walk ->
@@ -222,7 +284,12 @@ object GitUtils {
             return files.sortedBy { it.path.lowercase() }
         }
 
-        /** Returns false when a path is absent or does not resolve to a blob. */
+        /**
+         * Writes the content of [path] from this snapshot into [writer],
+         * normalizing CRLF to LF so the dump is consistent across platforms.
+         *
+         * Returns `false` when the path is absent or does not resolve to a blob.
+         */
         fun writeFileContent(path: String, writer: Writer): Boolean {
             val objectId = repository.resolve("$ref:$path") ?: return false
             val loader = runCatching { repository.open(objectId, Constants.OBJ_BLOB) }.getOrNull()
@@ -252,6 +319,13 @@ object GitUtils {
         val deletions: Int
     )
 
+    /**
+     * Per-file diff statistics between [ref] and the working tree.
+     *
+     * The diff is computed with rename detection enabled so a moved file is
+     * reported once as a rename instead of an add + delete pair. Returns `null`
+     * when the repository or ref cannot be read.
+     */
     fun getDiffStats(dir: File, ref: String): DiffStats? = withGit(dir) { git ->
         val entries = scanDiff(git, ref) ?: return@withGit null
         val changes = DiffFormatter(DisabledOutputStream.INSTANCE).use { formatter ->
@@ -277,6 +351,13 @@ object GitUtils {
         )
     }
 
+    /**
+     * Unified diff text between [ref] and the working tree, truncated to
+     * [maxLines] to keep the preview dialog responsive on large changes.
+     *
+     * The truncation notice is appended in English so it reads consistently
+     * regardless of the IDE locale.
+     */
     fun getDiff(dir: File, ref: String, maxLines: Int = 800): String? = withGit(dir) { git ->
         val entries = scanDiff(git, ref) ?: return@withGit null
         val output = ByteArrayOutputStream()
@@ -288,7 +369,7 @@ object GitUtils {
         val lines = output.toString(Charsets.UTF_8.name()).lineSequence().toList()
         val limit = maxLines.coerceAtLeast(1)
         if (lines.size > limit) {
-            lines.take(limit).joinToString("\n") + "\n\n... (${lines.size - limit} líneas omitidas)"
+            lines.take(limit).joinToString("\n") + "\n\n... (${lines.size - limit} lines truncated)"
         } else {
             lines.joinToString("\n")
         }
@@ -315,6 +396,14 @@ object GitUtils {
         DiffEntry.ChangeType.MODIFY -> 'M'
     }
 
+    /**
+     * Copies [reader] to [writer] normalizing every line ending to `\n` and
+     * guaranteeing the output ends with exactly one newline.
+     *
+     * Git blobs are stored with LF, but the working tree may contain CRLF on
+     * Windows or with `core.autocrlf`; normalizing here keeps the dump uniform
+     * regardless of the source.
+     */
     private fun copyNormalizedText(reader: java.io.Reader, writer: Writer) {
         val buffer = CharArray(DEFAULT_BUFFER_SIZE)
         var previousWasCarriageReturn = false

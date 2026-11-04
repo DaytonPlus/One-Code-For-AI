@@ -21,13 +21,37 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import java.util.Locale
 
 object UiFactory {
 
     // Paquete del plugin. Coincide con module.toml -> [android].namespace
     private const val PLUGIN_PACKAGE = "com.devdayton.onecodeforai"
 
+    // [PERF] Resources del APK del plugin. Se resuelve una sola vez por proceso.
+    @Volatile
     private var pluginResourcesCache: Resources? = null
+
+    // [PERF] Context del plugin ya envuelto con el locale del IDE.
+    // Antes se llamaba `createPackageContext` + `createConfigurationContext`
+    // por cada string, lo que sumaba cientos de ms al abrir el diálogo.
+    @Volatile
+    private var cachedLocalizedPluginCtx: Context? = null
+    @Volatile
+    private var cachedLocalizedLocale: Locale? = null
+    private val pluginCtxLock = Any()
+
+    // [PERF] Cache de ConstantState por resId. Mantiene una sola instancia de
+    // estado (compartida, segura) y devuelve un `Drawable` nuevo por llamada
+    // mediante `newDrawable()`. Esto hace que `setColorFilter` sobre el
+    // ImageView (que muta el Drawable, no el ConstantState) sea seguro aunque
+    // varios ImageView usen el mismo icono con tints distintos.
+    private val drawableStateCache = HashMap<Int, Drawable.ConstantState?>()
+    private val drawableCacheLock = Any()
+
+    // ------------------------------------------------------------------
+    // Resources del plugin
+    // ------------------------------------------------------------------
 
     /**
      * Devuelve el Resources del APK del plugin. Necesario porque las vistas se crean
@@ -40,17 +64,43 @@ object UiFactory {
             val res = packageManager.getResourcesForApplication(PLUGIN_PACKAGE)
             pluginResourcesCache = res
             res
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
+
+    // ------------------------------------------------------------------
+    // Drawables del plugin
+    // ------------------------------------------------------------------
 
     /**
      * Carga un drawable del plugin sin importar con qué Context se construyó la vista.
      * Si el ID es del framework (p. ej. android.R.drawable.*), hace fallback al
      * Resources del propio contexto.
+     *
+     * [PERF] Cachea el `ConstantState` y devuelve un `Drawable` nuevo por llamada
+     * (vía `newDrawable`). Evita re-inflar el XML vectorial en cada `ImageView`
+     * y mantiene el instanciado fresco para no romper `setColorFilter`.
      */
     fun Context.loadPluginDrawable(resId: Int): Drawable? {
+        // Camino rápido: ya tenemos el ConstantState cacheado.
+        synchronized(drawableCacheLock) {
+            if (drawableStateCache.containsKey(resId)) {
+                val state = drawableStateCache[resId] ?: return null
+                val res = pluginResources() ?: return null
+                return try { state.newDrawable(res) } catch (_: Exception) { null }
+            }
+        }
+
+        // Camino lento (solo la primera vez por resId).
+        val drawable = loadDrawableUncached(resId)
+        synchronized(drawableCacheLock) {
+            drawableStateCache[resId] = drawable?.constantState
+        }
+        return drawable
+    }
+
+    private fun Context.loadDrawableUncached(resId: Int): Drawable? {
         pluginResources()?.let { res ->
             try {
                 return res.getDrawable(resId, null)
@@ -58,29 +108,36 @@ object UiFactory {
                 // cae al fallback
             }
         }
-        return try { getDrawable(resId) } catch (_: Exception) { null }
+        return runCatching { getDrawable(resId) }.getOrNull()
     }
+
+    // ------------------------------------------------------------------
+    // Strings del plugin (con locale del IDE)
+    // ------------------------------------------------------------------
 
     /**
      * Resuelve un string del APK del plugin aplicando el locale del IDE host.
      *
      * Necesario porque las vistas del ConfigurationDialog se construyen con el
      * Context de CodeAssist (contexto anfitrión), cuyos Resources no conocen
-     * los IDs del plugin. Además aplica el locale que tenga configurado el IDE,
-     * para que si el usuario cambia el idioma de CodeAssist el plugin lo siga.
+     * los IDs del plugin.
+     *
+     * [PERF] El Context del plugin con el locale correcto se cachea en
+     * [getOrCreateLocalizedPluginCtx]. Antes se creaba uno nuevo por string,
+     * lo que dominaba el coste de `ConfigurationDialog.show()`.
      */
     fun Context.pluginString(resId: Int): String {
-        return try {
-            val pluginCtx = createPackageContext(PLUGIN_PACKAGE, 0)
-            val locale = LanguageHelper.detectIdeLocale(this)
-            val config = Configuration(pluginCtx.resources.configuration)
-            config.setLocale(locale)
-            pluginCtx.createConfigurationContext(config).getString(resId)
-        } catch (_: Exception) {
-            // Último recurso: intentar con el contexto actual.
-            // Funciona si el Context ya pertenece al plugin (p. ej. PluginInfoActivity).
-            runCatching { getString(resId) }.getOrDefault("")
+        val localizedCtx = getOrCreateLocalizedPluginCtx(this)
+        if (localizedCtx != null) {
+            try {
+                return localizedCtx.getString(resId)
+            } catch (_: Exception) {
+                // cae al fallback
+            }
         }
+        // Último recurso: intentar con el contexto actual. Funciona si el
+        // Context ya pertenece al plugin (p.ej. PluginInfoActivity).
+        return runCatching { getString(resId) }.getOrDefault("")
     }
 
     /**
@@ -88,6 +145,41 @@ object UiFactory {
      */
     fun Context.pluginString(resId: Int, vararg args: Any): String =
         String.format(pluginString(resId), *args)
+
+    /**
+     * [PERF] Devuelve el Context del plugin ya configurado con el locale del IDE.
+     * Se reconstruye únicamente si el locale detectado cambió (raro en la práctica).
+     */
+    private fun getOrCreateLocalizedPluginCtx(callerCtx: Context): Context? {
+        val currentLocale = LanguageHelper.detectIdeLocale(callerCtx)
+
+        // Camino rápido sin lock.
+        cachedLocalizedPluginCtx?.let { cached ->
+            if (cachedLocalizedLocale == currentLocale) return cached
+        }
+
+        // Creación con double-check.
+        synchronized(pluginCtxLock) {
+            cachedLocalizedPluginCtx?.let { cached ->
+                if (cachedLocalizedLocale == currentLocale) return cached
+            }
+            return try {
+                val base = callerCtx.createPackageContext(PLUGIN_PACKAGE, 0)
+                val config = Configuration(base.resources.configuration)
+                config.setLocale(currentLocale)
+                val localized = base.createConfigurationContext(config)
+                cachedLocalizedPluginCtx = localized
+                cachedLocalizedLocale = currentLocale
+                localized
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Fábricas de widgets (sin cambios funcionales)
+    // ------------------------------------------------------------------
 
     fun Context.textView(
         text: String,

@@ -23,18 +23,23 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * CodeAssist entry point.
  *
- * This class is deliberately limited to host integration and orchestration. File traversal,
- * Git operations, export and Android delivery live in independent components.
+ * [PERF] `startConfigurationFlow` now resolves the Git root on a background
+ * thread. Previously it called `GitUtils.findGitRoot(selected)` on the UI
+ * thread, which could block for hundreds of milliseconds on slow storage or
+ * when the selected folder sits deep inside a large repository.
  *
- * Export orchestration is *not* done here: [ConfigurationDialog] owns its own
- * [com.devdayton.onecodeforai.android.ExportCoordinator] and publishes progress
- * through [com.devdayton.onecodeforai.android.ExportStateHolder]. This entry
- * point just resolves the target folder and opens the configuration screen.
+ * The dialog is only opened on the main thread after the root is resolved,
+ * and `dialogVisible` is always released if the background work fails.
  */
 class OneCodeForAIPlugin : Plugin {
 
     private val dialogVisible = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    // [PERF] Optional cache of the resolved project root, keyed by the selected
+    // path. Avoids repeating `findGitRoot` when the user opens the dialog
+    // repeatedly on the same project.
+    private val rootCache = mutableMapOf<String, File>()
 
     override fun register(reg: PluginRegistration) {
         val logger = reg.logger(TAG)
@@ -59,7 +64,13 @@ class OneCodeForAIPlugin : Plugin {
         reg.register(SETTINGS_PAGE_EP, OneCodeForAISettingsPage())
     }
 
-    /** Resolves the selected file/folder and opens the configuration flow. */
+    /**
+     * Resolves the selected file/folder and opens the configuration flow.
+     *
+     * [PERF] The potentially expensive `GitUtils.findGitRoot` call runs on a
+     * background thread. The dialog is built on the main thread only after the
+     * root is known.
+     */
     private fun startConfigurationFlow(
         actionContext: ActionContext,
         logInfo: (String) -> Unit
@@ -71,6 +82,8 @@ class OneCodeForAIPlugin : Plugin {
             return ActionResult.message(message(R.string.dialog_already_open))
         }
 
+        // [PERF] `contextPath` is the canonical field in the plugin API.
+        // If it is null, fail early without touching the disk.
         val selectedPath = actionContext.contextPath
             ?: return ActionResult.message(message(R.string.no_folder_selected))
 
@@ -80,33 +93,82 @@ class OneCodeForAIPlugin : Plugin {
             return ActionResult.message(message(R.string.select_valid_folder))
         }
 
-        // Prefer the repository root so Git history and ignore rules cover the whole project.
-        val projectRoot = GitUtils.findGitRoot(selected) ?: selected
-        if (projectRoot.canonicalFile != selected.canonicalFile) {
-            logInfo("📍 Raíz del proyecto detectada automáticamente: ${projectRoot.name}")
+        // [PERF] Resolve the Git root off the UI thread.
+        // `findGitRoot` walks parent directories and touches the filesystem,
+        // which is fast on local storage but can block on network-backed
+        // directories or very deep trees.
+        val selectedCanonical = runCatching { selected.canonicalFile }.getOrDefault(selected)
+        rootCache[selectedCanonical.absolutePath]?.let { cached ->
+            logInfo("📍 Raíz del proyecto (cacheada): ${cached.name}")
+            return showConfigurationDialog(cached, logInfo)
         }
 
-        return showConfigurationDialog(projectRoot, logInfo)
+        // Reserve the dialog slot now to prevent concurrent taps while the
+        // background root resolution is running.
+        if (!dialogVisible.compareAndSet(false, true)) {
+            return ActionResult.message(message(R.string.dialog_already_open))
+        }
+
+        val activity = HostEnvironment.currentActivity()
+        if (activity == null) {
+            dialogVisible.set(false)
+            return ActionResult.message(message(R.string.error_opening_dialog))
+        }
+
+        Thread({
+            // `findGitRoot` returns null when no repository is found, so fall back
+            // to the user-selected folder. `getOrNull() ?: selected` keeps the
+            // type non-null through the whole chain.
+            val projectRoot: File = runCatching { GitUtils.findGitRoot(selected) }
+                .getOrNull()
+                ?: selected
+            rootCache[selectedCanonical.absolutePath] = projectRoot
+            activity.runOnUiThread {
+                if (activity.isFinishing || activity.isDestroyed) {
+                    dialogVisible.set(false)
+                    return@runOnUiThread
+                }
+                if (projectRoot.canonicalFile != selectedCanonical) {
+                    logInfo("📍 Project root auto-detected: ${projectRoot.name}")
+                }
+                try {
+                    showConfigurationDialog(projectRoot, logInfo, alreadyReserved = true)
+                } catch (error: Exception) {
+                    dialogVisible.set(false)
+                    logInfo(
+                        "Unable to open configuration dialog: " +
+                            (error.message ?: error.javaClass.simpleName)
+                    )
+                }
+            }
+        }, "OneCode-root-resolve").apply { isDaemon = true; start() }
+
+
+        return ActionResult.message(message(R.string.opening_config))
     }
 
     /**
-     * Creates the configuration screen on the main thread and prevents duplicate
-     * dialog instances. Export is driven entirely by the dialog itself, so this
-     * method no longer wires an [com.devdayton.onecodeforai.android.ExportCoordinator]
-     * callback — it only forwards [logInfo] so the dialog can log through the
-     * plugin's logger.
+     * Creates the configuration screen on the main thread.
+     *
+     * [PERF] `alreadyReserved` lets the caller keep the `dialogVisible` slot
+     * across the background root resolution. The flag is cleared by
+     * `onDismiss` when the dialog closes.
      */
     private fun showConfigurationDialog(
         projectRoot: File,
-        logInfo: (String) -> Unit
+        logInfo: (String) -> Unit,
+        alreadyReserved: Boolean = false
     ): ActionResult {
         val context = HostEnvironment.applicationContext()
         fun message(resourceId: Int): String = context?.pluginString(resourceId).orEmpty()
 
         val activity = HostEnvironment.currentActivity()
-            ?: return ActionResult.message(message(R.string.error_opening_dialog))
+            ?: run {
+                dialogVisible.set(false)
+                return ActionResult.message(message(R.string.error_opening_dialog))
+            }
 
-        if (!dialogVisible.compareAndSet(false, true)) {
+        if (!alreadyReserved && !dialogVisible.compareAndSet(false, true)) {
             return ActionResult.message(message(R.string.dialog_already_open))
         }
 
@@ -143,7 +205,10 @@ class OneCodeForAIPlugin : Plugin {
                 ).show()
             } catch (error: Exception) {
                 dialogVisible.set(false)
-                logInfo("Unable to open configuration dialog: ${error.message ?: error.javaClass.simpleName}")
+                logInfo(
+                    "Unable to open configuration dialog: " +
+                        (error.message ?: error.javaClass.simpleName)
+                )
             }
         }
 

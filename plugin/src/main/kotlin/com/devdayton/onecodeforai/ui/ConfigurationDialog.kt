@@ -60,14 +60,12 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
 /**
  * Configuration screen for the dump generator.
  *
- * Layout:
- *  - Header with close (X) — always visible.
- *  - [configContainer] — form, visible when state is IDLE.
- *  - [progressContainer] — generation progress / result / error, visible otherwise.
- *
- * A single "Generate" button replaces the old Export/Share pair; the share
- * and save actions are exposed only after generation completes, both inline
- * and via the persistent completion notification.
+ * [PERF] Opening flow:
+ *  1. `show()` displays an immediate loading spinner so the dialog appears instantly.
+ *  2. `.gitignore` rules + last saved state are read on a background thread.
+ *  3. The real UI (`buildFullUI`) is constructed on the main thread only once data is ready.
+ *  4. The Git section (JGit access) is rendered with its own loading placeholder and
+ *     resolved asynchronously — the dialog is never blocked by JGit class loading.
  */
 class ConfigurationDialog(
     private val activity: Activity,
@@ -85,6 +83,11 @@ class ConfigurationDialog(
     private var isCustomMode = false
     private var isUpdatingUI = false
     private var gitignoreTags: List<String> = emptyList()
+
+    // [PERF] Distinguishes "UI built" from "still loading", so the dismiss handler
+    // can safely skip readUIValues()/saveLastState() when the user closes the
+    // dialog while the initial data is still being loaded.
+    private var uiBuilt = false
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var rescanScheduled = false
@@ -137,10 +140,13 @@ class ConfigurationDialog(
     private lateinit var progressBackLink: TextView
     private var stateUnsubscribe: (() -> Unit)? = null
 
-    private val exportCoordinator = ExportCoordinator(
-        contextProvider = com.devdayton.onecodeforai.android.HostEnvironment::applicationContext,
-        logger = { message -> logInfo(message) }
-    )
+    // [PERF] Lazy: avoids loading JGit/MediaStore-related classes at dialog-open time.
+    private val exportCoordinator: ExportCoordinator by lazy {
+        ExportCoordinator(
+            contextProvider = com.devdayton.onecodeforai.android.HostEnvironment::applicationContext,
+            logger = { message -> logInfo(message) }
+        )
+    }
 
     private val tagViews = mutableMapOf<String, TextView>()
 
@@ -159,22 +165,113 @@ class ConfigurationDialog(
         }
     }
 
-    // ------------------------------------------------------------------
+    // ==================================================================
+    // [PERF] Public entry — shows loading immediately, then builds the UI.
+    // ==================================================================
 
     fun show() {
-        gitignoreTags = FileFilter(projectRoot).loadGitignoreRules()
-        val lastState = presetManager.loadLastState()
-        currentConfig = lastState?.first ?: initialConfig.normalized()
-        val lastPresetName = lastState?.second
-        isCustomMode = lastPresetName.isNullOrBlank() ||
-            lastPresetName == customPresetLabel() ||
-            presetManager.loadPreset(lastPresetName) == null
-
         val dialog = Dialog(activity).apply {
             requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
             setCancelable(true)
         }
         activeDialog = dialog
+
+        // Always attach the dismiss handler before we show anything, so a user
+        // dismissing the loading state still runs cleanup.
+        dialog.setOnDismissListener { handleDismiss(dialog) }
+        dialog.setOnShowListener { configureDialogWindow(dialog) }
+
+        // 1) Immediate loading view so the dialog appears at once.
+        dialog.setContentView(buildLoadingView())
+        dialog.show()
+
+        // 2) Load heavy data in background, then build the real UI on Main.
+        Thread({
+            val gitignore = runCatching { FileFilter(projectRoot).loadGitignoreRules() }
+                .getOrDefault(emptyList())
+            val lastState = runCatching { presetManager.loadLastState() }.getOrNull()
+            activity.runOnUiThread {
+                if (!dialog.isShowing || activity.isFinishing || activity.isDestroyed) return@runOnUiThread
+                gitignoreTags = gitignore
+                buildFullUI(dialog, lastState)
+            }
+        }, "OneCode-dialog-init").apply { isDaemon = true; start() }
+    }
+
+    private fun buildLoadingView(): View = LinearLayout(activity).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        setPadding(
+            CodeAssistTheme.dp(activity, 32),
+            CodeAssistTheme.dp(activity, 64),
+            CodeAssistTheme.dp(activity, 32),
+            CodeAssistTheme.dp(activity, 64)
+        )
+        background = CodeAssistTheme.roundedBg(
+            activity, CodeAssistTheme.BG, 15f, CodeAssistTheme.OUTLINE
+        )
+        addView(ProgressBar(activity).apply {
+            isIndeterminate = true
+            indeterminateTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
+            layoutParams = LinearLayout.LayoutParams(
+                CodeAssistTheme.dp(activity, 34), CodeAssistTheme.dp(activity, 34)
+            )
+        })
+        addView(activity.textView(
+            activity.pluginString(R.string.preparing_export),
+            12f, CodeAssistTheme.TEXT_SECONDARY
+        ).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, CodeAssistTheme.dp(activity, 12), 0, 0)
+        })
+    }
+
+    private fun configureDialogWindow(dialog: Dialog) {
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setLayout(
+                (activity.resources.displayMetrics.widthPixels * 0.94f).toInt(),
+                (activity.resources.displayMetrics.heightPixels * 0.88f).toInt()
+            )
+            @Suppress("DEPRECATION")
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        }
+    }
+
+    private fun handleDismiss(dialog: Dialog) {
+        if (activeDialog === dialog) activeDialog = null
+        stateUnsubscribe?.invoke()
+        stateUnsubscribe = null
+        try {
+            pendingResolve?.let { resolveHandler.removeCallbacks(it) }
+            resolveHandler.removeCallbacksAndMessages(null)
+            if (::treeView.isInitialized) treeView.cancelScan()
+            // [PERF] Only persist if the real UI was actually built.
+            if (uiBuilt && ::spinnerPresets.isInitialized) {
+                readUIValues()
+                presetManager.saveLastState(
+                    currentConfig,
+                    spinnerPresets.selectedItem?.toString() ?: customPresetLabel()
+                )
+            }
+        } finally {
+            onDismiss()
+        }
+    }
+
+    // ==================================================================
+    // [PERF] Full UI construction — was `show()` body in the original file.
+    // ==================================================================
+
+    private fun buildFullUI(
+        dialog: Dialog,
+        lastState: Pair<FilterConfig, String>?
+    ) {
+        currentConfig = lastState?.first ?: initialConfig.normalized()
+        val lastPresetName = lastState?.second
+        isCustomMode = lastPresetName.isNullOrBlank() ||
+            lastPresetName == customPresetLabel() ||
+            presetManager.loadPreset(lastPresetName) == null
 
         val scroll = ScrollView(activity).apply {
             isFillViewport = true
@@ -343,7 +440,7 @@ class ConfigurationDialog(
             configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_version_control)))
             layoutGitBox = panel()
             configContainer.addView(layoutGitBox)
-            setupGitUI()
+            setupGitUIAsync()
         }
 
         // Tree
@@ -455,24 +552,7 @@ class ConfigurationDialog(
             applyState(snapshot)
         }
 
-        dialog.setOnDismissListener {
-            if (activeDialog === dialog) activeDialog = null
-            stateUnsubscribe?.invoke()
-            stateUnsubscribe = null
-            try {
-                pendingResolve?.let { resolveHandler.removeCallbacks(it) }
-                resolveHandler.removeCallbacksAndMessages(null)
-                if (::treeView.isInitialized) treeView.cancelScan()
-                // NOTE: an in-flight export is intentionally NOT cancelled here.
-                readUIValues()
-                presetManager.saveLastState(
-                    currentConfig,
-                    spinnerPresets.selectedItem?.toString() ?: customPresetLabel()
-                )
-            } finally { onDismiss() }
-        }
-
-        val initialIndex = resolveInitialPresetIndex(lastState?.second)
+        val initialIndex = resolveInitialPresetIndex(lastPresetName)
         spinnerPresets.setSelection(initialIndex, false)
         updateTagsUI(animate = false)
 
@@ -488,16 +568,9 @@ class ConfigurationDialog(
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
 
-        dialog.show()
-        dialog.window?.apply {
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            setLayout(
-                (activity.resources.displayMetrics.widthPixels * 0.94f).toInt(),
-                (activity.resources.displayMetrics.heightPixels * 0.88f).toInt()
-            )
-            @Suppress("DEPRECATION")
-            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        }
+        uiBuilt = true
+
+        // Trigger entrance animation once the real content is laid out.
         scroll.post { playEntrance(configContainer) }
     }
 
@@ -779,7 +852,7 @@ class ConfigurationDialog(
     }
 
     // -------- Action chip handlers ---------
-    
+
     private fun onShareResultClicked() {
         val snap = ExportStateHolder.snapshot
         val uri = snap.uri ?: return
@@ -918,26 +991,64 @@ class ConfigurationDialog(
     }
 
     // ==================================================================
-    // Git
+    // [PERF] Git — async first load + async refresh
     // ==================================================================
 
-    private fun setupGitUI() {
-        val repoInfo = GitUtils.getRepoInfo(projectRoot)
-        if (repoInfo == null) {
-            layoutGitBox.addView(activity.textView(
-                activity.pluginString(R.string.git_not_repo), 11f, CodeAssistTheme.TEXT_MUTED
-            ).apply { setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4)) })
-            val parentRoot = GitUtils.findGitRoot(projectRoot.parentFile ?: projectRoot)
-            if (parentRoot != null && parentRoot.absolutePath != projectRoot.absolutePath) {
-                layoutGitBox.addView(activity.actionText(
-                    activity.pluginString(R.string.git_open_parent_root, parentRoot.name)
-                ) { activeDialog?.dismiss(); onChangeRoot(parentRoot) }.apply {
-                    setPadding(0, CodeAssistTheme.dp(activity, 6), 0, CodeAssistTheme.dp(activity, 6))
-                })
-            }
-            return
+    /**
+     * Shows a small loading row in `layoutGitBox` while JGit resolves the
+     * repository info + status in a background thread. This avoids blocking
+     * the first open of the dialog with JGit class loading / disk I/O.
+     */
+    private fun setupGitUIAsync() {
+        val loading = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, CodeAssistTheme.dp(activity, 8), 0, CodeAssistTheme.dp(activity, 8))
         }
+        loading.addView(ProgressBar(activity).apply {
+            isIndeterminate = true
+            indeterminateTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
+            layoutParams = LinearLayout.LayoutParams(
+                CodeAssistTheme.dp(activity, 18), CodeAssistTheme.dp(activity, 18)
+            )
+        })
+        loading.addView(activity.textView(
+            activity.pluginString(R.string.git_resolving), 11f, CodeAssistTheme.TEXT_MUTED
+        ).apply { setPadding(CodeAssistTheme.dp(activity, 8), 0, 0, 0) })
+        layoutGitBox.addView(loading)
 
+        Thread({
+            val repoInfo = runCatching { GitUtils.getRepoInfo(projectRoot) }.getOrNull()
+            val uncommitted = if (repoInfo?.hasUncommittedChanges == true) {
+                runCatching { GitUtils.countUncommittedChanges(projectRoot) }.getOrDefault(0)
+            } else 0
+            activity.runOnUiThread {
+                if (!::layoutGitBox.isInitialized || !uiBuilt) return@runOnUiThread
+                layoutGitBox.removeAllViews()
+                if (repoInfo == null) {
+                    renderNoRepoState()
+                } else {
+                    renderGitInfoState(repoInfo, uncommitted)
+                }
+            }
+        }, "OneCode-git-info").apply { isDaemon = true; start() }
+    }
+
+    private fun renderNoRepoState() {
+        layoutGitBox.addView(activity.textView(
+            activity.pluginString(R.string.git_not_repo), 11f, CodeAssistTheme.TEXT_MUTED
+        ).apply { setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4)) })
+        val parentRoot = GitUtils.findGitRoot(projectRoot.parentFile ?: projectRoot)
+        if (parentRoot != null && parentRoot.absolutePath != projectRoot.absolutePath) {
+            layoutGitBox.addView(activity.actionText(
+                activity.pluginString(R.string.git_open_parent_root, parentRoot.name)
+            ) { activeDialog?.dismiss(); onChangeRoot(parentRoot) }.apply {
+                setPadding(0, CodeAssistTheme.dp(activity, 6), 0, CodeAssistTheme.dp(activity, 6))
+            })
+        }
+    }
+
+    private fun renderGitInfoState(repoInfo: GitUtils.RepoInfo, uncommitted: Int) {
         val headerRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
         }
@@ -955,7 +1066,7 @@ class ConfigurationDialog(
         layoutGitBox.addView(headerRow)
 
         tvGitWarning = activity.textView(
-            activity.pluginString(R.string.git_uncommitted_changes, GitUtils.countUncommittedChanges(projectRoot)),
+            activity.pluginString(R.string.git_uncommitted_changes, uncommitted),
             10f, CodeAssistTheme.TAG_CONFLICT_TEXT
         ).apply {
             setPadding(0, CodeAssistTheme.dp(activity, 2), 0, CodeAssistTheme.dp(activity, 2))
@@ -1025,20 +1136,29 @@ class ConfigurationDialog(
         updateResolvedRef()
     }
 
+    /**
+     * [PERF] Was previously doing two JGit calls on the UI thread when the
+     * user tapped the refresh icon. Now runs entirely in the background.
+     */
     private fun refreshGitInfo() {
-        val info = GitUtils.getRepoInfo(projectRoot) ?: return
-        if (::tvGitInfo.isInitialized) tvGitInfo.text = activity.pluginString(
-            R.string.git_info,
-            info.currentBranch ?: activity.pluginString(R.string.no_branch),
-            info.currentCommit ?: activity.pluginString(R.string.no_commit)
-        )
-        if (::tvGitWarning.isInitialized) {
-            val count = GitUtils.countUncommittedChanges(projectRoot)
-            if (count > 0) {
-                tvGitWarning.text = activity.pluginString(R.string.git_uncommitted_changes, count)
-                tvGitWarning.visibility = View.VISIBLE
-            } else tvGitWarning.visibility = View.GONE
-        }
+        Thread({
+            val info = runCatching { GitUtils.getRepoInfo(projectRoot) }.getOrNull() ?: return@Thread
+            val count = runCatching { GitUtils.countUncommittedChanges(projectRoot) }.getOrDefault(0)
+            activity.runOnUiThread {
+                if (!::tvGitInfo.isInitialized) return@runOnUiThread
+                tvGitInfo.text = activity.pluginString(
+                    R.string.git_info,
+                    info.currentBranch ?: activity.pluginString(R.string.no_branch),
+                    info.currentCommit ?: activity.pluginString(R.string.no_commit)
+                )
+                if (::tvGitWarning.isInitialized) {
+                    if (count > 0) {
+                        tvGitWarning.text = activity.pluginString(R.string.git_uncommitted_changes, count)
+                        tvGitWarning.visibility = View.VISIBLE
+                    } else tvGitWarning.visibility = View.GONE
+                }
+            }
+        }, "OneCode-git-refresh").apply { isDaemon = true; start() }
     }
 
     private fun scheduleResolve() {
@@ -1234,6 +1354,8 @@ class ConfigurationDialog(
     }
 
     private fun readUIValues() {
+        if (!::etMaxSize.isInitialized || !::cbBinaries.isInitialized ||
+            !::cbGitignore.isInitialized || !::cbMaxSize.isInitialized) return
         val size = etMaxSize.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 512
         var useGit = false
         var gitRef: String? = null

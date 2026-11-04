@@ -24,6 +24,7 @@ import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
 import java.io.File
 import java.util.ArrayDeque
@@ -45,6 +46,13 @@ class ProjectTreeView(
     private val expandedPaths = mutableSetOf<String>()
     private var pendingPulsePath: String? = null
     private var isSyncingScroll = false
+
+    // [PERF] Permite actualizar los checkboxes sin re-disparar sus listeners.
+    private var isRefreshingRows = false
+
+    // [PERF] Referencia al checkbox del encabezado sticky (root).
+    // Permite actualizarlo in-place en lugar de reconstruirlo.
+    private var stickyCheckbox: CheckBox? = null
 
     private val scanToken = AtomicLong(0L)
 
@@ -236,6 +244,7 @@ class ProjectTreeView(
 
         // Sticky (sin chevron)
         stickyScroll.removeAllViews()
+        stickyCheckbox = null
         val rootRow = buildRow(root, isSticky = true)
         stickyScroll.addView(rootRow, ViewGroup.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
@@ -295,6 +304,58 @@ class ProjectTreeView(
         val cw = node.childrenWrapper ?: return
         if (cw.childCount > 0) return
         node.children.forEach { child -> renderNode(child, cw) }
+    }
+
+    // ------------------------------------------------------------------
+    // [PERF] Actualización in-place de filas visibles
+    // ------------------------------------------------------------------
+
+    /**
+     * Refresca únicamente las filas actualmente visibles en lugar de destruir
+     * y reconstruir todo el árbol. Coste O(visibles) en vez de O(todos).
+     *
+     * Necesario tras `setNodeIncluded` / `toggleAllMarked`, donde antes se
+     * llamaba a `renderInternal(fireStats = true)` — recreando cientos o miles
+     * de Views para reflejar cambios en un solo nodo y sus descendientes.
+     */
+    private fun refreshVisibleRows(fireStats: Boolean = true) {
+        val root = rootNode ?: return
+        stickyCheckbox?.let { cb ->
+            isRefreshingRows = true
+            cb.isChecked = currentConfig.excludedPaths.isEmpty()
+            isRefreshingRows = false
+        }
+        refreshNodeVisible(root)
+        if (fireStats) onStatsChanged(computeStatsFromTree(root))
+    }
+
+    private fun refreshNodeVisible(directoryNode: TreeNode) {
+        directoryNode.children.forEach { child ->
+            refreshNodeRow(child)
+            if (child.isDirectory && child.expanded) {
+                refreshNodeVisible(child)
+            }
+        }
+    }
+
+    private fun refreshNodeRow(node: TreeNode) {
+        val included = !node.selfExcluded && !node.ancestorExcluded
+        node.checkbox?.let { cb ->
+            isRefreshingRows = true
+            cb.isChecked = included
+            isRefreshingRows = false
+            cb.buttonTintList = ColorStateList.valueOf(
+                if (node.ancestorExcluded) CodeAssistTheme.TEXT_MUTED
+                else CodeAssistTheme.ACCENT
+            )
+        }
+        val tinted = node.ancestorExcluded || node.selfExcluded
+        node.iconView?.setColorFilter(
+            if (tinted) CodeAssistTheme.TEXT_MUTED else CodeAssistTheme.ACCENT
+        )
+        node.nameView?.setTextColor(
+            if (tinted) CodeAssistTheme.TEXT_MUTED else CodeAssistTheme.TEXT_PRIMARY
+        )
     }
 
     // ------------------------------------------------------------------
@@ -368,10 +429,13 @@ class ProjectTreeView(
                 scaleX = 0.78f
                 scaleY = 0.78f
                 setOnCheckedChangeListener { _, checked ->
+                    // [PERF] Ignora los cambios programáticos de refreshNodeRow.
+                    if (isRefreshingRows) return@setOnCheckedChangeListener
                     if (isSticky) toggleAllMarked() else setNodeIncluded(node, checked)
                 }
             }
             node.checkbox = cb
+            if (isSticky) stickyCheckbox = cb
             row.addView(cb)
         } else {
             row.addView(View(activity).apply {
@@ -405,6 +469,7 @@ class ProjectTreeView(
             layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
             setPadding(0, 0, dp(6), 0)
         }
+        node.nameView = nameView
         row.addView(nameView)
 
         // Tamaño
@@ -515,8 +580,9 @@ class ProjectTreeView(
 
         rootNode?.let { refreshExclusionFlags(it, ancestorExcluded = false) }
 
-        pendingPulsePath = node.relativePath
-        renderInternal(fireStats = true)
+        // [PERF] En vez de reconstruir todo el árbol, actualiza solo las filas visibles.
+        refreshVisibleRows(fireStats = true)
+        node.rowView?.let { pulseRow(it) }
     }
 
     private fun refreshExclusionFlags(node: TreeNode, ancestorExcluded: Boolean) {
@@ -540,8 +606,11 @@ class ProjectTreeView(
         currentConfig = currentConfig.copy(excludedPaths = newExcluded)
         onExcludedPathsChanged(newExcluded)
         rootNode?.let { refreshExclusionFlags(it, ancestorExcluded = false) }
-        pendingPulsePath = ""
-        renderInternal(fireStats = true)
+
+        // [PERF] Igual que arriba: solo filas visibles + pulso en el sticky.
+        refreshVisibleRows(fireStats = true)
+        pendingPulsePath = null
+        stickyScroll.getChildAt(0)?.let { pulseRow(it) }
     }
 
     // ------------------------------------------------------------------
@@ -688,5 +757,6 @@ class ProjectTreeView(
         var arrow: ImageView? = null
         var checkbox: CheckBox? = null
         var iconView: ImageView? = null
+        var nameView: TextView? = null
     }
 }
