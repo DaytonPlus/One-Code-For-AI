@@ -4,7 +4,7 @@
 [plugin]
 id = "com.devdayton.onecodeforai"
 name = "One Code For AI"
-version = "1.0.76"
+version = "1.0.78"
 minIdeVersion = "3.33"
 mainClass = "com.devdayton.onecodeforai.plugin.OneCodeForAIPlugin"
 # Must equal the IDE's PLUGIN_API_VERSION, or the plugin is rejected with that reason.

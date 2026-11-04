@@ -835,7 +835,33 @@ class ConfigurationDialog(
         configContainer.visibility = View.VISIBLE
         progressContainer.visibility = View.GONE
     }
-
+    
+    /**
+     * Renders the [ExportStateHolder.State.RUNNING] snapshot in the inline progress
+     * panel.
+     *
+     * Progress source priority:
+     *  1. **Bytes** — used when both `bytesProcessed` and `bytesTotal` are known.
+     *     Scaled to a fixed 10 000-step range to keep every intermediate value
+     *     inside [ProgressBar]'s `Int` bounds, even for multi-GB projects where a
+     *     1-byte = 1-step mapping would overflow.
+     *  2. **Files** — used when only the file counter is available (early in the
+     *     run, before any byte has been accumulated).
+     *  3. **Indeterminate** — used when neither is available (preparing, Git
+     *     snapshot resolution, etc.).
+     *
+     * The progress bar is updated through `setProgress(value, animate = true)`
+     * (API 24+). The ~80 ms built-in interpolation is shorter than
+     * [ExportCoordinator]'s 120 ms publish throttle, so consecutive ticks chain
+     * into a continuous fill instead of a sequence of jumps.
+     *
+     * `max` is only reassigned when it actually changes: `setMax()` invalidates
+     * the internal `VisualProgress` tracker and cancels any in-flight animation,
+     * which would defeat the animated `setProgress` overload. Resetting
+     * `progress` to 0 when transitioning back to indeterminate guarantees the
+     * next animated update starts from 0 rather than from a stale value left by
+     * a previous run.
+     */
     private fun showProgressInline(snapshot: ExportStateHolder.Snapshot) {
         configContainer.visibility = View.GONE
         progressContainer.visibility = View.VISIBLE
@@ -847,23 +873,33 @@ class ConfigurationDialog(
         progressSubtitle.text = if (snapshot.bytesTotal > 0L && snapshot.bytesProcessed > 0L) {
             "$baseMessage  ·  ${formatSize(snapshot.bytesProcessed)} / ${formatSize(snapshot.bytesTotal)}"
         } else baseMessage
+
         progressBar.visibility = View.VISIBLE
         progressMinimizeHint.visibility = View.VISIBLE
         progressStats.visibility = View.GONE
+
         if (snapshot.bytesTotal > 0L && snapshot.bytesProcessed > 0L) {
-            // La barra avanza por bytes; la escala fija evita límites de Int en ProgressBar.
-            val scale = 10_000L
-            val ratio = (snapshot.bytesProcessed.coerceAtMost(snapshot.bytesTotal) * scale) / snapshot.bytesTotal
+            // Fixed 10 000-step scale: keeps the ratio inside Int bounds for any
+            // project size and lets the bar animate with sub-percent granularity.
+            val scale = 10_000
+            val target = ((snapshot.bytesProcessed.coerceAtMost(snapshot.bytesTotal) * scale) / snapshot.bytesTotal).toInt()
             progressBar.isIndeterminate = false
-            progressBar.max = scale.toInt()
-            progressBar.progress = ratio.toInt()
+            if (progressBar.max != scale) progressBar.max = scale
+            progressBar.setProgress(target, /* animate = */ true)
         } else if (snapshot.total > 0 && snapshot.processed > 0) {
+            // Fall back to file-count progress while byte totals are still unknown.
             progressBar.isIndeterminate = false
-            progressBar.max = snapshot.total
-            progressBar.progress = snapshot.processed
+            if (progressBar.max != snapshot.total) progressBar.max = snapshot.total
+            progressBar.setProgress(snapshot.processed, /* animate = */ true)
         } else {
+            // Neither byte nor file progress is available yet (preparing, Git
+            // snapshot resolution, etc.). Reset the bar so the first animated
+            // update of the next phase starts from 0 instead of from the value
+            // left behind by a previous run.
             progressBar.isIndeterminate = true
+            progressBar.progress = 0
         }
+
         progressCancelBtn.visibility = View.VISIBLE
         progressActionsRow.visibility = View.GONE
         progressBackLink.visibility = View.GONE
