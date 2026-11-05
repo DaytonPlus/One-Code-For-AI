@@ -1,115 +1,95 @@
-# One Code For AI
+<div align="center">
 
-**Prepare clean, reviewable technical context for AI-assisted programming — in one file.**
+# 🚀 One Code For AI
 
-One Code For AI is a **CodeAssist** plugin that scans a project or selected folder, applies configurable filters, and generates a structured `.txt` file containing a directory tree and the contents of the selected files. Share the result with ChatGPT, Claude, Gemini, or another app—without copying files one by one.
+**Turn your entire CodeAssist project into a single, structured, AI-ready `.txt` file in seconds.**
 
-![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Min SDK](https://img.shields.io/badge/API-26%2B-brightgreen.svg)
-![Target SDK](https://img.shields.io/badge/Target_SDK-36-informational.svg)
-![Java](https://img.shields.io/badge/Java-17-orange.svg)
-![Kotlin](https://img.shields.io/badge/Kotlin-JVM-purple.svg)
-![Platform](https://img.shields.io/badge/CodeAssist_Plugin_API-4-lightgrey.svg)
-![Version](https://img.shields.io/badge/Version-1.0.80-success.svg)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://github.com/daytonplus/one-code-for-ai/blob/main/LICENSE)
+[![Min SDK](https://img.shields.io/badge/API-26%2B-brightgreen.svg?style=for-the-badge)]()
+[![Target SDK](https://img.shields.io/badge/Target_SDK-36-informational.svg?style=for-the-badge)]()
+[![Java](https://img.shields.io/badge/Java-17-orange.svg?style=for-the-badge)]()
+[![Kotlin](https://img.shields.io/badge/Kotlin-JVM-purple.svg?style=for-the-badge)]()
+[![CodeAssist Plugin API](https://img.shields.io/badge/Plugin_API-4-lightgrey.svg?style=for-the-badge)]()
 
----
+*Stop copying and pasting files one by one. Give ChatGPT, Claude, or Gemini the full context they need, 100% locally on your device.*
 
-## Features
-
-### Export and filtering
-
-- Generate a dump of the project or a selected folder.
-- Automatically detect the Git root when working inside a repository.
-- Include or exclude files by extension, name, relative path, or glob pattern (`*`, `?`, `**`).
-- Respect root `.gitignore` rules, including negation patterns.
-- Exclude binary files automatically.
-- Enable or disable the per-file size limit.
-- Exclude individual files or directories from the project tree.
-
-### Git snapshots
-
-- Browse local and remote branches, tags, and recent commits.
-- Generate a dump from a selected Git reference without changing the working tree.
-- Preview a reference’s diff against the current working tree before exporting.
-- View the current branch, commit, and uncommitted changes.
-
-### Project tree and results
-
-- Browse the project tree, expand or collapse directories, and reload the view.
-- Select files or directories to exclude from the generated dump.
-- Follow export progress by processed bytes, with a file-count fallback when byte totals are not yet available.
-- View the processed file count and byte progress while generation runs.
-- See the final file count, total size, and approximate token count after generation. Token counts are estimates, based on roughly four UTF-8 bytes per token.
-
-### Profiles and preferences
-
-- Use built-in profiles for Android/Kotlin, Web, Python, and plain text.
-- Save custom profiles and restore them on the next launch.
-- Preserve saved profiles and settings across plugin updates.
-- Configure Git integration, the project tree, `.gitignore` handling, and binary-file filtering in plugin settings.
-
-### Export, saving, and sharing
-
-- Generate the project context in one step.
-- Cancel an export while it is running or minimize the dialog; generation continues in the background.
-- After generation, share the result, save a timestamped copy, or regenerate it.
-- Save files to `Downloads/OneCodeForAI`.
-- Share the generated file through the native Android share chooser.
-- Receive a notification when generation is complete.
-
-### Performance and localization
-
-- Load the configuration dialog promptly while project and Git information is resolved in the background.
-- Reuse cached `.gitignore` rules and plugin resources to reduce repeated file reads and UI setup work.
-- Update visible project-tree rows in place when possible instead of rebuilding the entire tree.
-- Use the interface in **English** or **Spanish**, including the plugin information page, installation guide, and help.
-
-## Privacy
-
-Project scanning and dump generation happen locally on your device. The plugin does not upload project files or send telemetry.
-
-## Output format
-
-The generated `.txt` file contains a directory tree followed by clearly separated sections for the included files. File contents are written incrementally rather than assembled into one large in-memory string.
-
-Generated files are stored in:
-
-```text
-Downloads/OneCodeForAI
-```
-
-## Tech stack
-
-| Category | Technology |
-|---|---|
-| Language | Kotlin (JVM) |
-| Minimum Android version | Android 8.0 Oreo (API 26) |
-| Compile SDK / Target SDK | 36 |
-| Java language level | 17 |
-| Host platform | CodeAssist Plugin API 4 |
-| Git library | JGit `7.8.0.202609011348-r` |
-| Module format | CodeAssist module (`plugin/module.toml`) |
-
-## Project structure
-
-| Package | Responsibility |
-|---|---|
-| `core/` | File filtering, directory-tree generation, dump generation, Git operations, and profile/configuration data |
-| `android/` | Host environment access, export coordination, progress state, notifications, and Android file delivery |
-| `ui/` | Configuration dialog, project tree, Git reference picker, diff preview, settings, and shared UI components |
-| Root package | CodeAssist plugin entry point, settings page, and plugin information activity |
-
-## Requirements
-
-- Android 8.0 (API 26) or higher.
-- CodeAssist with support for Plugin API 4.
-- Java 17 to compile the plugin module.
-
-## Links
-
-- [Source code and issues](https://github.com/daytonplus/one-code-for-ai)
-- [MIT License](https://github.com/daytonplus/one-code-for-ai/blob/main/LICENSE)
+</div>
 
 ---
 
-Built with ❤️ for the CodeAssist community.
+## 🌟 Why One Code For AI?
+
+Providing context to AI models is the difference between generic answers and precise, project-aware code. **One Code For AI** deeply integrates with the CodeAssist IDE to scan your project, respect your ignore rules, and generate a beautifully formatted directory tree alongside the actual source code. 
+
+No cloud uploads. No telemetry. Just pure, instant context generation.
+
+## ✨ Epic Features
+
+### 📁 Advanced Export & Smart Filtering
+*   **Complete Control:** Export an entire project, specific subfolders, or dynamically filter by extensions, names, and relative paths.
+*   **Advanced Glob Patterns:** Master your exports with patterns like `*.log`, `build/`, or `**/generated/**`.
+*   **Directory-Level Exclusions:** Instantly skip heavy folders during the scan, making large exports lightning-fast.
+*   **`.gitignore` Intelligence:** Automatically respects `.gitignore` rules. If a manual inclusion/exclusion overrides a rule, the UI highlights it in **amber** so you always know what's being exported.
+*   **Binary Shield:** Automatically excludes images, videos, and compiled binaries to save tokens.
+
+### 🌿 Deep Git Integration
+*   **Snapshot Export:** Generate a dump from any local/remote branch, tag, or commit without altering your working tree.
+*   **Diff Preview:** See exactly what changed against the current working tree before you export.
+*   **Global Git Kill Switch:** Disable all Git features in settings for a purely filesystem-based experience. The plugin still hunts down ancestor `.gitignore` files to keep your filters active.
+
+### 📱 Professional Android Presets
+*   **Android (Kotlin):** The perfect profile for full-project reviews. Includes source, build configs, and resources.
+*   **Android (Source Only):** Excludes tests, docs, and JSONs for pure logic analysis.
+*   **Android (Resources):** Focuses strictly on XML layouts, themes, and manifests for UI work.
+*   **Web, Python & Text:** Includes smart, pre-configured exclusions (like `package-lock.json`, `coverage.xml`, and `R.java`) so the AI doesn't get confused by machine-generated code.
+
+### 🎨 Native UI & Contextual Help
+*   **Built-in Settings Page:** Native CodeAssist toggles for Git, Animations (great for low-end devices), and Generation Notifications.
+*   **Inline Help Dialogs:** Contextual `?` icons explain pattern syntax and priority rules exactly where you need them.
+*   **Project Tree Preview:** Browse a beautiful, interactive tree. Check or uncheck entire folders or single files to customize your export.
+*   **Byte-Accurate Progress:** Watch your export in real-time with byte-level precision, and cancel or minimize it while it runs in the background.
+
+### ⚡ Uncompromising Performance
+*   **Background Processing:** Dialog setup, Git detection, and tree scanning run off the main thread to keep the IDE perfectly responsive.
+*   **Dynamic Animations:** UI transitions and tree expansions update instantly when toggled in settings.
+*   **IDE Native Logging:** Internal diagnostics bypass Logcat and route directly to the CodeAssist console, featuring automatic chunking for long messages.
+
+---
+
+## 📦 Output Format
+
+Generated files are saved securely to your device's storage:
+`Downloads/OneCodeForAI`
+
+The output is a highly readable `.txt` file containing:
+1.  A visual directory tree of all included files.
+2.  Clearly separated file contents with exact relative paths.
+3.  Final statistics: Total files, total size, and an estimated token count.
+
+---
+
+## 🔒 Privacy & Security
+
+*   **100% Offline:** No internet permission required. Your code never leaves your device.
+*   **No Telemetry:** We don't track usage.
+*   **Local Processing:** Everything happens right inside CodeAssist.
+
+---
+
+## 🛠️ Technical Details
+
+*   **Requirements:** Android 8.0 (API 26+) and CodeAssist with Plugin API 4 support.
+*   **Language:** Kotlin (JVM) / Java 17.
+*   **Localization:** Fully translated in **English** and **Spanish**.
+*   **Module Format:** CodeAssist plugin architecture.
+
+**License:** MIT  
+**Source code and issues:** [https://github.com/daytonplus/one-code-for-ai](https://github.com/daytonplus/one-code-for-ai)
+
+<div align="center">
+  
+*Built with ❤️ for the CodeAssist community.*
+
+**If this plugin supercharges your workflow, consider giving it a ⭐ on GitHub!**
+
+</div>

@@ -1,17 +1,44 @@
-# What the IDE reads to decide whether to load this plugin, and how to list it in
-# Settings > Plugins. It is read without running any of the plugin's code, so it has to agree
-# with what the entry point actually registers.
+# ==============================================================================
+# CodeAssist Plugin Manifest
+# ==============================================================================
+# This file is read statically by the CodeAssist IDE to determine whether to 
+# load the plugin, how to display it in Settings > Plugins, and what permissions 
+# it requires. It is evaluated before any plugin code is executed, so it must 
+# perfectly align with the actual implementation and registered entry points.
+# ==============================================================================
+
 [plugin]
 id = "com.devdayton.onecodeforai"
 name = "One Code For AI"
 version = "1.0.80"
 minIdeVersion = "3.33"
-mainClass = "com.devdayton.onecodeforai.plugin.OneCodeForAIPlugin"
-# Must equal the IDE's PLUGIN_API_VERSION, or the plugin is rejected with that reason.
+
+# The fully qualified class name of the main plugin entry point.
+# IMPORTANT: This must match the exact package and class name of the Kotlin file.
+# Note: Removed the '.plugin.' sub-package if the class resides directly in the root namespace.
+mainClass = "com.devdayton.onecodeforai.OneCodeForAIPlugin"
+
+# Must strictly equal the host IDE's PLUGIN_API_VERSION. 
+# If this mismatch occurs, the IDE will reject the plugin during initialization.
 apiVersion = 4
-description = "Genera un .txt con el código de una carpeta (estilo code2prompt/gitingest)."
+
+# Short description shown in the IDE's plugin manager.
+description = "Generates a structured .txt file containing the source code of a directory, optimized for AI context (code2prompt/gitingest style)."
+
+# List of other plugins that this plugin depends on. Empty if standalone.
 dependsOn = []
+
+# Classes that are dynamically discovered and registered by the IDE.
 entryPoints = ["com.devdayton.onecodeforai.OneCodeForAIPlugin"]
+
+# Features and UI components exposed by this plugin to the host IDE.
+# - ui.action: Allows the plugin to register context menu actions.
+# - ui.settingsPage: Allows the plugin to register a custom settings screen.
 capabilities = ["ui.action", "ui.settingsPage"]
+
 [permissions]
+# System-level capabilities required by the plugin.
+# - fs.read: Required to scan directories and read source files.
+# - fs.write: Required to save the generated .txt dump to public storage (Downloads).
 capabilities = ["fs.read", "fs.write"]
+
