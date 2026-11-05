@@ -1,6 +1,7 @@
 package com.devdayton.onecodeforai.ui
 
 import com.devdayton.onecodeforai.R
+import com.devdayton.onecodeforai.android.PluginSettings
 import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.ExtensionStats
 import com.devdayton.onecodeforai.core.FilterConfig
@@ -53,6 +54,11 @@ class ProjectTreeView(
     // [PERF] Referencia al checkbox del encabezado sticky (root).
     // Permite actualizarlo in-place en lugar de reconstruirlo.
     private var stickyCheckbox: CheckBox? = null
+
+
+    private val animationsEnabled: Boolean
+        get() = PluginSettings.areAnimationsEnabled(activity)
+    
 
     private val scanToken = AtomicLong(0L)
 
@@ -499,43 +505,85 @@ class ProjectTreeView(
     // Acciones
     // ------------------------------------------------------------------
 
+    /**
+     * Expands or collapses [node], with or without animation depending on
+     * [animationsEnabled].
+     *
+     * The state transitions (`node.expanded`, `expandedPaths`, child
+     * population) are identical in both branches; only the view-visibility
+     * mechanism differs. In the non-animated path the children wrapper is
+     * toggled in a single frame, which is what low-end devices need to avoid
+     * dropping frames on large trees.
+     */
     private fun toggleExpanded(node: TreeNode) {
         val cw = node.childrenWrapper ?: return
         if (node.expanded) {
             node.expanded = false
             expandedPaths.remove(node.relativePath)
-            cw.animate().cancel()
-            cw.animate().alpha(0f).translationY(-dp(6).toFloat())
-                .setDuration(150).setInterpolator(DecelerateInterpolator())
-                .withEndAction {
-                    cw.visibility = View.GONE
-                    cw.alpha = 1f
-                    cw.translationY = 0f
-                }.start()
+            if (animationsEnabled) {
+                cw.animate().cancel()
+                cw.animate().alpha(0f).translationY(-dp(6).toFloat())
+                    .setDuration(150).setInterpolator(DecelerateInterpolator())
+                    .withEndAction {
+                        cw.visibility = View.GONE
+                        cw.alpha = 1f
+                        cw.translationY = 0f
+                    }.start()
+            } else {
+                cw.animate().cancel()
+                cw.alpha = 1f
+                cw.translationY = 0f
+                cw.visibility = View.GONE
+            }
             animateChevron(node.arrow, false)
         } else {
             node.expanded = true
             expandedPaths.add(node.relativePath)
             populateChildren(node)
             cw.visibility = View.VISIBLE
-            cw.alpha = 0f
-            cw.translationY = -dp(6).toFloat()
-            cw.animate().cancel()
-            cw.animate().alpha(1f).translationY(0f)
-                .setDuration(200).setInterpolator(DecelerateInterpolator())
-                .start()
+            if (animationsEnabled) {
+                cw.alpha = 0f
+                cw.translationY = -dp(6).toFloat()
+                cw.animate().cancel()
+                cw.animate().alpha(1f).translationY(0f)
+                    .setDuration(200).setInterpolator(DecelerateInterpolator())
+                    .start()
+            } else {
+                cw.animate().cancel()
+                cw.alpha = 1f
+                cw.translationY = 0f
+            }
             animateChevron(node.arrow, true)
         }
     }
 
+    /**
+     * Swaps the chevron drawable and, when animations are enabled, rotates it
+     * from `right` (0°) to `down` (90°) as a visual cue for the expand state.
+     *
+     * The non-animated branch sets the target drawable directly and resets the
+     * rotation to 0°, so the final visual state is identical to the end of the
+     * animated path. The rotation is always reset because the `ImageView` may
+     * have inherited a non-zero rotation from a previous animated run.
+     */
     private fun animateChevron(arrow: ImageView?, expanded: Boolean) {
         arrow ?: return
+        val res = if (expanded) R.drawable.ic_tech_chevron_down
+                  else R.drawable.ic_tech_chevron_right
+
+        if (!animationsEnabled) {
+            arrow.animate().cancel()
+            val drawable = UiFactory.run { activity.loadPluginDrawable(res) }
+            if (drawable != null) arrow.setImageDrawable(drawable)
+            else runCatching { arrow.setImageResource(res) }
+            arrow.rotation = 0f
+            return
+        }
+
         arrow.animate().cancel()
         arrow.animate().rotation(if (expanded) 90f else 0f)
             .setDuration(180).setInterpolator(DecelerateInterpolator())
             .withEndAction {
-                val res = if (expanded) R.drawable.ic_tech_chevron_down
-                          else R.drawable.ic_tech_chevron_right
                 val drawable = UiFactory.run { activity.loadPluginDrawable(res) }
                 if (drawable != null) arrow.setImageDrawable(drawable)
                 else runCatching { arrow.setImageResource(res) }
@@ -687,7 +735,16 @@ class ProjectTreeView(
     // Utils
     // ------------------------------------------------------------------
 
+    /**
+     * Brief alpha fade to draw the eye to a row whose inclusion state just
+     * changed. No-op when [animationsEnabled] is `false`: the row's final
+     * alpha is already 1 by default, and skipping the animation avoids
+     * touching the view-property animator on every checkbox tap, which is
+     * noticeable on low-end hardware when toggling directories with many
+     * visible descendants.
+     */
     private fun pulseRow(row: View) {
+        if (!animationsEnabled) return
         row.alpha = 0.3f
         row.animate().cancel()
         row.animate().alpha(1f).setDuration(260)

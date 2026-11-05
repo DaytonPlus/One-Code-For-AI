@@ -25,23 +25,163 @@ class PresetManager(context: Context) {
         private const val TEXT_PRESET = "Plain Text"
     }
 
-    /** Names and contents of bundled presets are stable and language-independent. */
+    /**
+     * Bundled profiles. Names are stable and language-independent, so a saved
+     * "last preset" keeps pointing at the same profile after switching the
+     * IDE language.
+     *
+     * Design notes
+     * ------------
+     * CodeAssist is an Android IDE, so the majority of users work on Android
+     * projects. The Android profiles are therefore the primary, opinionated
+     * starting points; the generic ones (Web, Python, Plain Text) stay as
+     * secondary options for mixed projects (docs, backend code, scripts).
+     *
+     * Binary exclusions
+     * -----------------
+     * `excludeBinaries = true` (the default) already filters ~40 binary
+     * extensions via `FileFilter.BINARY_EXTENSIONS` — images, media, archives,
+     * native libraries, fonts, databases. The `exclusions` list here only adds
+     * what the fallback can't cover:
+     *
+     *  - generated Android code that still has a source extension (`R.java`,
+     *    `BuildConfig.java`, `*.generated.kt`, `*Generated.kt`),
+     *  - machine-specific files (`local.properties` — SDK path, user home),
+     *  - large lock files that happen to use a text extension
+     *    (`package-lock.json`, `pnpm-lock.yaml`).
+     *
+     * Note on inclusions being a soft whitelist
+     * -----------------------------------------
+     * `FileFilter.includePath` falls through to `extension in TEXT_EXTENSIONS`
+     * when no inclusion matches. That means an extension present in
+     * `TEXT_EXTENSIONS` (e.g. `json`, `xml`, `txt`) is included even if the
+     * preset didn't list it — which is why `package-lock.json` and
+     * `coverage.xml` need explicit exclusions instead of relying on the
+     * inclusion whitelist.
+     */
     fun getDefaultPresets(): Map<String, FilterConfig> = linkedMapOf(
+        // ------------------------------------------------------------------
+        // Android — primary, opinionated profiles.
+        // ------------------------------------------------------------------
+
+        // Full Android app in Kotlin: source, build, resources, docs, data.
+        // Suitable for "review my whole project", "explain the architecture",
+        // or "find bugs across modules". Tests are included because they
+        // document intent and behaviour for the model.
         "Android (Kotlin)" to FilterConfig(
-            inclusions = listOf("kt", "xml", "gradle", "toml", "properties", "pro"),
-            exclusions = listOf("png", "jpg", "jar", "aar", "apk")
+            inclusions = listOf(
+                // Source
+                "kt", "kts", "java",
+                // Build system: Groovy + Kotlin DSL + version catalog + proguard
+                "gradle", "toml", "properties", "pro", "cfg", "ini",
+                // Manifest, layouts, values, vector drawables, config
+                "xml", "json", "yaml", "yml",
+                // Docs and structured data (Room schemas, CSVs)
+                "md", "txt", "csv", "sql"
+            ),
+            exclusions = listOf(
+                // Generated Android code — compiled from XML/resources at
+                // build time. Useless and noisy for an AI reviewer.
+                "R.java", "BuildConfig.java",
+                "*.generated.kt", "*.generated.java",
+                "*Generated.kt", "*Generated.java",
+                // Machine-specific: absolute SDK path + user home. Never
+                // useful, and contains developer-local paths.
+                "local.properties"
+                // Note: *.keystore, *.jks, *.p12, *.pem, *.key need no
+                // explicit exclusion — those extensions aren't in
+                // TEXT_EXTENSIONS, so the fallback already filters them out.
+            )
         ),
+
+        // Same as above but with tests and docs stripped. Use when you want
+        // the model to reason about implementation only: lower token count,
+        // higher signal-to-noise for "explain what this method does",
+        // "suggest a refactor", "find a bug in this class".
+        "Android (source only)" to FilterConfig(
+            inclusions = listOf(
+                "kt", "kts", "java",
+                "gradle", "toml", "properties", "pro", "cfg", "ini",
+                "xml"
+            ),
+            exclusions = listOf(
+                "R.java", "BuildConfig.java",
+                "*.generated.kt", "*.generated.java",
+                "*Generated.kt", "*Generated.java",
+                "local.properties",
+                // Test files. Naming conventions covered:
+                //  - JUnit 4/5:     LoginTest.kt, LoginTests.kt
+                //  - kotest:        LoginSpec.kt
+                //  - kebab/dotted:  login.test.kt
+                "*Test.kt", "*Tests.kt", "*Spec.kt",
+                "*Test.java", "*Tests.java", "*Spec.java",
+                "*.test.kt", "*.test.java"
+            )
+        ),
+
+        // Resources only: layouts, values, drawables, manifest, themes.
+        // Use for UI-focused prompts ("redesign this screen", "explain the
+        // theme hierarchy", "translate these strings"). Strips every source
+        // file so the model stays focused on the visual layer.
+        "Android (Resources)" to FilterConfig(
+            inclusions = listOf("xml"),
+            exclusions = emptyList()
+        ),
+
+        // ------------------------------------------------------------------
+        // Generic — secondary profiles for non-Android work.
+        // ------------------------------------------------------------------
+
+        // Modern JS/TS web project. Covers React/Vue/Svelte/Next/Astro
+        // conventions plus build config and docs. Lock files are excluded
+        // explicitly because they use `.json`/`.yaml` extensions and would
+        // otherwise be pulled in by the TEXT_EXTENSIONS fallback — they're
+        // multi-megabyte, machine-generated, and useless to an AI.
         "Web (JS/TS)" to FilterConfig(
-            inclusions = listOf("js", "ts", "html", "css", "json", "md"),
-            exclusions = listOf("png", "jpg", "svg", "ico", "woff", "woff2", "map")
+            inclusions = listOf(
+                "js", "jsx", "ts", "tsx", "mjs", "cjs",
+                "html", "htm", "css", "scss", "sass", "less",
+                "json", "yaml", "yml", "toml",
+                "md", "mdx", "txt",
+                // Framework-specific single-file components
+                "vue", "svelte", "astro"
+            ),
+            exclusions = listOf(
+                // Bundled / minified / chunked build output. Even though
+                // `build`, `dist` and `.next` are hardcoded excluded
+                // directories, some projects emit bundles to `public/` or
+                // `static/` — exclude them by name too.
+                "*.bundle.js", "*.min.js", "*.min.css", "*.chunk.js",
+                // Lock files with text extensions
+                "package-lock.json", "pnpm-lock.yaml"
+            )
         ),
+
+        // Python project: source, type stubs, Cython, packaging, docs.
+        // `__pycache__`, `venv` and `.venv` are already excluded as
+        // directories by FileFilter, so no exclusions needed beyond
+        // coverage reports.
         "Python" to FilterConfig(
-            inclusions = listOf("py", "txt", "md", "json", "yaml", "yml", "toml"),
-            exclusions = listOf("pyc", "pyd", "pyo")
+            inclusions = listOf(
+                "py", "pyi", "pyx", "pxd",
+                "toml", "cfg", "ini",
+                "txt", "md", "rst", "json", "yaml", "yml", "sql"
+            ),
+            exclusions = listOf(
+                // Generated coverage report — has `.xml` extension so it
+                // would be pulled in by the TEXT_EXTENSIONS fallback.
+                "coverage.xml"
+            )
         ),
+
+        // Human-readable text only. Useful for feeding specifications,
+        // READMEs, changelogs or notes to the model without any source code.
         TEXT_PRESET to FilterConfig(
             excludeBinaries = true,
-            inclusions = listOf("txt", "md", "json", "xml", "yaml", "yml"),
+            inclusions = listOf(
+                "txt", "md", "rst", "adoc", "org", "tex", "log", "csv",
+                "json", "xml", "yaml", "yml"
+            ),
             exclusions = emptyList()
         )
     )

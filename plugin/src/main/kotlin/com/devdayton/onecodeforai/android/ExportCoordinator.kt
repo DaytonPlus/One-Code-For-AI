@@ -13,6 +13,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import com.devdayton.onecodeforai.R
+import com.devdayton.onecodeforai.android.PluginSettings
 import com.devdayton.onecodeforai.core.CodeDumpGenerator
 import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.FileProgressListener
@@ -54,6 +55,15 @@ enum class ExportAction {
  *
  * Logging uses bracketed severity tags ([INFO], [OK], [WARN], [ERROR],
  * [CANCEL], [CLEANUP]) so log lines can be filtered by severity in the IDE.
+ *
+ * Notifications
+ * -------------
+ * The three visible notifications (progress, completion, error) are gated by
+ * [PluginSettings.areNotificationsEnabled]. The flag is read at the moment
+ * each notification would be emitted, so toggling it mid-export is safe: the
+ * current run simply stops producing new notifications from the next call
+ * onwards, without needing to be restarted. The `hide` path is deliberately
+ * **not** gated — see [hideProgressNotification].
  */
 class ExportCoordinator(
     private val contextProvider: () -> Context?,
@@ -112,6 +122,22 @@ class ExportCoordinator(
      * Body of the worker thread. Every failure path routes through
      * [ExportStateHolder.fail] and a system notification, so the user always
      * sees an explanation even if the dialog was dismissed.
+     *
+     * Notification gating
+     * -------------------
+     * Each `show*Notification` call is wrapped in [notifyIfEnabled], which
+     * checks [PluginSettings.areNotificationsEnabled] on the **current**
+     * context. The check runs per call (not once at the top) so a user who
+     * toggles the flag mid-export stops receiving new notifications without
+     * losing the export — the file is still written and
+     * [ExportStateHolder] still receives the final state, which is what the
+     * in-dialog result panel reads.
+     *
+     * The `hideProgressNotification` call is **not** gated: if the flag was
+     * ON when the progress notification was posted and then turned OFF mid-
+     * export, we still need to remove the leftover notification. Since
+     * `cancel()` on a non-existent id is a no-op, gating it would only add
+     * risk without benefit.
      */
     private fun runExport(
         root: File, 
@@ -139,7 +165,7 @@ class ExportCoordinator(
             logger("[INFO] Starting export ($actionLabel).")
 
             val initialMessage = if (sourceUri != null) context.pluginString(R.string.preparing_export) else context.pluginString(R.string.generating_dump)
-            runCatching { showProgressNotification(context, initialMessage) }
+            notifyIfEnabled(context) { showProgressNotification(context, initialMessage) }
             
             // When generating from scratch, remove any leftover duplicate share
             // files before writing so the user only ever sees a single file in
@@ -199,9 +225,7 @@ class ExportCoordinator(
             }
 
             logger("[OK] File written: $outputUri")
-            runCatching {
-                showCompletionNotification(context, fileName)
-            }
+            notifyIfEnabled(context) { showCompletionNotification(context, fileName) }
             ExportStateHolder.complete(outputUri, fileName, finalFiles, finalBytes)
 
             if (action == ExportAction.SHARE) {
@@ -217,9 +241,28 @@ class ExportCoordinator(
             val message = resolveErrorMessage(context, error)
             logger("[ERROR] Unhandled exception during export: ${error.message ?: message}")
             error.printStackTrace()
-            runCatching { showErrorNotification(context, message) }
+            notifyIfEnabled(context) { showErrorNotification(context, message) }
             ExportStateHolder.fail(message)
         }
+    }
+
+    /**
+     * Runs [block] only when the notification master switch is ON, and swallows
+     * any exception the notification builder may throw.
+     *
+     * Two independent reasons for the swallow:
+     *  - **Notification failures must never fail the export.** A dead
+     *    NotificationManager, a revoked permission, a hostile OEM build, or an
+     *    `IllegalStateException` from `Notification.Builder` on some API 26
+     *    devices would otherwise abort the whole run even though the file was
+     *    already written.
+     *  - **The original code already used `runCatching` around each call site**,
+     *    so wrapping here keeps the behaviour identical while centralising the
+     *    gate check in one place.
+     */
+    private inline fun notifyIfEnabled(context: Context, block: () -> Unit) {
+        if (!PluginSettings.areNotificationsEnabled(context)) return
+        runCatching { block() }
     }
 
     /**
@@ -230,6 +273,12 @@ class ExportCoordinator(
      * export rather than silently falling back to the working tree, so a
      * misconfigured profile cannot produce a dump that does not match the
      * branch the user selected.
+     *
+     * The Git master switch ([PluginSettings.isGitEnabled]) is enforced one
+     * level up, in [com.devdayton.onecodeforai.OneCodeForAIPlugin], by never
+     * setting `config.useGit = true` when Git is disabled. By the time we get
+     * here, `useGit = true` means the user explicitly chose a ref **and** the
+     * kill switch is on; no second check is needed.
      */
     private fun generateContent(
         root: File,
@@ -536,6 +585,13 @@ class ExportCoordinator(
 
     // ------------------------------------------------------------------
     // Notifications
+    //
+    // All three `show*` methods below are called exclusively through
+    // [notifyIfEnabled], so the master switch is checked once and any
+    // exception from the builder is swallowed before it can reach the export
+    // worker. `hideProgressNotification` is called directly from `runExport`
+    // because removing a notification is always safe and must happen even if
+    // the flag was turned OFF mid-run.
     // ------------------------------------------------------------------
 
     /** Creates a notification channel if the platform requires it; no-op below API 26. */
@@ -560,6 +616,14 @@ class ExportCoordinator(
         )
     }
 
+    /**
+     * Removes the progress notification.
+     *
+     * Not gated by [PluginSettings.areNotificationsEnabled]: hiding a
+     * notification is idempotent and must happen regardless of the current
+     * flag value, otherwise a notification posted while the flag was ON could
+     * linger forever after the user turns it OFF mid-export.
+     */
     private fun hideProgressNotification(context: Context) {
         (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .cancel(PROGRESS_NOTIFICATION_ID)

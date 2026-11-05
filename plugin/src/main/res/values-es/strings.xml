@@ -165,6 +165,30 @@
     <string name="settings_tree">Árbol y estadísticas</string>
     <string name="settings_tree_desc">Muestra el árbol de archivos y el conteo de tokens. Desactívalo en proyectos grandes si no lo necesitas.</string>
 
+    <string name="settings_git_global">Integración con Git</string>
+    <string name="settings_git_global_desc">Detecta repositorios y activa todas las funciones de Git. Desactívalo para forzar el modo carpeta incluso dentro de un repo. Las reglas de .gitignore siguen aplicándose.</string>
+    <string name="settings_animations">Animaciones</string>
+    <string name="settings_animations_desc">Transiciones de fundido y escala en el diálogo, el árbol y el selector de perfiles. Desactívalas en dispositivos de gama baja.</string>
+    <string name="settings_notifications">Notificaciones de generación</string>
+    <string name="settings_notifications_desc">Notificaciones de progreso, finalización y error durante la exportación. Desactívalas para silenciar la bandeja.</string>
+
+    <string name="settings_action_delete_presets">Borrar todos los perfiles personalizados</string>
+    <string name="settings_action_delete_presets_desc">Tienes %1$d perfil(es) personalizado(s). No se puede deshacer.</string>
+    <string name="settings_action_delete_presets_confirm_title">¿Borrar todos los perfiles personalizados?</string>
+    <string name="settings_action_delete_presets_confirm_message">Se eliminarán permanentemente todos los perfiles personalizados. No se puede deshacer.</string>
+    <string name="settings_action_delete_presets_done">Perfiles personalizados eliminados.</string>
+    <string name="settings_action_delete_presets_empty">No hay perfiles personalizados que borrar.</string>
+
+    <string name="settings_action_reset_config">Restablecer toda la configuración</string>
+    <string name="settings_action_reset_config_desc">Borra filtros, perfiles, elecciones de Git y el último estado guardado. No se puede deshacer. Las descargas no se tocan.</string>
+    <string name="settings_action_reset_confirm_title">¿Restablecer la configuración de One Code?</string>
+    <string name="settings_action_reset_confirm_message">Borra filtros, perfiles, elecciones de Git y el último estado guardado. No se puede deshacer. Las descargas se mantienen intactas.</string>
+    <string name="settings_action_reset_done">Configuración restablecida a los valores por defecto.</string>
+
+    <string name="settings_action_needs_foreground">Abre CodeAssist primero y vuelve a intentarlo.</string>
+
+    <string name="git_disabled_globally">Git está desactivado globalmente en los ajustes de CodeAssist. Actívalo ahí para usar ramas, etiquetas y commits.</string>
+    
     <!-- ===== Info activity ===== -->
     <!-- > Header -->
     <string name="info_title">INFO</string>
@@ -250,4 +274,15 @@
     <string name="help_a9">No. Las claves de preferencias, los nombres de propiedades JSON y los nombres de perfil se conservan entre versiones. Los perfiles personalizados y el último estado guardado siguen disponibles tras instalar un APK nuevo.</string>
     <string name="help_q10">El plugin no aparece en CodeAssist. ¿Qué hago?</string>
     <string name="help_a10">Confirma que el plugin está habilitado en la sección de plugins de CodeAssist y reinicia el host. Si sigue sin aparecer, verifica que la build instalada apunte a la API de plugins 4 de CodeAssist.</string>
+    
+    <!-- values-es/strings.xml -->
+    <string name="help_icon_description">Ayuda de la sección</string>
+    <string name="help_inclusions_title">Inclusiones</string>
+    <string name="help_inclusions_body">Lista blanca de extensiones y patrones glob, evaluada antes que .gitignore.\n\nSintaxis soportada (igual que los patrones de .gitignore):\n\u2022 Extensiones: kt, json, xml\n\u2022 Comodines: *.log, **/*.kt, src/*.kt\n\u2022 Directorios: build/, **/generated/**\n\nCualquier archivo que coincida con una inclusión se exporta aunque .gitignore o las exclusiones lo descartarían.\n\nLas inclusiones tienen prioridad sobre las exclusiones y sobre .gitignore. Úsala para forzar la inclusión de archivos o extensiones concretas.</string>
+    <string name="help_exclusions_title">Exclusiones</string>
+    <string name="help_exclusions_body">Lista negra de extensiones y patrones glob.\n\nSintaxis soportada (igual que los patrones de .gitignore):\n\u2022 Extensiones: log, tmp, pyc\n\u2022 Comodines: *.log, **/*.test.kt, src/*.bak\n\u2022 Directorios: build/, **/generated/**\n\nCualquier archivo que coincida con una exclusión se omite, aunque .gitignore lo incluiría. Las inclusiones tienen prioridad sobre las exclusiones.\n\nPara excluir una carpeta concreta sin escribir un patrón, usa el árbol de archivos de abajo.</string>
+    <string name="help_gitignore_title">Reglas de .gitignore</string>
+    <string name="help_gitignore_body">Reglas detectadas en el archivo .gitignore del proyecto.\n\nEsta lista es de solo lectura \u2014 edita .gitignore directamente para modificarla.\n\nLas inclusiones y exclusiones tienen prioridad sobre estas reglas: añadir una inclusión o exclusión que coincida fuerza la entrada o salida del archivo aunque .gitignore diga lo contrario. Las reglas anuladas se marcan en ámbar.</string>
+    
+    
 </resources>

@@ -72,6 +72,17 @@ class FileFilter(
         val name = segments.last()
         if (isDirectory) {
             if (name in excludedDirectoryNames) return false
+            // NEW: user-defined exclusions also apply to directories, so a rule
+            // like `build`, `**/generated` or `src/test` prevents the directory
+            // itself from being walked. Previously the check ran only for files,
+            // which meant `build` as an exclusion was silently a no-op for the
+            // directory (its children were still scanned) and surprised users
+            // expecting .gitignore-like semantics. Extension is passed as empty
+            // because directories have none — only the literal / path / glob
+            // branches of `matchesAny` can match here, which is the intended
+            // behavior (a bare `kt` will still match a directory literally
+            // named `kt`, mirroring .gitignore, and that edge case is accepted).
+            if (matchesAny(config.exclusions, path, name, extension = "")) return false
             if (isIgnored(path, isDirectory = true)) return false
             if (respectExcludedPaths && isPathExcluded(path)) return false
             return true
@@ -214,7 +225,15 @@ class FileFilter(
         fileName: String,
         extension: String
     ): Boolean = rules.any { rawRule ->
-        val literalRule = rawRule.trim()
+        // NEW: strip the .gitignore-style trailing slash before comparing.
+        // `build/` in an exclusion should behave the same as `build` —
+        // `fileName` and `path` never carry a trailing slash, so without this
+        // the literal comparison and the glob match both fail. The slash is a
+        // gitignore hint that the rule targets a directory; here the caller
+        // already knows whether the entry is a directory (`isDirectory` branch
+        // in `includePath`), so keeping it on the pattern would only cause the
+        // rule to silently never match.
+        val literalRule = rawRule.trim().removeSuffix("/")
         if (literalRule.isEmpty()) return@any false
         val extensionRule = literalRule.removePrefix(".")
         literalRule.equals(fileName, ignoreCase = true) ||

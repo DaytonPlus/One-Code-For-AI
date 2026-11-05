@@ -4,6 +4,7 @@ import com.devdayton.onecodeforai.R
 import com.devdayton.onecodeforai.android.ExportAction
 import com.devdayton.onecodeforai.android.ExportCoordinator
 import com.devdayton.onecodeforai.android.ExportStateHolder
+import com.devdayton.onecodeforai.android.PluginSettings
 import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.GitUtils
 import com.devdayton.onecodeforai.core.FilterConfig
@@ -66,6 +67,14 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  *  3. The real UI (`buildFullUI`) is constructed on the main thread only once data is ready.
  *  4. The Git section (JGit access) is rendered with its own loading placeholder and
  *     resolved asynchronously — the dialog is never blocked by JGit class loading.
+ *
+ * Git master switch
+ * -----------------
+ * `gitEnabledGlobally` mirrors `PluginSettings.isGitEnabled`. When `false`,
+ * the Git section still renders but displays a static "disabled globally"
+ * notice instead of the interactive branch/commit controls. This explains
+ * to the user why Git features are missing, regardless of whether the
+ * selected folder is a repository or not.
  */
 class ConfigurationDialog(
     private val activity: Activity,
@@ -91,6 +100,16 @@ class ConfigurationDialog(
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var rescanScheduled = false
+
+    /**
+     * Master gate for every fade / scale / rotation animation in this dialog.
+     *
+     * Uses a custom getter instead of `by lazy` so that if the user disables
+     * animations in the global settings while this dialog is open, the change
+     * is picked up immediately for subsequent animations.
+     */
+    private val animationsEnabled: Boolean
+        get() = PluginSettings.areAnimationsEnabled(activity)
 
     private lateinit var spinnerPresets: Spinner
     private lateinit var presetAdapter: ArrayAdapter<String>
@@ -176,15 +195,11 @@ class ConfigurationDialog(
         }
         activeDialog = dialog
 
-        // Always attach the dismiss handler before we show anything, so a user
-        // dismissing the loading state still runs cleanup.
         dialog.setOnDismissListener { handleDismiss(dialog) }
-        // 1) Immediate loading view so the dialog appears at once.
         dialog.setContentView(buildLoadingView())
         configureDialogWindow(dialog)
         dialog.show()
 
-        // 2) Load heavy data in background, then build the real UI on Main.
         Thread({
             val gitignore = runCatching { FileFilter(projectRoot).loadGitignoreRules() }
                 .getOrDefault(emptyList())
@@ -197,19 +212,6 @@ class ConfigurationDialog(
         }, "OneCode-dialog-init").apply { isDaemon = true; start() }
     }
 
-    /**
-     * Skeleton shown while the real dialog content loads in the background.
-     *
-     * Mirrors the rough geometry of the finished UI — header with two text bars,
-     * a divider, and three stacked panels — so the transition to the real content
-     * reads as a reveal rather than a layout jump. A single accent spinner sits
-     * where the close button will land, which is the only piece of real UI the
-     * skeleton hints at.
-     *
-     * Deliberately does **not** call `pluginString(...)`: resolving any string
-     * forces creation of the plugin package context, which is precisely the cost
-     * this loading state exists to hide. Shapes only, no text.
-     */
     private fun buildLoadingView(): View {
         val outer = FrameLayout(activity).apply {
             setPadding(dp(18), dp(16), dp(18), dp(18))
@@ -226,7 +228,6 @@ class ConfigurationDialog(
             )
         }
 
-        // --- Header skeleton: title bar + subtitle bar + spinner (close slot) ---
         val header = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -245,7 +246,6 @@ class ConfigurationDialog(
         })
         content.addView(header)
 
-        // --- Divider ---
         content.addView(View(activity).apply {
             setBackgroundColor(CodeAssistTheme.OUTLINE)
             layoutParams = LinearLayout.LayoutParams(
@@ -256,7 +256,6 @@ class ConfigurationDialog(
             }
         })
 
-        // --- Two fixed-size section skeletons ---
         repeat(2) {
             content.addView(skeletonBar(dp(110), dp(10), radius = 3f, topMargin = dp(18)))
             val panel = LinearLayout(activity).apply {
@@ -272,8 +271,6 @@ class ConfigurationDialog(
             content.addView(panel)
         }
 
-        // --- Flex section: fills the remaining vertical space so the skeleton
-        //     reaches the bottom of the dialog instead of leaving a dead gap. ---
         content.addView(skeletonBar(dp(110), dp(10), radius = 3f, topMargin = dp(18)))
         val flexPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -291,20 +288,13 @@ class ConfigurationDialog(
         return outer
     }
 
-    /** A single rounded gray bar used by the loading skeleton. */
-    private fun skeletonBar(
-        width: Int,
-        height: Int,
-        radius: Float,
-        topMargin: Int = 0
-    ): View = View(activity).apply {
+    private fun skeletonBar(width: Int, height: Int, radius: Float, topMargin: Int = 0): View = View(activity).apply {
         background = CodeAssistTheme.roundedBg(activity, CodeAssistTheme.SURFACE_RAISED, radius)
         layoutParams = LinearLayout.LayoutParams(width, height).apply {
             this.topMargin = topMargin
         }
     }
 
-    /** Local shorthand for [CodeAssistTheme.dp] so the skeleton reads cleanly. */
     private fun dp(value: Int): Int = CodeAssistTheme.dp(activity, value)
 
     private fun configureDialogWindow(dialog: Dialog) {
@@ -327,7 +317,6 @@ class ConfigurationDialog(
             pendingResolve?.let { resolveHandler.removeCallbacks(it) }
             resolveHandler.removeCallbacksAndMessages(null)
             if (::treeView.isInitialized) treeView.cancelScan()
-            // [PERF] Only persist if the real UI was actually built.
             if (uiBuilt && ::spinnerPresets.isInitialized) {
                 readUIValues()
                 presetManager.saveLastState(
@@ -341,13 +330,10 @@ class ConfigurationDialog(
     }
 
     // ==================================================================
-    // [PERF] Full UI construction — was `show()` body in the original file.
+    // [PERF] Full UI construction.
     // ==================================================================
 
-    private fun buildFullUI(
-        dialog: Dialog,
-        lastState: Pair<FilterConfig, String>?
-    ) {
+    private fun buildFullUI(dialog: Dialog, lastState: Pair<FilterConfig, String>?) {
         currentConfig = lastState?.first ?: initialConfig.normalized()
         val lastPresetName = lastState?.second
         isCustomMode = lastPresetName.isNullOrBlank() ||
@@ -455,7 +441,7 @@ class ConfigurationDialog(
         basePanel.addView(cbBinaries)
         basePanel.addView(cbGitignore)
 
-        // Max size row: [checkbox] Tamaño máximo [input] KB
+        // Max size row
         val sizeRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -495,9 +481,11 @@ class ConfigurationDialog(
         basePanel.addView(sizeRow)
         configContainer.addView(basePanel)
 
-        // Tags
+        // Tags — Inclusions / Exclusions.
         configContainer.addView(tagSectionHeader(
             activity.pluginString(R.string.section_inclusions),
+            R.string.help_inclusions_title,
+            R.string.help_inclusions_body,
             activity.pluginString(R.string.action_add)
         ) { showAddTagDialog(activity.pluginString(R.string.add_inclusion_title)) { addTag(it, true) } })
         flowInclusions = createFlow()
@@ -505,23 +493,49 @@ class ConfigurationDialog(
 
         configContainer.addView(tagSectionHeader(
             activity.pluginString(R.string.section_exclusions),
+            R.string.help_exclusions_title,
+            R.string.help_exclusions_body,
             activity.pluginString(R.string.action_add)
         ) { showAddTagDialog(activity.pluginString(R.string.add_exclusion_title)) { addTag(it, false) } })
         flowExclusions = createFlow()
         configContainer.addView(flowExclusions)
 
         gitignoreSection = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        gitignoreSection.addView(activity.sectionTitle(activity.pluginString(R.string.section_gitignore_rules)))
+        gitignoreSection.addView(sectionTitleWithHelp(
+            R.string.section_gitignore_rules,
+            R.string.help_gitignore_title,
+            R.string.help_gitignore_body
+        ))
         flowGitignore = createFlow()
         gitignoreSection.addView(flowGitignore)
         configContainer.addView(gitignoreSection)
 
         // Git
+        //
+        // If Git is enabled globally, we render the interactive UI.
+        // If Git is disabled, we still render the section but show a static
+        // "disabled globally" notice. This informs the user why branch/tag
+        // controls are missing, regardless of whether the folder is a repo.
         if (gitEnabledGlobally) {
             configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_version_control)))
             layoutGitBox = panel()
             configContainer.addView(layoutGitBox)
             setupGitUIAsync()
+        } else {
+            configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_version_control)))
+            layoutGitBox = panel()
+            configContainer.addView(layoutGitBox)
+            layoutGitBox.addView(activity.textView(
+                activity.pluginString(R.string.git_disabled_globally),
+                11f, CodeAssistTheme.TEXT_MUTED
+            ).apply {
+                setPadding(
+                    0,
+                    CodeAssistTheme.dp(activity, 4),
+                    0,
+                    CodeAssistTheme.dp(activity, 4)
+                )
+            })
         }
 
         // Tree
@@ -583,7 +597,7 @@ class ConfigurationDialog(
             configContainer.addView(treeWrapper)
         }
 
-        // Single "Generate" button — stats are shown after generation.
+        // Single "Generate" button
         val generateButton = Button(activity).apply {
             text = activity.pluginString(R.string.action_generate)
             textSize = 13f
@@ -650,9 +664,51 @@ class ConfigurationDialog(
         }
 
         uiBuilt = true
-
-        // Trigger entrance animation once the real content is laid out.
         scroll.post { playEntrance(configContainer) }
+    }
+
+    // ==================================================================
+    // Section help (?)
+    // ==================================================================
+
+    private fun helpIcon(helpTitleRes: Int, helpBodyRes: Int): View =
+        ImageView(activity).apply {
+            setImageDrawable(activity.loadPluginDrawable(R.drawable.ic_tech_help))
+            setColorFilter(CodeAssistTheme.ACCENT)
+            scaleType = ImageView.ScaleType.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                CodeAssistTheme.dp(activity, 20), CodeAssistTheme.dp(activity, 20)
+            ).apply { marginStart = CodeAssistTheme.dp(activity, 4) }
+            setPadding(
+                CodeAssistTheme.dp(activity, 2), CodeAssistTheme.dp(activity, 2),
+                CodeAssistTheme.dp(activity, 2), CodeAssistTheme.dp(activity, 2)
+            )
+            contentDescription = activity.pluginString(R.string.help_icon_description)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { showSectionHelp(helpTitleRes, helpBodyRes) }
+        }
+
+    private fun showSectionHelp(titleRes: Int, bodyRes: Int) {
+        AlertDialog.Builder(activity)
+            .setTitle(activity.pluginString(titleRes))
+            .setMessage(activity.pluginString(bodyRes))
+            .setPositiveButton(activity.pluginString(R.string.accept), null)
+            .show()
+            .styleDialog()
+    }
+
+    private fun sectionTitleWithHelp(titleRes: Int, helpTitleRes: Int, helpBodyRes: Int): LinearLayout = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(0, CodeAssistTheme.dp(activity, 18), 0, CodeAssistTheme.dp(activity, 9))
+        addView(activity.textView(
+            activity.pluginString(titleRes).uppercase(),
+            11f, CodeAssistTheme.TEXT_SECONDARY, true
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        addView(helpIcon(helpTitleRes, helpBodyRes))
     }
 
     // ==================================================================
@@ -835,33 +891,7 @@ class ConfigurationDialog(
         configContainer.visibility = View.VISIBLE
         progressContainer.visibility = View.GONE
     }
-    
-    /**
-     * Renders the [ExportStateHolder.State.RUNNING] snapshot in the inline progress
-     * panel.
-     *
-     * Progress source priority:
-     *  1. **Bytes** — used when both `bytesProcessed` and `bytesTotal` are known.
-     *     Scaled to a fixed 10 000-step range to keep every intermediate value
-     *     inside [ProgressBar]'s `Int` bounds, even for multi-GB projects where a
-     *     1-byte = 1-step mapping would overflow.
-     *  2. **Files** — used when only the file counter is available (early in the
-     *     run, before any byte has been accumulated).
-     *  3. **Indeterminate** — used when neither is available (preparing, Git
-     *     snapshot resolution, etc.).
-     *
-     * The progress bar is updated through `setProgress(value, animate = true)`
-     * (API 24+). The ~80 ms built-in interpolation is shorter than
-     * [ExportCoordinator]'s 120 ms publish throttle, so consecutive ticks chain
-     * into a continuous fill instead of a sequence of jumps.
-     *
-     * `max` is only reassigned when it actually changes: `setMax()` invalidates
-     * the internal `VisualProgress` tracker and cancels any in-flight animation,
-     * which would defeat the animated `setProgress` overload. Resetting
-     * `progress` to 0 when transitioning back to indeterminate guarantees the
-     * next animated update starts from 0 rather than from a stale value left by
-     * a previous run.
-     */
+
     private fun showProgressInline(snapshot: ExportStateHolder.Snapshot) {
         configContainer.visibility = View.GONE
         progressContainer.visibility = View.VISIBLE
@@ -879,23 +909,16 @@ class ConfigurationDialog(
         progressStats.visibility = View.GONE
 
         if (snapshot.bytesTotal > 0L && snapshot.bytesProcessed > 0L) {
-            // Fixed 10 000-step scale: keeps the ratio inside Int bounds for any
-            // project size and lets the bar animate with sub-percent granularity.
             val scale = 10_000
             val target = ((snapshot.bytesProcessed.coerceAtMost(snapshot.bytesTotal) * scale) / snapshot.bytesTotal).toInt()
             progressBar.isIndeterminate = false
             if (progressBar.max != scale) progressBar.max = scale
-            progressBar.setProgress(target, /* animate = */ true)
+            progressBar.setProgress(target, /* animate = */ animationsEnabled)
         } else if (snapshot.total > 0 && snapshot.processed > 0) {
-            // Fall back to file-count progress while byte totals are still unknown.
             progressBar.isIndeterminate = false
             if (progressBar.max != snapshot.total) progressBar.max = snapshot.total
-            progressBar.setProgress(snapshot.processed, /* animate = */ true)
+            progressBar.setProgress(snapshot.processed, /* animate = */ animationsEnabled)
         } else {
-            // Neither byte nor file progress is available yet (preparing, Git
-            // snapshot resolution, etc.). Reset the bar so the first animated
-            // update of the next phase starts from 0 instead of from the value
-            // left behind by a previous run.
             progressBar.isIndeterminate = true
             progressBar.progress = 0
         }
@@ -919,7 +942,6 @@ class ConfigurationDialog(
         progressMinimizeHint.visibility = View.GONE
         progressCancelBtn.visibility = View.GONE
 
-        // Stats — shown only after generation completes.
         val statsText = formatResultStats(snapshot)
         if (statsText.isNullOrBlank()) {
             progressStats.visibility = View.GONE
@@ -967,8 +989,6 @@ class ConfigurationDialog(
             ).show()
         }
     }
-
-    // -------- Action chip handlers ---------
 
     private fun onShareResultClicked() {
         val snap = ExportStateHolder.snapshot
@@ -1111,11 +1131,6 @@ class ConfigurationDialog(
     // [PERF] Git — async first load + async refresh
     // ==================================================================
 
-    /**
-     * Shows a small loading row in `layoutGitBox` while JGit resolves the
-     * repository info + status in a background thread. This avoids blocking
-     * the first open of the dialog with JGit class loading / disk I/O.
-     */
     private fun setupGitUIAsync() {
         val loading = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1253,10 +1268,6 @@ class ConfigurationDialog(
         updateResolvedRef()
     }
 
-    /**
-     * [PERF] Was previously doing two JGit calls on the UI thread when the
-     * user tapped the refresh icon. Now runs entirely in the background.
-     */
     private fun refreshGitInfo() {
         Thread({
             val info = runCatching { GitUtils.getRepoInfo(projectRoot) }.getOrNull() ?: return@Thread
@@ -1324,6 +1335,7 @@ class ConfigurationDialog(
     // ==================================================================
 
     private fun playEntrance(root: ViewGroup) {
+        if (!animationsEnabled) return
         for (i in 0 until root.childCount) {
             val child = root.getChildAt(i)
             child.alpha = 0f
@@ -1335,6 +1347,7 @@ class ConfigurationDialog(
     }
 
     private fun animateTagIn(view: View) {
+        if (!animationsEnabled) return
         view.animate().cancel()
         view.scaleX = 0.5f; view.scaleY = 0.5f; view.alpha = 0f
         view.animate().scaleX(1f).scaleY(1f).alpha(1f)
@@ -1342,6 +1355,7 @@ class ConfigurationDialog(
     }
 
     private fun animateTagOut(view: View, onEnd: () -> Unit) {
+        if (!animationsEnabled) { onEnd(); return }
         view.animate().cancel()
         view.animate().scaleX(0.5f).scaleY(0.5f).alpha(0f)
             .setDuration(180).setInterpolator(DecelerateInterpolator())
@@ -1349,6 +1363,7 @@ class ConfigurationDialog(
     }
 
     private fun attachPressScale(button: View) {
+        if (!animationsEnabled) return
         button.setOnTouchListener { v, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN ->
@@ -1411,16 +1426,26 @@ class ConfigurationDialog(
         minimumHeight = CodeAssistTheme.dp(activity, 16)
     }
 
-    private fun tagSectionHeader(title: String, action: String, onAction: () -> Unit): LinearLayout =
-        LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, CodeAssistTheme.dp(activity, 8), 0, CodeAssistTheme.dp(activity, 4))
-            addView(activity.textView(title, 13f, CodeAssistTheme.TEXT_PRIMARY, true).apply {
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            addView(activity.actionText(action, onAction))
-        }
+    private fun tagSectionHeader(
+        title: String,
+        helpTitleRes: Int,
+        helpBodyRes: Int,
+        action: String,
+        onAction: () -> Unit
+    ): LinearLayout = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(0, CodeAssistTheme.dp(activity, 8), 0, CodeAssistTheme.dp(activity, 4))
+        addView(activity.textView(title, 13f, CodeAssistTheme.TEXT_PRIMARY, true).apply {
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        addView(activity.actionText(action, onAction).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { marginStart = CodeAssistTheme.dp(activity, 8) }
+        })
+        addView(helpIcon(helpTitleRes, helpBodyRes))
+    }
 
     private fun applyConfigToUI(config: FilterConfig) {
         isUpdatingUI = true
@@ -1515,8 +1540,7 @@ class ConfigurationDialog(
                 addEmptyLabel(flowGitignore, activity.pluginString(R.string.no_gitignore_rules))
             } else {
                 gitignoreTags.forEach { tag ->
-                    val overridden = currentConfig.inclusions.contains(tag) ||
-                        currentConfig.exclusions.contains(tag)
+                    val overridden = isGitignoreRuleOverridden(tag)
                     val bg = if (overridden) CodeAssistTheme.TAG_CONFLICT else CodeAssistTheme.TAG_EXCLUDE
                     val fg = if (overridden) CodeAssistTheme.TAG_CONFLICT_TEXT else CodeAssistTheme.TAG_EXCLUDE_TEXT
                     flowGitignore.addView(createTagView(tag, bg, fg, null))
@@ -1524,7 +1548,7 @@ class ConfigurationDialog(
             }
         }
 
-        if (animate) {
+        if (animate && animationsEnabled) {
             val all = listOf(flowInclusions, flowExclusions, flowGitignore)
             var i = 0
             all.forEach { flow ->
@@ -1550,13 +1574,76 @@ class ConfigurationDialog(
     }
 
     private fun addTagToFlow(flow: FlowLayout, tag: String, isInclusion: Boolean) {
-        val conflict = gitignoreTags.contains(tag) ||
-            (if (isInclusion) currentConfig.exclusions.contains(tag) else currentConfig.inclusions.contains(tag))
+        val gitignoreOverride = userRuleOverridesGitignore(tag)
+        val listConflict = if (isInclusion) currentConfig.exclusions.any { it.equals(tag, ignoreCase = true) }
+                           else currentConfig.inclusions.any { it.equals(tag, ignoreCase = true) }
+        val conflict = gitignoreOverride || listConflict
         val bg = when { conflict -> CodeAssistTheme.TAG_CONFLICT; isInclusion -> CodeAssistTheme.TAG_INCLUDE; else -> CodeAssistTheme.TAG_EXCLUDE }
         val fg = when { conflict -> CodeAssistTheme.TAG_CONFLICT_TEXT; isInclusion -> CodeAssistTheme.TAG_INCLUDE_TEXT; else -> CodeAssistTheme.TAG_EXCLUDE_TEXT }
         val view = createTagView(tag, bg, fg) { showTagOptions(tag, isInclusion) }
         flow.addView(view)
         tagViews[tagKey(tag, isInclusion)] = view
+    }
+
+    // ==================================================================
+    // Gitignore vs user rule matching (help highlighters)
+    // ==================================================================
+
+    private fun isGitignoreRuleOverridden(gitignoreRule: String): Boolean =
+        currentConfig.inclusions.any { ruleMatchesGitignoreTag(it, gitignoreRule) } ||
+            currentConfig.exclusions.any { ruleMatchesGitignoreTag(it, gitignoreRule) }
+
+    private fun userRuleOverridesGitignore(rule: String): Boolean =
+        gitignoreTags.any { gitignoreTag -> ruleMatchesGitignoreTag(rule, gitignoreTag) }
+
+    private fun ruleMatchesGitignoreTag(userRule: String, gitignoreTag: String): Boolean {
+        val normalizedTag = gitignoreTag.removePrefix("/").removeSuffix("/")
+        val tagExtension = normalizedTag.removePrefix("*.").lowercase()
+        val rule = userRule.trim()
+        if (rule.isEmpty()) return false
+        val ruleExtension = rule.removePrefix(".").lowercase()
+        return rule.equals(tagExtension, ignoreCase = true) ||
+            rule.equals(normalizedTag, ignoreCase = true) ||
+            rule.equals(gitignoreTag, ignoreCase = true) ||
+            ruleExtension.equals(tagExtension, ignoreCase = true) ||
+            globMatchTag(rule, normalizedTag)
+    }
+
+    /**
+     * Minimal glob matcher that mirrors the wildcard support of [FileFilter]:
+     * single-char `?`, single-segment `*`, and the cross-segment double-star
+     * wildcard (including its directory-prefix form).
+     *
+     * Only invoked from the UI thread on small rule strings (one per chip), so
+     * the cost of recompiling a [Regex] per call is negligible and not worth
+     * caching.
+     */
+    private fun globMatchTag(pattern: String, value: String): Boolean {
+        if (!pattern.contains('*') && !pattern.contains('?')) return false
+        return runCatching {
+            val regex = buildString {
+                append('^')
+                var i = 0
+                while (i < pattern.length) {
+                    when (val c = pattern[i]) {
+                        '*' -> {
+                            if (i + 1 < pattern.length && pattern[i + 1] == '*') {
+                                if (i + 2 < pattern.length && pattern[i + 2] == '/') {
+                                    append("(?:.*/)?"); i += 2
+                                } else { append(".*"); i++ }
+                            } else append("[^/]*")
+                        }
+                        '?' -> append("[^/]")
+                        '.', '(', ')', '+', '|', '^', '$', '\\', '{', '}', '[', ']' ->
+                            append('\\').append(c)
+                        else -> append(c)
+                    }
+                    i++
+                }
+                append('$')
+            }
+            Regex(regex, RegexOption.IGNORE_CASE).matches(value)
+        }.getOrDefault(false)
     }
 
     private fun createTagView(label: String, bg: Int, fg: Int, onClick: (() -> Unit)?): TextView =
@@ -1707,6 +1794,7 @@ class ConfigurationDialog(
     }
 
     private fun animatePresetRow(saved: Boolean, onEnd: (() -> Unit)? = null) {
+        if (!animationsEnabled) { onEnd?.invoke(); return }
         val target = if (saved) btnSavePreset else btnDeletePreset
         target.animate().cancel()
         target.scaleX = 0.6f; target.scaleY = 0.6f; target.alpha = 0f

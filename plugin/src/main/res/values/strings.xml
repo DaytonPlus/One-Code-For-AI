@@ -165,6 +165,31 @@
     <string name="settings_tree">File tree &amp; stats</string>
     <string name="settings_tree_desc">Shows the file tree and token count. Disable it on large projects if you don\'t need it.</string>
 
+    <!-- ===== Settings — new rows ===== -->
+    <string name="settings_git_global">Git integration</string>
+    <string name="settings_git_global_desc">Detects repositories and enables every Git feature. Disable to force plain-folder mode even inside a repo. .gitignore rules still apply.</string>
+    <string name="settings_animations">Animations</string>
+    <string name="settings_animations_desc">Fade and scale transitions in the dialog, tree and preset spinner. Disable on low-end devices.</string>
+    <string name="settings_notifications">Generation notifications</string>
+    <string name="settings_notifications_desc">Progress, completion, and error notifications while exporting. Disable to silence the notification tray.</string>
+
+    <string name="settings_action_delete_presets">Delete all custom presets</string>
+    <string name="settings_action_delete_presets_desc">You have %1$d custom preset(s). Cannot be undone.</string>
+    <string name="settings_action_delete_presets_confirm_title">Delete all custom presets?</string>
+    <string name="settings_action_delete_presets_confirm_message">This will permanently remove every custom profile. Cannot be undone.</string>
+    <string name="settings_action_delete_presets_done">Custom presets deleted.</string>
+    <string name="settings_action_delete_presets_empty">No custom presets to delete.</string>
+
+    <string name="settings_action_reset_config">Reset all settings</string>
+    <string name="settings_action_reset_config_desc">Erases filters, presets, Git choices and saved state. Cannot be undone. Downloads are untouched.</string>
+    <string name="settings_action_reset_confirm_title">Reset all One Code settings?</string>
+    <string name="settings_action_reset_confirm_message">Erases filters, presets, Git choices, and saved state. Cannot be undone. Downloads remain untouched.</string>
+    <string name="settings_action_reset_done">All settings reset to defaults.</string>
+
+    <string name="settings_action_needs_foreground">Open CodeAssist first, then try again.</string>
+
+    <string name="git_disabled_globally">Git is disabled globally in CodeAssist settings. Enable it there to use branches, tags, and commits.</string>
+    
     <!-- ===== Info activity ===== -->
     <!-- > Header -->
     <string name="info_title">INFO</string>
@@ -250,4 +275,15 @@
     <string name="help_a9">No. Preference keys, JSON property names, and profile names are preserved across versions. Custom profiles and the last saved state remain available after installing a new APK.</string>
     <string name="help_q10">The plugin does not appear in CodeAssist. What do I do?</string>
     <string name="help_a10">Confirm that the plugin is enabled in the CodeAssist plugins section, then restart the host. If it still does not appear, verify that the installed build targets CodeAssist Plugin API 4.</string>
+    
+    <!-- values/strings.xml -->
+    <string name="help_icon_description">Section help</string>
+    <string name="help_inclusions_title">Inclusions</string>
+    <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n\u2022 Extensions: kt, json, xml\n\u2022 Wildcards: *.log, **/*.kt, src/*.kt\n\u2022 Directories: build/, **/generated/**\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.</string>
+    <string name="help_exclusions_title">Exclusions</string>
+    <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n\u2022 Extensions: log, tmp, pyc\n\u2022 Wildcards: *.log, **/*.test.kt, src/*.bak\n\u2022 Directories: build/, **/generated/**\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.</string>
+    <string name="help_gitignore_title">Gitignore rules</string>
+    <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only \u2014 edit .gitignore directly to change it.\n\nInclusions and exclusions take priority over these rules: adding a matching inclusion or exclusion forces the file in or out regardless of .gitignore. Overridden rules are highlighted in amber.</string>
+    
+    
 </resources>
