@@ -42,7 +42,7 @@
     <string name="add_exclusion_title">Añadir exclusión</string>
     <string name="edit_extension">Editar extensión</string>
     <string name="delete_rule">Eliminar regla</string>
-    <string name="extension_hint">Ej.: kt, json, src/config</string>
+    <string name="extension_hint">Ej.: kt, json, *.test.kt</string>
     <string name="action_add">＋ Añadir</string>
 
     <!-- > Version control (config dialog) -->
@@ -128,9 +128,6 @@
     <string name="opening_config">⚙️ Abriendo configuración...</string>
 
     <!-- ===== Export errors ===== -->
-    <!-- Mostrados por ExportCoordinator.resolveErrorMessage() cuando falla
-         una exportación en segundo plano. Los marcadores inline que se
-         escriben dentro del .txt se mantienen en inglés por diseño. -->
     <string name="error_file_write_failed">Error al escribir el archivo.</string>
     <string name="error_source_uri_unreadable">No se pudo abrir el archivo de origen.</string>
     <string name="error_output_stream_unavailable">El destino no proporcionó un flujo de salida.</string>
@@ -156,36 +153,12 @@
     <string name="generating_dump">Generando volcado de código...</string>
 
     <!-- ===== Settings page ===== -->
-    <string name="settings_gitignore">Respetar .gitignore</string>
-    <string name="settings_gitignore_desc">Ignora los archivos listados en .gitignore</string>
-    <string name="settings_binaries">Excluir binarios</string>
-    <string name="settings_binaries_desc">Filtra imágenes, vídeos, etc.</string>
-    <string name="settings_git">Integración con Git</string>
-    <string name="settings_git_desc">Permite elegir rama o commit</string>
-    <string name="settings_tree">Árbol y estadísticas</string>
-    <string name="settings_tree_desc">Muestra el árbol de archivos y el conteo de tokens. Desactívalo en proyectos grandes si no lo necesitas.</string>
-
     <string name="settings_git_global">Integración con Git</string>
     <string name="settings_git_global_desc">Detecta repositorios y activa todas las funciones de Git. Desactívalo para forzar el modo carpeta incluso dentro de un repo. Las reglas de .gitignore siguen aplicándose.</string>
     <string name="settings_animations">Animaciones</string>
     <string name="settings_animations_desc">Transiciones de fundido y escala en el diálogo, el árbol y el selector de perfiles. Desactívalas en dispositivos de gama baja.</string>
     <string name="settings_notifications">Notificaciones de generación</string>
     <string name="settings_notifications_desc">Notificaciones de progreso, finalización y error durante la exportación. Desactívalas para silenciar la bandeja.</string>
-
-    <string name="settings_action_delete_presets">Borrar todos los perfiles personalizados</string>
-    <string name="settings_action_delete_presets_desc">Tienes %1$d perfil(es) personalizado(s). No se puede deshacer.</string>
-    <string name="settings_action_delete_presets_confirm_title">¿Borrar todos los perfiles personalizados?</string>
-    <string name="settings_action_delete_presets_confirm_message">Se eliminarán permanentemente todos los perfiles personalizados. No se puede deshacer.</string>
-    <string name="settings_action_delete_presets_done">Perfiles personalizados eliminados.</string>
-    <string name="settings_action_delete_presets_empty">No hay perfiles personalizados que borrar.</string>
-
-    <string name="settings_action_reset_config">Restablecer toda la configuración</string>
-    <string name="settings_action_reset_config_desc">Borra filtros, perfiles, elecciones de Git y el último estado guardado. No se puede deshacer. Las descargas no se tocan.</string>
-    <string name="settings_action_reset_confirm_title">¿Restablecer la configuración de One Code?</string>
-    <string name="settings_action_reset_confirm_message">Borra filtros, perfiles, elecciones de Git y el último estado guardado. No se puede deshacer. Las descargas se mantienen intactas.</string>
-    <string name="settings_action_reset_done">Configuración restablecida a los valores por defecto.</string>
-
-    <string name="settings_action_needs_foreground">Abre CodeAssist primero y vuelve a intentarlo.</string>
 
     <string name="git_disabled_globally">Git está desactivado globalmente en los ajustes de CodeAssist. Actívalo ahí para usar ramas, etiquetas y commits.</string>
     
@@ -199,6 +172,15 @@
     <string name="codeassist_not_installed">CodeAssist no está instalado</string>
     <string name="codeassist_open_error">No se pudo abrir CodeAssist</string>
     <string name="no_app_for_link">No hay app para abrir enlaces</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">NOVEDADES</string>
+    <string name="whats_new_version">Versión %1$s</string>
+    <string name="whats_new_item_1">Nueva Página de Ajustes para activar/desactivar Git, Animaciones y Notificaciones globalmente.</string>
+    <string name="whats_new_item_2">Nuevo Interruptor Global de Git con búsqueda inteligente de .gitignore en directorios superiores.</string>
+    <string name="whats_new_item_3">Perfiles rediseñados con opciones profesionales para Android y exclusiones inteligentes.</string>
+    <string name="whats_new_item_4">Soporte completo de patrones glob (*.log, build/, **/generated/**) y filtrado de directorios.</string>
+    <string name="whats_new_item_5">Ayuda contextual, logs nativos del IDE y corrección de bugs de reflexión y animaciones.</string>
 
     <!-- > Installation guide -->
     <string name="guide_header_title">Guía de instalación</string>
@@ -227,12 +209,16 @@
 
     <!-- > Features -->
     <string name="features_title">Características</string>
-    <string name="feature_1">Un único .txt con todo el código de tu proyecto</string>
-    <string name="feature_2">Exporta desde cualquier rama o commit de Git</string>
-    <string name="feature_3">Perfiles predefinidos: Android, Web, Python, Texto</string>
-    <string name="feature_4">Comparte el archivo con ChatGPT, Claude, Gemini</string>
-    <string name="feature_5">Filtros por extensión y reglas de .gitignore</string>
-    <string name="feature_6">Interfaz integrada con el tema oscuro de CodeAssist</string>
+    <string name="feature_1">Filtros Glob Avanzados: Usa patrones como *.log, build/ o **/generated/**</string>
+    <string name="feature_2">Integración Git: Exporta desde ramas, tags, commits o previsualiza diffs</string>
+    <string name="feature_3">Perfiles Profesionales: Android (Kotlin, Código, Recursos), Web, Python, Texto</string>
+    <string name="feature_4">Ayuda Contextual: Diálogos integrados explican filtros, patrones y prioridad</string>
+    <string name="feature_5">Interruptor Global de Git: Desactiva Git por completo manteniendo el fallback de .gitignore</string>
+    <string name="feature_6">Exclusión en Árbol: Marca/desmarca manualmente archivos y carpetas antes de exportar</string>
+    <string name="feature_7">Progreso Preciso: Rastrea la exportación en tiempo real con procesamiento en segundo plano</string>
+    <string name="feature_8">Logs Nativos del IDE: La depuración va a la consola de CodeAssist sin cortes</string>
+    <string name="feature_9">Página de Ajustes: Toggles nativos para Git, Animaciones y Notificaciones</string>
+    <string name="feature_10">100% Offline y Privado: Sin telemetría, sin internet, totalmente local</string>
 
     <!-- > Links -->
     <string name="links_title">Enlaces</string>
@@ -254,35 +240,46 @@
     <!-- > Help & FAQ -->
     <string name="help_title">AYUDA Y FAQ</string>
     <string name="help_header_subtitle">Encuentra respuestas a problemas comunes y aprende a sacar el máximo provecho del plugin.</string>
-    <string name="help_q1">¿Por qué el archivo generado está vacío o le faltan archivos?</string>
-    <string name="help_a1">Revisa tus filtros. Asegúrate de que las extensiones estén en la sección \"Inclusiones\", o verifica que el límite de tamaño máximo no sea muy bajo. También, asegúrate de que las reglas de .gitignore no estén excluyendo tu código.</string>
-    <string name="help_q2">¿Cómo uso esto con ChatGPT o Claude?</string>
-    <string name="help_a2">Toca \"Compartir archivo\" en lugar de \"Exportar\". Selecciona tu app de IA (ChatGPT, Claude, etc.) en el menú de compartir. Luego puedes pedirle a la IA: \"Aquí está el código de mi proyecto, por favor revísalo...\".</string>
-    <string name="help_q3">La sección de Git dice que no es un repositorio.</string>
-    <string name="help_a3">Si estás dentro de una subcarpeta, toca la acción \"Ir a la raíz del proyecto\". Además, asegúrate de que la integración con Git esté activada en los ajustes del plugin en CodeAssist.</string>
-    <string name="help_q4">¿Dónde se guardan los archivos?</string>
-    <string name="help_a4">Los archivos exportados se guardan en el almacenamiento de tu dispositivo en la ruta: Descargas/OneCodeForAI.</string>
-    <string name="help_q5">¿Los archivos binarios se excluyen automáticamente?</string>
-    <string name="help_a5">Sí. La detección de binarios está activada por defecto y puede desactivarse en las preferencias globales (sección Binarios). Si se desactiva, los binarios se incluyen tal cual y pueden producir un volcado ilegible.</string>
-    <string name="help_q6">¿Qué significa el tamaño máximo?</string>
-    <string name="help_a6">Es un límite por archivo expresado en kilobytes. Los archivos que lo superan se omiten, no se truncan. El valor se recuerda entre sesiones.</string>
-    <string name="help_q7">¿Puedo exportar una rama, etiqueta o commit?</string>
-    <string name="help_a7">Sí, cuando el proyecto es un repositorio Git. Abre el selector de referencias desde el diálogo, elige una rama local o remota, una etiqueta o un commit reciente, y previsualiza el diff contra el árbol de trabajo antes de exportar.</string>
-    <string name="help_q8">¿Puedo reutilizar mis filtros entre proyectos?</string>
-    <string name="help_a8">Sí. Los perfiles guardan las inclusiones, exclusiones, límite de tamaño y el resto de propiedades. Hay perfiles integrados para Android/Kotlin, Web, Python y texto plano; los personalizados se conservan entre arranques.</string>
-    <string name="help_q9">¿Perderé mis perfiles o preferencias tras una actualización?</string>
-    <string name="help_a9">No. Las claves de preferencias, los nombres de propiedades JSON y los nombres de perfil se conservan entre versiones. Los perfiles personalizados y el último estado guardado siguen disponibles tras instalar un APK nuevo.</string>
-    <string name="help_q10">El plugin no aparece en CodeAssist. ¿Qué hago?</string>
-    <string name="help_a10">Confirma que el plugin está habilitado en la sección de plugins de CodeAssist y reinicia el host. Si sigue sin aparecer, verifica que la build instalada apunte a la API de plugins 4 de CodeAssist.</string>
     
-    <!-- values-es/strings.xml -->
+    <string name="help_q1">¿Cómo desactivo la funcionalidad de Git por completo?</string>
+    <string name="help_a1">Ve a Ajustes de CodeAssist, luego Plugins, y abre los ajustes de One Code For AI. Allí encontrarás el interruptor de \"Integración con Git\". Al desactivarlo, el plugin trata la carpeta como archivos planos.</string>
+    
+    <string name="help_q2">¿Por qué .gitignore sigue funcionando si Git está desactivado?</string>
+    <string name="help_a2">Si Git está desactivado, el plugin busca automáticamente el archivo .gitignore en la carpeta seleccionada y en sus ancestros (hasta 5 niveles) para asegurar que tus reglas de filtrado sigan intactas.</string>
+    
+    <string name="help_q3">¿Qué significan las reglas de .gitignore en ámbar?</string>
+    <string name="help_a3">Una regla se resalta en ámbar cuando uno de tus filtros manuales (inclusión o exclusión) la está anulando activamente. Las inclusiones y exclusiones siempre tienen prioridad.</string>
+    
+    <string name="help_q4">¿Cómo uso patrones glob en los filtros?</string>
+    <string name="help_a4">Usa la sintaxis estándar: *.log (cualquier log), build/ (carpeta específica), **/generated/** (cualquier carpeta generada). Toca el icono \"?\" junto a los filtros para más ayuda.</string>
+    
+    <string name="help_q5">¿Qué hacen los nuevos perfiles de Android?</string>
+    <string name="help_a5">Android (Kotlin) exporta todo. Android (source only) quita tests y docs. Android (Resources) exporta solo XMLs (layouts/temas). Excluyen automáticamente archivos generados como R.java.</string>
+    
+    <string name="help_q6">¿Dónde están los ajustes de animaciones y notificaciones?</string>
+    <string name="help_a6">Están en los ajustes nativos de CodeAssist para este plugin. Desactivar animaciones ayuda en dispositivos de gama baja. Desactivar notificaciones silencia alertas de progreso y finalización.</string>
+    
+    <string name="help_q7">¿Cómo excluyo una carpeta entera fácilmente?</string>
+    <string name="help_a7">Abre la vista previa del árbol en el diálogo de configuración. Desmarca la carpeta que quieras excluir. Esto es más rápido y seguro que escribir reglas complejas.</string>
+    
+    <string name="help_q8">¿Puedo cancelar una exportación mientras se ejecuta?</string>
+    <string name="help_a8">Sí. Puedes tocar \"Cancelar\" en el diálogo, o simplemente cerrarlo. La exportación se ejecuta de forma segura en segundo plano y puedes volver a comprobar su progreso cuando quieras.</string>
+    
+    <string name="help_q9">¿Mi código se sube a algún servidor?</string>
+    <string name="help_a9">Para nada. El plugin no requiere permiso de internet. Todo el escaneo, filtrado y generación ocurre 100% en tu dispositivo.</string>
+    
+    <string name="help_q10">¿Dónde se guardan los archivos generados?</string>
+    <string name="help_a10">Los archivos exportados se guardan en el almacenamiento público de tu dispositivo en Descargas/OneCodeForAI.</string>
+    
+    <!-- > Contextual Help -->
     <string name="help_icon_description">Ayuda de la sección</string>
     <string name="help_inclusions_title">Inclusiones</string>
     <string name="help_inclusions_body">Lista blanca de extensiones y patrones glob, evaluada antes que .gitignore.\n\nSintaxis soportada (igual que los patrones de .gitignore):\n\u2022 Extensiones: kt, json, xml\n\u2022 Comodines: *.log, **/*.kt, src/*.kt\n\u2022 Directorios: build/, **/generated/**\n\nCualquier archivo que coincida con una inclusión se exporta aunque .gitignore o las exclusiones lo descartarían.\n\nLas inclusiones tienen prioridad sobre las exclusiones y sobre .gitignore. Úsala para forzar la inclusión de archivos o extensiones concretas.</string>
+    
     <string name="help_exclusions_title">Exclusiones</string>
     <string name="help_exclusions_body">Lista negra de extensiones y patrones glob.\n\nSintaxis soportada (igual que los patrones de .gitignore):\n\u2022 Extensiones: log, tmp, pyc\n\u2022 Comodines: *.log, **/*.test.kt, src/*.bak\n\u2022 Directorios: build/, **/generated/**\n\nCualquier archivo que coincida con una exclusión se omite, aunque .gitignore lo incluiría. Las inclusiones tienen prioridad sobre las exclusiones.\n\nPara excluir una carpeta concreta sin escribir un patrón, usa el árbol de archivos de abajo.</string>
+    
     <string name="help_gitignore_title">Reglas de .gitignore</string>
     <string name="help_gitignore_body">Reglas detectadas en el archivo .gitignore del proyecto.\n\nEsta lista es de solo lectura \u2014 edita .gitignore directamente para modificarla.\n\nLas inclusiones y exclusiones tienen prioridad sobre estas reglas: añadir una inclusión o exclusión que coincida fuerza la entrada o salida del archivo aunque .gitignore diga lo contrario. Las reglas anuladas se marcan en ámbar.</string>
-    
     
 </resources>

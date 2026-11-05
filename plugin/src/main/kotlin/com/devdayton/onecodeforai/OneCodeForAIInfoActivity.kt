@@ -27,17 +27,15 @@ import java.io.File
  * Plugin info screen.
  *
  * Sections, top to bottom:
- *   1. Header          — app name, subtitle, version
- *   2. Installation    — guide_step1..5 (download → install → open → enable → restart)
- *   3. How to use      — step_1..4 (open project → long-press → choose plugin → export/share)
- *   4. Features        — feature_1..6 with icons
- *   5. Help & FAQ      — help_q1..10 / help_a1..10 as expandable Q/A items
- *   6. Links           — repository, issues, license, open CodeAssist
- *   7. Technical info  — version, package, min/target SDK, APK size, language, status
- *   8. Footer          — "Made with love" + author
- *
- * Single scrollable page. No animations, no custom drawables.
- * All user-facing text lives in strings.xml (EN + ES).
+ *   1. Header          - app name, subtitle, version
+ *   2. What's New      - recent changelog for the current version
+ *   3. Installation    - guide_step1..5 (download, install, open, enable, restart)
+ *   4. How to use      - step_1..4 (open project, long-press, choose plugin, export)
+ *   5. Features        - feature_1..10 with icons (advanced filtering, presets, etc.)
+ *   6. Help & FAQ      - help_q1..10 / help_a1..10 as expandable Q/A items
+ *   7. Links           - repository, issues, license, open CodeAssist
+ *   8. Technical info  - version, package, min/target SDK, APK size, language, status
+ *   9. Footer          - "Made with love" + author
  */
 class OneCodeForAIInfoActivity : Activity() {
 
@@ -67,14 +65,16 @@ class OneCodeForAIInfoActivity : Activity() {
         column.addView(buildTopBar())
         column.addView(spacer(12))
         column.addView(buildHeader())
-        column.addView(spacer(16))
-        column.addView(buildPluginInstallSection())   // installation guide (5 steps)
         column.addView(spacer(12))
-        column.addView(buildInstallSection())         // how to use (4 steps)
+        column.addView(buildWhatsNewSection()) // <-- Nueva sección
+        column.addView(spacer(16))
+        column.addView(buildPluginInstallSection())
+        column.addView(spacer(12))
+        column.addView(buildInstallSection())
         column.addView(spacer(12))
         column.addView(buildFeaturesSection())
         column.addView(spacer(12))
-        column.addView(buildHelpSection())            // help & FAQ
+        column.addView(buildHelpSection())
         column.addView(spacer(12))
         column.addView(buildLinksSection())
         column.addView(spacer(12))
@@ -152,9 +152,36 @@ class OneCodeForAIInfoActivity : Activity() {
     }
 
     /**
-     * Installation guide — 5 steps.
-     * Reuses the `guide_step1_title` .. `guide_step5_desc` string keys.
+     * Builds the "What's New" changelog section.
+     * Highlights the most important features introduced in the current version.
      */
+    private fun buildWhatsNewSection(): View {
+        val card = sectionCard()
+        card.addView(sectionTitle(R.string.whats_new_title))
+
+        card.addView(TextView(this).apply {
+            text = getString(R.string.whats_new_version, getVersionName())
+            setTextColor(CodeAssistTheme.ACCENT)
+            textSize = 12f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setPadding(0, 0, 0, dp(8))
+        })
+
+        val changes = listOf(
+            R.string.whats_new_item_1,
+            R.string.whats_new_item_2,
+            R.string.whats_new_item_3,
+            R.string.whats_new_item_4,
+            R.string.whats_new_item_5,
+        )
+        
+        changes.forEach { 
+            card.addView(iconRow(R.drawable.ic_tech_check, getString(it))) 
+        }
+        
+        return card
+    }
+
     private fun buildPluginInstallSection(): View {
         val card = sectionCard()
         card.addView(sectionTitle(R.string.guide_header_title))
@@ -178,10 +205,6 @@ class OneCodeForAIInfoActivity : Activity() {
         return card
     }
 
-    /**
-     * How-to-use section — 4 steps.
-     * Reuses the `step_1_title` .. `step_4_desc` string keys.
-     */
     private fun buildInstallSection(): View {
         val card = sectionCard()
         card.addView(sectionTitle(R.string.integration_title))
@@ -202,25 +225,21 @@ class OneCodeForAIInfoActivity : Activity() {
         card.addView(sectionTitle(R.string.features_title))
 
         val features = listOf(
-            R.drawable.ic_tech_code   to R.string.feature_1,
+            R.drawable.ic_tech_filter to R.string.feature_1,
             R.drawable.ic_tech_git    to R.string.feature_2,
-            R.drawable.ic_tech_filter to R.string.feature_3,
+            R.drawable.ic_tech_code   to R.string.feature_3,
             R.drawable.ic_tech_share  to R.string.feature_4,
-            R.drawable.ic_tech_filter to R.string.feature_5,
-            R.drawable.ic_tech_code   to R.string.feature_6,
+            R.drawable.ic_tech_folder to R.string.feature_5,
+            R.drawable.ic_tech_chart  to R.string.feature_6,
+            R.drawable.ic_tech_check  to R.string.feature_7,
+            R.drawable.ic_tech_search to R.string.feature_8,
+            R.drawable.ic_tech_settings to R.string.feature_9,
+            R.drawable.ic_tech_rocket to R.string.feature_10,
         )
         features.forEach { card.addView(iconRow(it.first, getString(it.second))) }
         return card
     }
 
-    /**
-     * Help & FAQ.
-     *
-     * All Q/A pairs live under the `help_q*` / `help_a*` prefix —
-     * the section title itself is "HELP & FAQ" and its header is
-     * "Frequently Asked Questions", so no parallel namespace is used.
-     * Answers are collapsed by default; tapping a question toggles it.
-     */
     private fun buildHelpSection(): View {
         val card = sectionCard()
         card.addView(sectionTitle(R.string.help_title))
@@ -248,11 +267,6 @@ class OneCodeForAIInfoActivity : Activity() {
         return card
     }
 
-    /**
-     * One collapsible Q/A row.
-     * The chevron and the answer state are local to the row — no
-     * external state, no persistence across activity recreations.
-     */
     private fun helpItem(questionRes: Int, answerRes: Int): View {
         val item = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

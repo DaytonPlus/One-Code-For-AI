@@ -42,7 +42,7 @@
     <string name="add_exclusion_title">Add exclusion</string>
     <string name="edit_extension">Edit extension</string>
     <string name="delete_rule">Delete rule</string>
-    <string name="extension_hint">e.g.: kt, json, src/config</string>
+    <string name="extension_hint">e.g.: kt, json, *.test.kt</string>
     <string name="action_add">＋ Add</string>
 
     <!-- > Version control (config dialog) -->
@@ -128,9 +128,6 @@
     <string name="opening_config">⚙️ Opening configuration…</string>
 
     <!-- ===== Export errors ===== -->
-    <!-- Surfaced through ExportCoordinator.resolveErrorMessage() when a
-         background export fails. Kept separate from inline markers written
-         into the .txt dump (those stay in English by design). -->
     <string name="error_file_write_failed">File write failed.</string>
     <string name="error_source_uri_unreadable">Could not open the source file.</string>
     <string name="error_output_stream_unavailable">The destination did not provide an output stream.</string>
@@ -156,37 +153,12 @@
     <string name="generating_dump">Generating code dump…</string>
 
     <!-- ===== Settings page ===== -->
-    <string name="settings_gitignore">Respect .gitignore</string>
-    <string name="settings_gitignore_desc">Ignores files listed in .gitignore</string>
-    <string name="settings_binaries">Exclude binaries</string>
-    <string name="settings_binaries_desc">Filters out images, videos, etc.</string>
-    <string name="settings_git">Git integration</string>
-    <string name="settings_git_desc">Lets you pick a branch or commit</string>
-    <string name="settings_tree">File tree &amp; stats</string>
-    <string name="settings_tree_desc">Shows the file tree and token count. Disable it on large projects if you don\'t need it.</string>
-
-    <!-- ===== Settings — new rows ===== -->
     <string name="settings_git_global">Git integration</string>
     <string name="settings_git_global_desc">Detects repositories and enables every Git feature. Disable to force plain-folder mode even inside a repo. .gitignore rules still apply.</string>
     <string name="settings_animations">Animations</string>
     <string name="settings_animations_desc">Fade and scale transitions in the dialog, tree and preset spinner. Disable on low-end devices.</string>
     <string name="settings_notifications">Generation notifications</string>
     <string name="settings_notifications_desc">Progress, completion, and error notifications while exporting. Disable to silence the notification tray.</string>
-
-    <string name="settings_action_delete_presets">Delete all custom presets</string>
-    <string name="settings_action_delete_presets_desc">You have %1$d custom preset(s). Cannot be undone.</string>
-    <string name="settings_action_delete_presets_confirm_title">Delete all custom presets?</string>
-    <string name="settings_action_delete_presets_confirm_message">This will permanently remove every custom profile. Cannot be undone.</string>
-    <string name="settings_action_delete_presets_done">Custom presets deleted.</string>
-    <string name="settings_action_delete_presets_empty">No custom presets to delete.</string>
-
-    <string name="settings_action_reset_config">Reset all settings</string>
-    <string name="settings_action_reset_config_desc">Erases filters, presets, Git choices and saved state. Cannot be undone. Downloads are untouched.</string>
-    <string name="settings_action_reset_confirm_title">Reset all One Code settings?</string>
-    <string name="settings_action_reset_confirm_message">Erases filters, presets, Git choices, and saved state. Cannot be undone. Downloads remain untouched.</string>
-    <string name="settings_action_reset_done">All settings reset to defaults.</string>
-
-    <string name="settings_action_needs_foreground">Open CodeAssist first, then try again.</string>
 
     <string name="git_disabled_globally">Git is disabled globally in CodeAssist settings. Enable it there to use branches, tags, and commits.</string>
     
@@ -200,6 +172,15 @@
     <string name="codeassist_not_installed">CodeAssist is not installed</string>
     <string name="codeassist_open_error">Could not open CodeAssist</string>
     <string name="no_app_for_link">No app available to open links</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">WHAT'S NEW</string>
+    <string name="whats_new_version">Version %1$s</string>
+    <string name="whats_new_item_1">Added a native Settings Page to toggle Git, Animations, and Notifications globally.</string>
+    <string name="whats_new_item_2">Introduced a Git Kill Switch with a smart .gitignore ancestor fallback.</string>
+    <string name="whats_new_item_3">Overhauled presets with professional Android-focused profiles and smart exclusions.</string>
+    <string name="whats_new_item_4">Added full glob pattern support (*.log, build/, **/generated/**) and directory filtering.</string>
+    <string name="whats_new_item_5">Added contextual help dialogs, IDE native logging, and fixed reflection bugs.</string>
 
     <!-- > Installation guide -->
     <string name="guide_header_title">Installation guide</string>
@@ -228,12 +209,16 @@
 
     <!-- > Features -->
     <string name="features_title">Features</string>
-    <string name="feature_1">A single .txt with all your project code</string>
-    <string name="feature_2">Export from any Git branch or commit</string>
-    <string name="feature_3">Ready-made presets: Android, Web, Python, Text</string>
-    <string name="feature_4">Share the file with ChatGPT, Claude, Gemini</string>
-    <string name="feature_5">Filters by extension and .gitignore rules</string>
-    <string name="feature_6">UI integrated with the CodeAssist dark theme</string>
+    <string name="feature_1">Advanced Glob Filters: Use patterns like *.log, build/, or **/generated/**</string>
+    <string name="feature_2">Git Integration: Export from branches, tags, commits, or preview diffs</string>
+    <string name="feature_3">Professional Presets: Android (Kotlin, Source, Resources), Web, Python, Text</string>
+    <string name="feature_4">Contextual Help: Inline dialogs explain filters, patterns, and .gitignore priority</string>
+    <string name="feature_5">Global Git Kill Switch: Disable Git entirely while preserving .gitignore fallback</string>
+    <string name="feature_6">Project Tree Exclusions: Manually check/uncheck files and folders before export</string>
+    <string name="feature_7">Byte-accurate Progress: Track export progress in real-time with background processing</string>
+    <string name="feature_8">IDE Native Logging: Debugs route to the CodeAssist console with automatic chunking</string>
+    <string name="feature_9">Global Settings Page: Native toggles for Git, Animations, and Notifications</string>
+    <string name="feature_10">100% Offline &amp; Private: No telemetry, no internet permission, totally local</string>
 
     <!-- > Links -->
     <string name="links_title">Links</string>
@@ -255,35 +240,46 @@
     <!-- > Help & FAQ -->
     <string name="help_title">HELP &amp; FAQ</string>
     <string name="help_header_subtitle">Find answers to common issues and learn how to get the most out of the plugin.</string>
-    <string name="help_q1">Why is the generated file empty or missing files?</string>
-    <string name="help_a1">Check your filters. Make sure the extensions are in the \"Inclusions\" section, or verify that the maximum size limit isn\'t too low. Also, ensure .gitignore rules aren\'t excluding your code.</string>
-    <string name="help_q2">How do I use this with ChatGPT or Claude?</string>
-    <string name="help_a2">Tap \"Share file\" instead of \"Export\". Select your AI app (ChatGPT, Claude, etc.) from the share menu. You can then prompt the AI: \"Here is my project code, please review it...\".</string>
-    <string name="help_q3">The Git section says it\'s not a repository.</string>
-    <string name="help_a3">If you are inside a subfolder, tap the \"Go to project root\" action. Also, make sure the Git integration is enabled in CodeAssist\'s plugin settings.</string>
-    <string name="help_q4">Where are the files saved?</string>
-    <string name="help_a4">Exported files are saved in your device\'s storage under the path: Downloads/OneCodeForAI.</string>
-    <string name="help_q5">Are binary files excluded automatically?</string>
-    <string name="help_a5">Yes. Binary detection is enabled by default and can be turned off in the global preferences (Binaries section). When disabled, binary files are included as-is and may produce an unreadable dump.</string>
-    <string name="help_q6">What does the maximum size mean?</string>
-    <string name="help_a6">It is a per-file limit expressed in kilobytes. Files larger than the limit are skipped, not truncated. The value is remembered across sessions.</string>
-    <string name="help_q7">Can I export a branch, tag, or commit?</string>
-    <string name="help_a7">Yes, when the project is a Git repository. Open the reference picker from the dialog, choose a local or remote branch, a tag, or a recent commit, and preview the diff against the working tree before exporting.</string>
-    <string name="help_q8">Can I reuse my filters across projects?</string>
-    <string name="help_a8">Yes. Profiles store inclusions, exclusions, size limit, and the other filter properties. Built-in profiles cover Android/Kotlin, Web, Python, and plain text; custom profiles are persisted across launches.</string>
-    <string name="help_q9">Will I lose my profiles or preferences after an update?</string>
-    <string name="help_a9">No. Preference keys, JSON property names, and profile names are preserved across versions. Custom profiles and the last saved state remain available after installing a new APK.</string>
-    <string name="help_q10">The plugin does not appear in CodeAssist. What do I do?</string>
-    <string name="help_a10">Confirm that the plugin is enabled in the CodeAssist plugins section, then restart the host. If it still does not appear, verify that the installed build targets CodeAssist Plugin API 4.</string>
     
-    <!-- values/strings.xml -->
+    <string name="help_q1">How do I disable Git functionality entirely?</string>
+    <string name="help_a1">Go to CodeAssist Settings, then Plugins, and open the One Code For AI settings. There you will find the \"Git integration\" toggle. When disabled, the plugin treats your folder as plain files.</string>
+    
+    <string name="help_q2">Why does .gitignore still work when Git is disabled?</string>
+    <string name="help_a2">If Git is disabled, the plugin automatically searches your selected folder and its parent directories (up to 5 levels) for a .gitignore file. This ensures your filtering rules remain intact.</string>
+    
+    <string name="help_q3">What do the amber .gitignore rules mean?</string>
+    <string name="help_a3">A rule is highlighted in amber when one of your manual inclusion or exclusion filters is actively overriding it. Inclusions and exclusions always take priority over .gitignore.</string>
+    
+    <string name="help_q4">How do I use glob patterns in filters?</string>
+    <string name="help_a4">Use standard glob syntax: *.log (any log file), build/ (specific folder), **/generated/** (any nested generated folder). Tap the \"?\" icon next to the filter sections for a quick guide.</string>
+    
+    <string name="help_q5">What do the new Android presets do?</string>
+    <string name="help_a5">Android (Kotlin) exports everything. Android (source only) strips tests and docs. Android (Resources) exports only XMLs (layouts/themes). They automatically exclude generated files like R.java.</string>
+    
+    <string name="help_q6">Where are the settings for animations and notifications?</string>
+    <string name="help_a6">They are in the native CodeAssist settings for this plugin. Disabling animations helps performance on low-end devices. Disabling notifications silences progress and completion alerts.</string>
+    
+    <string name="help_q7">How do I exclude an entire folder easily?</string>
+    <string name="help_a7">Open the file tree preview in the configuration dialog. Uncheck the folder you want to exclude. This is faster and safer than writing complex exclusion rules.</string>
+    
+    <string name="help_q8">Can I cancel an export while it is running?</string>
+    <string name="help_a8">Yes. You can tap \"Cancel\" in the dialog, or simply dismiss the dialog. The export runs safely in the background and you can return to check its progress at any time.</string>
+    
+    <string name="help_q9">Is my code uploaded to a server?</string>
+    <string name="help_a9">Absolutely not. The plugin does not require internet permission. All scanning, filtering, and generation happens 100% locally on your device.</string>
+    
+    <string name="help_q10">Where are the generated files saved?</string>
+    <string name="help_a10">Exported files are saved to your device's public storage under Downloads/OneCodeForAI.</string>
+    
+    <!-- > Contextual Help -->
     <string name="help_icon_description">Section help</string>
     <string name="help_inclusions_title">Inclusions</string>
     <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n\u2022 Extensions: kt, json, xml\n\u2022 Wildcards: *.log, **/*.kt, src/*.kt\n\u2022 Directories: build/, **/generated/**\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.</string>
+    
     <string name="help_exclusions_title">Exclusions</string>
     <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n\u2022 Extensions: log, tmp, pyc\n\u2022 Wildcards: *.log, **/*.test.kt, src/*.bak\n\u2022 Directories: build/, **/generated/**\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.</string>
+    
     <string name="help_gitignore_title">Gitignore rules</string>
     <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only \u2014 edit .gitignore directly to change it.\n\nInclusions and exclusions take priority over these rules: adding a matching inclusion or exclusion forces the file in or out regardless of .gitignore. Overridden rules are highlighted in amber.</string>
-    
     
 </resources>
