@@ -833,23 +833,30 @@ class ConfigurationDialog(
     // ==================================================================
 
     /**
-     * Creates an inline help icon ("?") with a small visual footprint and a
-     * touch-friendly hit area.
+     * Creates an inline help icon ("?") with a moderate visual footprint and
+     * a touch-friendly hit area.
      *
-     * The icon is a 14 dp vector centered inside a 40 dp transparent
+     * The icon is an 18 dp vector centered inside a 40 dp transparent
      * [FrameLayout]. The frame (not the icon itself) owns the click handler,
      * so the user can reliably tap the affordance without accidentally
      * triggering the adjacent section title or checkbox. This matches the
      * plugin's minimum tap-target rule while keeping the visual weight low
      * enough that it does not compete with the section title.
      *
+     * 18 dp is the sweet spot between the previous 14 dp (which was reported
+     * as visually too small against bold section titles) and the underlying
+     * 24 dp vector (which would dominate the row). It also leaves a 2 dp
+     * breathing room on every side inside the 40 dp frame, which keeps the
+     * icon comfortably centered even when the container gets a stroke or
+     * background in a future iteration.
+     *
      * `FIT_CENTER` (rather than `CENTER`) is used because the underlying
-     * vector is 24 dp and must be scaled down inside the 14 dp frame; using
+     * vector is 24 dp and must be scaled down inside the 18 dp frame; using
      * `CENTER` would crop it.
      */
     private fun helpIcon(helpTitleRes: Int, helpBodyRes: Int): View {
         val touchSize = CodeAssistTheme.dp(activity, 40)
-        val iconSize = CodeAssistTheme.dp(activity, 14)
+        val iconSize = CodeAssistTheme.dp(activity, 18)
 
         val container = FrameLayout(activity).apply {
             layoutParams = LinearLayout.LayoutParams(touchSize, touchSize).apply {
