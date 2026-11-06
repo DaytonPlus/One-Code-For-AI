@@ -138,6 +138,10 @@
     <string name="error_git_ref_unresolved">Git reference \"%1$s\" could not be resolved.</string>
     <string name="error_git_export_no_ref">Git export is enabled but no reference was selected.</string>
     <string name="unknown_error">Unknown error</string>
+    
+    <string name="error_storage_permission">Storage permission required. Grant it in Settings → Apps → One Code For AI → Permissions.</string>
+    <string name="notification_ready_title_partial">Context ready · %1$d read errors</string>
+    <string name="error_source_file_missing">The generated file is no longer available. It may have been deleted or moved. Generate the context again to recreate it.</string>
 
     <!-- ===== Sharing ===== -->
     <string name="share_with">Share dump with:</string>

@@ -26,10 +26,43 @@ import java.io.Writer
  * All operations are synchronous and may block on disk I/O. Callers running on
  * the UI thread must dispatch to a background executor (see
  * `ExportCoordinator`, `ConfigurationDialog`, and `OneCodeForAIPlugin`).
+ *
+ * Exception policy
+ * ----------------
+ * Two opening helpers exist, with deliberately different exception handling:
+ *
+ *  - [withGit] **swallows every exception** and returns `null` / a default.
+ *    It backs the *metadata* and *diff* helpers ([getBranches], [getTags],
+ *    [getRecentCommits], [getRepoInfo], [getDiff], …). Those are UI-facing
+ *    queries that are not cancellable from the export coordinator, so a
+ *    missing repo, a locked index, or an interrupted thread should surface
+ *    as an empty result rather than crash a spinner.
+ *  - [withSnapshot] **propagates every exception**. It backs the actual
+ *    export path, so a `SecurityException`, an [java.io.IOException], or an
+ *    [InterruptedException] must reach [com.devdayton.onecodeforai.android.ExportCoordinator]
+ *    unchanged. That is what lets the coordinator distinguish a real I/O
+ *    failure from a user cancellation (see the `Cancellation` note below).
+ *
+ * Cancellation
+ * ------------
+ * Only the export path is cancellable. [GitSnapshot.writeFileContent] streams
+ * each blob through [copyNormalizedText], which checks the worker thread's
+ * interrupt flag **before every read** (roughly every [DEFAULT_BUFFER_SIZE]
+ * characters). The thrown [InterruptedException] is not caught anywhere on the
+ * call chain [GitSnapshot.writeFileContent] → [withSnapshot] → caller, so it
+ * unwinds all the way to the export coordinator and terminates the run within
+ * a single chunk — even in the middle of a multi-megabyte file.
  */
 object GitUtils {
 
-    /** Opens a repository, runs [block], and always closes the repository. */
+    /**
+     * Opens a repository, runs [block], and always closes the repository.
+     *
+     * All exceptions raised by [block] are swallowed and reported as `null`,
+     * including [InterruptedException]. That is intentional: this helper is
+     * only used by the metadata and diff queries, which are not part of the
+     * cancellable export path. See the class-level *Exception policy* note.
+     */
     private inline fun <T> withGit(directory: File, block: (Git) -> T): T? {
         val git = openGit(directory) ?: return null
         return try {
@@ -206,9 +239,19 @@ object GitUtils {
      * Opens a single repository session for a complete Git export.
      *
      * Keeping the repository open across tree enumeration and blob streaming
-     * avoids reopening JGit once per file in large projects. Exceptions raised
-     * by [operation] propagate so the export can report the actual I/O failure
-     * rather than silently emitting a partial snapshot.
+     * avoids reopening JGit once per file in large projects.
+     *
+     * Unlike [withGit], this helper **does not swallow exceptions**: the actual
+     * I/O failure (a closed repository, a `SecurityException`, an
+     * [java.io.IOException], or an [InterruptedException] raised by
+     * [GitSnapshot.writeFileContent]) propagates out of [operation] unchanged
+     * so the coordinator can report it accurately instead of silently emitting
+     * a partial snapshot.
+     *
+     * @throws java.io.IOException when the folder is not a readable repository
+     *   or [ref] cannot be resolved to a tree.
+     * @throws InterruptedException when the worker thread is interrupted while
+     *   [operation] is streaming blob content; see [copyNormalizedText].
      */
     @Throws(java.io.IOException::class)
     fun <T> withSnapshot(
@@ -288,7 +331,19 @@ object GitUtils {
          * Writes the content of [path] from this snapshot into [writer],
          * normalizing CRLF to LF so the dump is consistent across platforms.
          *
-         * Returns `false` when the path is absent or does not resolve to a blob.
+         * Returns `false` when the path is absent or does not resolve to a blob
+         * — that is a *per-file* failure, and the caller is expected to write
+         * an inline `[Git read error: …]` marker and keep going.
+         *
+         * Cancellation
+         * ------------
+         * An [InterruptedException] raised by [copyNormalizedText] (worker thread
+         * interrupted while streaming the blob) is deliberately **not** caught:
+         * it propagates out of this method, through [withSnapshot], and all the
+         * way to the export coordinator, which aborts the run. That is what
+         * makes the Cancel button responsive even in the middle of a large
+         * file, and it is why cancellation is never reported as a per-file read
+         * error.
          */
         fun writeFileContent(path: String, writer: Writer): Boolean {
             val objectId = repository.resolve("$ref:$path") ?: return false
@@ -403,6 +458,17 @@ object GitUtils {
      * Git blobs are stored with LF, but the working tree may contain CRLF on
      * Windows or with `core.autocrlf`; normalizing here keeps the dump uniform
      * regardless of the source.
+     *
+     * Cancellation
+     * ------------
+     * The worker thread's interrupt flag is checked **before every read**
+     * (roughly every [DEFAULT_BUFFER_SIZE] characters). This is what lets
+     * [com.devdayton.onecodeforai.android.ExportCoordinator.cancel] stop the
+     * export within a single chunk even when the current blob is a
+     * multi-megabyte file. The thrown [InterruptedException] is not caught
+     * here or in [GitSnapshot.writeFileContent] / [withSnapshot]; it unwinds
+     * all the way to the coordinator, which distinguishes it from a real I/O
+     * failure.
      */
     private fun copyNormalizedText(reader: java.io.Reader, writer: Writer) {
         val buffer = CharArray(DEFAULT_BUFFER_SIZE)
@@ -410,6 +476,13 @@ object GitUtils {
         var lastWasNewline = false
 
         while (true) {
+            // Check every chunk so that a single large blob cannot block the
+            // Cancel button. The caller's loop in ExportCoordinator only checks
+            // between files, which is not enough for files bigger than a few
+            // hundred KiB.
+            if (Thread.currentThread().isInterrupted) {
+                throw InterruptedException("Git dump generation was interrupted.")
+            }
             val count = reader.read(buffer)
             if (count < 0) break
             for (index in 0 until count) {

@@ -20,6 +20,20 @@ import java.util.concurrent.ConcurrentHashMap
  * Before, every `FileFilter` instance re-read and re-parsed the file, and
  * `ConfigurationDialog` + `ProjectTreeView.scanAsync` both created instances
  * (and rescanned on every filter change).
+ *
+ * Cancellation
+ * ------------
+ * The export path is cancellable through the standard `Thread.interrupt`
+ * mechanism. [walkIncludedFiles] — and any terminal operator on its sequence,
+ * including [countEligibleFiles] — checks the worker thread's interrupt flag
+ * between directory entries, so an export that is cancelled mid-walk unwinds
+ * within a single entry instead of having to finish scanning the whole tree.
+ *
+ * The thrown [InterruptedException] propagates to the caller unchanged; the
+ * export coordinator treats it as a user cancellation and never reports it as
+ * a failure. The `ConfigurationDialog`'s tree scanner is not affected because
+ * it uses its own token-based cancellation and never calls this method while
+ * a filter instance is shared with the export worker.
  */
 class FileFilter(
     root: File,
@@ -43,6 +57,11 @@ class FileFilter(
      * Evaluates a filesystem entry. `respectExcludedPaths=false` is reserved
      * for the interactive tree, which must display manually excluded nodes so
      * that users can include them again.
+     *
+     * Cancellation is **not** checked here: this method is called once per
+     * entry from the walk loop, which is where the interrupt flag is polled.
+     * Adding a second check per entry would double the cost of the hottest
+     * path in the filter for no benefit.
      */
     fun include(file: File, respectExcludedPaths: Boolean = true): Boolean {
         if (isSymbolicLink(file) || (!file.isDirectory && !file.isFile)) return false
@@ -72,7 +91,7 @@ class FileFilter(
         val name = segments.last()
         if (isDirectory) {
             if (name in excludedDirectoryNames) return false
-            // NEW: user-defined exclusions also apply to directories, so a rule
+            // User-defined exclusions also apply to directories, so a rule
             // like `build`, `**/generated` or `src/test` prevents the directory
             // itself from being walked. Previously the check ran only for files,
             // which meant `build` as an exclusion was silently a no-op for the
@@ -107,11 +126,35 @@ class FileFilter(
     /**
      * Returns included regular files in deterministic depth-first order.
      * Only one directory's children are materialized at a time.
+     *
+     * Cancellation
+     * ------------
+     * The worker thread's interrupt flag is checked **once per directory entry**,
+     * in two places:
+     *
+     *  - at the top of [walk], before `listFiles()` runs, so a directory that
+     *    was just entered cannot start its scan if the user already pressed
+     *    Cancel between recursion levels, and
+     *  - inside the `for` loop, before dispatching into `include` / `walk` /
+     *    `yield`, so a wide directory with thousands of children unwinds on
+     *    the very next entry.
+     *
+     * `listFiles()` and `sortedWith` themselves are not interruptible — both
+     * are bounded by the number of entries in a single directory and complete
+     * in milliseconds on any realistic project — so adding a check inside them
+     * is not worth the extra branch per iteration.
+     *
+     * The thrown [InterruptedException] propagates out of the calling terminal
+     * operator (`toList`, `count`, `forEach`, …) and lands in
+     * [com.devdayton.onecodeforai.android.ExportCoordinator.runExport]'s
+     * dedicated `catch (e: InterruptedException)` block.
      */
     fun walkIncludedFiles(): Sequence<File> = sequence {
         require(root.isDirectory) { "Project root is not a directory: ${root.path}" }
+        ensureActive()
 
         suspend fun SequenceScope<File>.walk(directory: File) {
+            ensureActive()
             val children = directory.listFiles()
                 ?.asSequence()
                 ?.filterNot(::isSymbolicLink)
@@ -122,6 +165,7 @@ class FileFilter(
                 ?: return
 
             for (child in children) {
+                ensureActive()
                 if (child.isDirectory) {
                     if (include(child)) walk(child)
                 } else if (include(child)) {
@@ -137,6 +181,11 @@ class FileFilter(
      * Returns the number of files that would be included with the current
      * configuration. Used to drive the determinate progress bar in the
      * generation panel and the notification text.
+     *
+     * Because this delegates to [walkIncludedFiles], it also honours the
+     * worker thread's interrupt flag: if the export is cancelled while the
+     * pre-count is running, this throws [InterruptedException] instead of
+     * finishing the traversal.
      */
     fun countEligibleFiles(): Int = walkIncludedFiles().count()
 
@@ -145,6 +194,17 @@ class FileFilter(
         readGitignoreEntry()?.rawRules ?: emptyList()
 
     // ------------------------------------------------------------------
+
+    /**
+     * Throws [InterruptedException] when the current thread has been
+     * interrupted. Shared by every loop in this class so the walk responds to
+     * `ExportCoordinator.cancel()` within a single directory entry.
+     */
+    private fun ensureActive() {
+        if (Thread.currentThread().isInterrupted) {
+            throw InterruptedException("File walk was interrupted.")
+        }
+    }
 
     private fun relativePathOf(file: File): String? = runCatching {
         val canonical = file.canonicalFile
@@ -190,6 +250,16 @@ class FileFilter(
     private fun loadIgnoreRules(): List<IgnoreRule> =
         readGitignoreEntry()?.parsedRules ?: emptyList()
 
+    /**
+     * Reads and parses the root `.gitignore`, reusing the cached entry when the
+     * file's mtime has not changed.
+     *
+     * The fast path returns the cached entry without touching the filesystem
+     * beyond the `lastModified()` call; the slow path reads and parses the
+     * file once and stores the result. `ConcurrentHashMap` provides the
+     * happens-before guarantee needed for the immutable [GitignoreCacheEntry]
+     * to be safely shared between threads.
+     */
     private fun readGitignoreEntry(): GitignoreCacheEntry? {
         val gitignore = File(root, ".gitignore")
         if (!gitignore.isFile) return null
@@ -197,12 +267,12 @@ class FileFilter(
         val mtime = gitignore.lastModified()
         val key = gitignore.absolutePath
 
-        // Camino rápido: ya cacheado y el fichero no cambió.
+        // Fast path: already cached and the file has not changed.
         gitignoreCache[key]?.let { entry ->
             if (entry.mtime == mtime) return entry
         }
 
-        // Lectura + parseo de una sola pasada.
+        // Slow path: read and parse in a single pass.
         val lines = runCatching { gitignore.readLines(Charsets.UTF_8) }
             .getOrDefault(emptyList())
         val filtered = lines
@@ -225,7 +295,7 @@ class FileFilter(
         fileName: String,
         extension: String
     ): Boolean = rules.any { rawRule ->
-        // NEW: strip the .gitignore-style trailing slash before comparing.
+        // Strip the .gitignore-style trailing slash before comparing.
         // `build/` in an exclusion should behave the same as `build` —
         // `fileName` and `path` never carry a trailing slash, so without this
         // the literal comparison and the glob match both fail. The slash is a
@@ -291,7 +361,7 @@ class FileFilter(
         }
     }
 
-    /** [PERF] Caché compartida por todas las instancias; invalidada por mtime. */
+    /** [PERF] Cache shared by every instance; invalidated when the mtime changes. */
     private data class GitignoreCacheEntry(
         val mtime: Long,
         val rawRules: List<String>,
@@ -301,7 +371,11 @@ class FileFilter(
     companion object {
         private val gitignoreCache = ConcurrentHashMap<String, GitignoreCacheEntry>()
 
-        /** [PERF] Permite forzar la recarga si el fichero cambió fuera del mtime esperado. */
+        /**
+         * [PERF] Forces a reload when the `.gitignore` file was changed outside
+         * the expected mtime window (e.g. a Git checkout that preserves the
+         * previous timestamp on some filesystems).
+         */
         fun invalidateGitignoreCache(root: File) {
             val gitignore = File(root.canonicalFile, ".gitignore")
             gitignoreCache.remove(gitignore.absolutePath)

@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- WRITE_EXTERNAL_STORAGE is only needed for the legacy public-Downloads
+         path on API 26-28. API 29+ uses MediaStore and needs no permission.
+         maxSdkVersion limits the request to the API range that actually uses it. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <application
         android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name">
 
-        <!-- How CodeAssist finds this app at all: it queries the package manager for this action,
-             then reads the manifest out of the resource the meta-data points at. -->
+        <!-- How CodeAssist finds this app at all: it queries the package manager
+             for the PLUGIN action, then reads the manifest out of the resource
+             the meta-data points at. The MAIN/LAUNCHER filter is what makes the
+             app appear in the launcher so the user can open the info screen.
+             Do NOT remove either intent-filter or the meta-data below. -->
         <activity
             android:name=".OneCodeForAIInfoActivity"
             android:exported="true"
@@ -16,13 +27,11 @@
 
             <intent-filter>
                 <action android:name="dev.ide.codeassist.action.PLUGIN" />
-
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 

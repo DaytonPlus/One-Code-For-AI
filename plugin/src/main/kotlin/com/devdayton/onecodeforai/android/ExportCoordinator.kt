@@ -3,17 +3,18 @@ package com.devdayton.onecodeforai.android
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import com.devdayton.onecodeforai.R
-import com.devdayton.onecodeforai.android.PluginSettings
 import com.devdayton.onecodeforai.core.CodeDumpGenerator
 import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.FileProgressListener
@@ -45,10 +46,58 @@ enum class ExportAction {
  * singleton and re-renders whatever state currently exists, which is what lets
  * the dialog be dismissed and reopened mid-export without losing progress.
  *
- * Cancellation is cooperative: [cancel] interrupts the worker thread and
- * [CodeDumpGenerator] checks `Thread.isInterrupted` between files, so large
- * exports unwind promptly without leaving partial files behind.
+ * Delivery strategy
+ * -----------------
+ * Every export goes through the same two stages:
  *
+ *  1. **Produce the content.** Generation and Save-to-a-new-name both stream
+ *     the dump into a **private cache temp file** first. This stage can fail
+ *     for reasons the user controls (filter errors, an unresolvable Git ref,
+ *     cancellation, an unreadable source URI), so the target file in
+ *     Downloads is never touched until the content is known to be complete.
+ *  2. **Publish to Downloads.** The temp file is streamed into the target
+ *     file using an **atomic write**:
+ *       - On API 29+ a new MediaStore entry is created with
+ *         `IS_PENDING = 1` so the partial write is invisible to other apps,
+ *         then the previous file is deleted and the pending entry is
+ *         renamed to the canonical name and made visible.
+ *       - On API 26-28 the content is written to a `.tmp-…` sibling and
+ *         renamed over the target (POSIX-atomic on the same filesystem).
+ *     In both cases, if the copy fails or is cancelled mid-stream, the new
+ *     file is discarded and the previous dump is left untouched.
+ *
+ * No cache fallback, no FileProvider
+ * ----------------------------------
+ * When the Downloads write fails (most commonly `WRITE_EXTERNAL_STORAGE`
+ * denied on API 26-28), the export **fails visibly** with a localized error
+ * message and the previous dump is preserved. There is no second delivery
+ * path through the cache because the plugin no longer bundles a
+ * `ContentProvider`: shipping `androidx.core` purely to expose a fallback
+ * cache file added ~1.2 MB to the APK for a single edge case. Users on
+ * API 26-28 who see the error can grant the permission once and retry.
+ *
+ * Cancellation
+ * ------------
+ * Cancellation is cooperative: [cancel] interrupts the worker thread and every
+ * long-running stage honours the interrupt:
+ *
+ *  - [CodeDumpGenerator] and [FileFilter] check between files and between
+ *    directory entries while walking the tree.
+ *  - The content copy loop inside [CodeDumpGenerator] checks every 8 KiB
+ *    chunk, so a single multi-megabyte file cannot stall the Cancel button.
+ *  - [copyFromUri] (the Save-as-copy path) checks every chunk it writes.
+ *  - The Downloads copy step between the temp file and the target file
+ *    checks every chunk it writes.
+ *
+ * Crucially, `InterruptedException` is **never swallowed**: the two
+ * `try`/`catch` blocks that could accidentally catch it (around generation
+ * and around the Downloads write) either do not exist, or have the
+ * `finally`-only form. It always unwinds to the dedicated outer
+ * `catch (e: InterruptedException)` in [runExport], which resets the state
+ * and skips the completion notification and share chooser.
+ *
+ * Concurrency
+ * -----------
  * A single process-wide lock ([Companion.globalExportLock]) prevents concurrent
  * runs regardless of whether the request originates from the dialog, a
  * notification action, or a future entry point.
@@ -81,11 +130,13 @@ class ExportCoordinator(
      *
      * When [sourceUri] is provided, the operation copies that file into a new
      * timestamped destination instead of re-scanning the project — used by the
-     * "Save" action after generation completes.
+     * "Save" action after generation completes. The source is treated as
+     * already-validated content and is streamed verbatim into the new temp
+     * file, then published to Downloads exactly like a fresh generation.
      */
     fun export(
-        root: File, 
-        config: FilterConfig, 
+        root: File,
+        config: FilterConfig,
         action: ExportAction,
         sourceUri: Uri? = null,
         sourceFilesCount: Int = 0,
@@ -123,34 +174,20 @@ class ExportCoordinator(
      * [ExportStateHolder.fail] and a system notification, so the user always
      * sees an explanation even if the dialog was dismissed.
      *
-     * Notification gating
-     * -------------------
-     * Each `show*Notification` call is wrapped in [notifyIfEnabled], which
-     * checks [PluginSettings.areNotificationsEnabled] on the **current**
-     * context. The check runs per call (not once at the top) so a user who
-     * toggles the flag mid-export stops receiving new notifications without
-     * losing the export — the file is still written and
-     * [ExportStateHolder] still receives the final state, which is what the
-     * in-dialog result panel reads.
-     *
-     * The `hideProgressNotification` call is **not** gated: if the flag was
-     * ON when the progress notification was posted and then turned OFF mid-
-     * export, we still need to remove the leftover notification. Since
-     * `cancel()` on a non-existent id is a no-op, gating it would only add
-     * risk without benefit.
+     * The temp-then-atomic-publish structure is what makes the "never lose
+     * the previous dump" guarantee possible — see the class-level
+     * *Delivery strategy* note.
      */
     private fun runExport(
-        root: File, 
-        config: FilterConfig, 
+        root: File,
+        config: FilterConfig,
         action: ExportAction,
         sourceUri: Uri?,
         sourceFilesCount: Int,
         sourceTotalBytes: Long
     ) {
-        val context = contextProvider()
-        if (context == null) {
+        val context = contextProvider() ?: run {
             ExportStateHolder.fail("Unable to obtain application context.")
-            logger("[ERROR] Application context unavailable; aborting export.")
             return
         }
 
@@ -164,83 +201,126 @@ class ExportCoordinator(
             )
             logger("[INFO] Starting export ($actionLabel).")
 
-            val initialMessage = if (sourceUri != null) context.pluginString(R.string.preparing_export) else context.pluginString(R.string.generating_dump)
+            val initialMessage = if (sourceUri != null)
+                context.pluginString(R.string.preparing_export)
+            else context.pluginString(R.string.generating_dump)
             notifyIfEnabled(context) { showProgressNotification(context, initialMessage) }
-            
-            // When generating from scratch, remove any leftover duplicate share
-            // files before writing so the user only ever sees a single file in
-            // Downloads/OneCodeForAI after a SHARE run.
-            if (sourceUri == null) {
-                runCatching { cleanupDuplicateShareFiles(context) }
-            }
 
-            val fileName = if (action == ExportAction.GENERATE) {
-                SHARE_FILE_NAME
-            } else {
-                generateSmartFileName(root)
-            }
+            val fileName = if (action == ExportAction.GENERATE) SHARE_FILE_NAME
+                           else generateSmartFileName(root)
             logger("[INFO] Target filename: $fileName")
+
+            // ---- STEP 1: produce the content in a private cache temp file ----
+            // Nothing here touches Downloads, so a failure or a Cancel at this
+            // stage leaves the previous dump in Downloads/OneCodeForAI intact.
+            val tempDir = File(context.cacheDir, TEMP_SUBDIR).apply { mkdirs() }
+            val tempFile = File(tempDir, "dump-${System.currentTimeMillis()}.txt")
 
             var lastReportedAt = 0L
             var finalFiles = sourceFilesCount
             var finalBytes = sourceTotalBytes
+            // Files that failed mid-read. Reported to the user at the end so
+            // they know the dump is usable but incomplete, without failing the
+            // whole run (see the `onReadError` contract in CodeDumpGenerator).
+            val readErrors = mutableListOf<String>()
 
-            val outputUri = writeToDownloads(context, fileName) { writer ->
-                if (sourceUri != null) {
-                    // Copy mode: the source file was already produced, so we
-                    // only stream it into the new destination without
-                    // re-scanning the project.
-                    copyFromUri(context, sourceUri, writer)
-                } else {
-                    // Generation mode: walk the working tree (or the selected
-                    // Git snapshot) and write the dump incrementally.
-                    generateContent(root, config, writer) { processed, total, _, bytesProcessed, bytesTotal ->
-                        if (isCancelled.get()) throw InterruptedException("Export cancelled by user.")
-                        finalFiles = processed
-                        finalBytes = bytesProcessed
-                        val now = System.currentTimeMillis()
-                        if (now - lastReportedAt > PROGRESS_THROTTLE_MS || processed == total) {
-                            lastReportedAt = now
-                            val message = if (total > 0) {
-                                context.pluginString(R.string.processing_progress, processed, total)
-                            } else context.pluginString(R.string.preparing_export)
-                            ExportStateHolder.updateProgress(message, processed, total, bytesProcessed, bytesTotal)
-                        }
+            try {
+                tempFile.bufferedWriter(Charsets.UTF_8).use { writer ->
+                    if (sourceUri != null) {
+                        copyFromUri(context, sourceUri, writer)
+                    } else {
+                        generateContent(root, config, writer,
+                            onFileProgress = { processed, total, _, bytesProcessed, bytesTotal ->
+                                if (isCancelled.get()) throw InterruptedException("Export cancelled.")
+                                finalFiles = processed
+                                finalBytes = bytesProcessed
+                                val now = System.currentTimeMillis()
+                                if (now - lastReportedAt > PROGRESS_THROTTLE_MS || processed == total) {
+                                    lastReportedAt = now
+                                    val msg = if (total > 0)
+                                        context.pluginString(R.string.processing_progress, processed, total)
+                                    else context.pluginString(R.string.preparing_export)
+                                    ExportStateHolder.updateProgress(msg, processed, total, bytesProcessed, bytesTotal)
+                                }
+                            },
+                            onReadError = { path -> readErrors += path }
+                        )
                     }
                 }
+            } catch (e: Exception) {
+                // Any failure while producing the dump aborts the run. The
+                // temp file is deleted so the cache does not accumulate
+                // half-written content across repeated failures. This catch
+                // also handles InterruptedException (thrown by the progress
+                // callback or by copyFromUri) so the temp file is always
+                // cleaned up — but the InterruptedException is re-thrown so
+                // the outer handler can reset the state.
+                tempFile.delete()
+                throw e
             }
 
             if (isCancelled.get()) {
+                tempFile.delete()
                 runCatching { hideProgressNotification(context) }
                 ExportStateHolder.reset()
                 return
             }
 
-            runCatching { hideProgressNotification(context) }
-
-            if (outputUri == null) {
-                ExportStateHolder.fail(context.pluginString(R.string.error_file_write_failed))
-                logger("[ERROR] MediaStore returned a null URI; export aborted.")
-                return
+            // ---- STEP 2: publish the temp file to Downloads (atomic) ----
+            // Any exception from writeToDownloads() propagates to the outer
+            // handler unchanged. This includes InterruptedException — the
+            // copy loop inside the writer lambda checks isCancelled() on
+            // every chunk, so a Cancel during the copy unwinds cleanly and
+            // the previous dump is preserved by the atomic-write logic.
+            val outputUri: Uri = try {
+                writeToDownloads(context, fileName) { writer ->
+                    tempFile.bufferedReader(Charsets.UTF_8).use { reader ->
+                        val buffer = CharArray(8 * 1024)
+                        var n = reader.read(buffer)
+                        while (n >= 0) {
+                            if (isCancelled.get()) throw InterruptedException("Cancelled.")
+                            writer.write(buffer, 0, n)
+                            n = reader.read(buffer)
+                        }
+                    }
+                }
+            } finally {
+                // Deleted regardless of outcome. `writeToDownloads` reads from
+                // this file only, so the delete never races with an active
+                // copy inside it.
+                tempFile.delete()
             }
 
-            logger("[OK] File written: $outputUri")
-            notifyIfEnabled(context) { showCompletionNotification(context, fileName) }
+            runCatching { hideProgressNotification(context) }
+
+            logger("[OK] File written: $outputUri (readErrors=${readErrors.size})")
+
+            // ---- STEP 3: cleanup old duplicates (only after success) ----
+            // Scoped to our own folder. On failure of this step, the newly
+            // written file is still valid and the duplicates just linger
+            // until the next successful run.
+            runCatching { cleanupDuplicateShareFiles(context, preserveFileName = fileName) }
+
+            // ---- STEP 4: complete ----
+            notifyIfEnabled(context) { showCompletionNotification(context, fileName, readErrors.size) }
             ExportStateHolder.complete(outputUri, fileName, finalFiles, finalBytes)
 
             if (action == ExportAction.SHARE) {
                 logger("[INFO] Launching system share chooser.")
                 shareFile(context, outputUri, fileName)
             }
-        } catch (error: InterruptedException) {
+        } catch (e: InterruptedException) {
+            // Dedicated branch: cancellation is never reported as a failure.
+            // This catch fires when either the generation loop or the copy
+            // loop throws InterruptedException, because those blocks either
+            // re-throw unconditionally or have no catch at all.
             runCatching { hideProgressNotification(context) }
             logger("[CANCEL] Export cancelled before completion.")
             ExportStateHolder.reset()
-        } catch (error: Exception) {
+        } catch (e: Exception) {
             runCatching { hideProgressNotification(context) }
-            val message = resolveErrorMessage(context, error)
-            logger("[ERROR] Unhandled exception during export: ${error.message ?: message}")
-            error.printStackTrace()
+            val message = resolveErrorMessage(context, e)
+            logger("[ERROR] Unhandled exception: ${e.message}")
             notifyIfEnabled(context) { showErrorNotification(context, message) }
             ExportStateHolder.fail(message)
         }
@@ -268,30 +348,24 @@ class ExportCoordinator(
     /**
      * Streams the filtered project into [writer].
      *
-     * When [FilterConfig.useGit] is enabled, the selected ref is resolved to a
-     * snapshot before generation starts; an invalid or empty ref aborts the
-     * export rather than silently falling back to the working tree, so a
-     * misconfigured profile cannot produce a dump that does not match the
-     * branch the user selected.
-     *
-     * The Git master switch ([PluginSettings.isGitEnabled]) is enforced one
-     * level up, in [com.devdayton.onecodeforai.OneCodeForAIPlugin], by never
-     * setting `config.useGit = true` when Git is disabled. By the time we get
-     * here, `useGit = true` means the user explicitly chose a ref **and** the
-     * kill switch is on; no second check is needed.
+     * [onReadError] is invoked for each file that fails to read; the generator
+     * writes the failure inline and continues, so a single unreadable file
+     * cannot lose the whole dump. See [CodeDumpGenerator] for the exact
+     * contract.
      */
     private fun generateContent(
         root: File,
         config: FilterConfig,
         writer: Writer,
-        onFileProgress: FileProgressListener
+        onFileProgress: FileProgressListener,
+        onReadError: ((String) -> Unit)? = null
     ) {
         val filter = FileFilter(root, config)
         val selectedRef = if (config.useGit) {
             config.gitRef?.trim()?.takeIf(String::isNotEmpty)
                 ?: throw IllegalStateException("Git export enabled but no reference selected.")
         } else null
-        CodeDumpGenerator(root, filter, selectedRef, onFileProgress).generateTo(writer)
+        CodeDumpGenerator(root, filter, selectedRef, onFileProgress, onReadError).generateTo(writer)
     }
 
     /** Streams an already-generated file into the destination writer. */
@@ -308,7 +382,7 @@ class ExportCoordinator(
             }
         } ?: throw IOException("Could not open source URI.")
     }
-    
+
     /**
      * Translates an exception raised by the `core/` layer into a localized,
      * user-facing message.
@@ -325,6 +399,12 @@ class ExportCoordinator(
      * unexpected failure is never masked; an empty message falls back to
      * [R.string.unknown_error].
      *
+     * `SecurityException` is checked first because on API 26-28 a missing
+     * `WRITE_EXTERNAL_STORAGE` is by far the most common failure and its
+     * developer-facing message (`"WRITE_EXTERNAL_STORAGE permission not granted
+     * on API < 29."`) is not actionable to the user. Routing it to
+     * [R.string.error_storage_permission] gives them a concrete next step.
+     *
      * The inline `[File read error: …]` and `[Git read error: …]` markers that are
      * written **inside the `.txt` dump** deliberately bypass this method: they are
      * part of the generated content and stay in English for the consuming model.
@@ -332,6 +412,8 @@ class ExportCoordinator(
     private fun resolveErrorMessage(context: Context, error: Exception): String {
         val msg = error.message.orEmpty()
         return when {
+            error is SecurityException ->
+                context.pluginString(R.string.error_storage_permission)
             msg.startsWith("Project root is not a directory: ") ->
                 context.pluginString(
                     R.string.error_project_root_not_dir,
@@ -348,8 +430,8 @@ class ExportCoordinator(
                 context.pluginString(R.string.error_git_export_no_ref)
             msg == "Could not open source URI." ->
                 context.pluginString(R.string.error_source_uri_unreadable)
-            msg == "MediaStore did not provide an output stream." ->
-                context.pluginString(R.string.error_output_stream_unavailable)
+            msg == "MediaStore did not provide an output stream." ||
+            msg == "MediaStore did not provide a URI." ||
             msg == "MediaStore could not finalize the file." ->
                 context.pluginString(R.string.error_media_store_finalize)
             msg.startsWith("Unable to create ") ->
@@ -364,125 +446,292 @@ class ExportCoordinator(
     }
 
     // ------------------------------------------------------------------
-    // MediaStore write + cleanup
+    // Atomic MediaStore / legacy Downloads write
     // ------------------------------------------------------------------
 
     /**
-     * Writes [content] to `Downloads/OneCodeForAI/<fileName>` through
-     * MediaStore on API 29+, and through the legacy public-Downloads path on
-     * older devices.
+     * Writes [content] to `Downloads/OneCodeForAI/<fileName>` atomically.
      *
-     * On API 29+, if a file with the same name already exists it is truncated
-     * in place rather than deleted first, because the delete+insert fallback
-     * can create media entries that are briefly visible to other apps.
+     * Delegates to [writeToDownloadsApi29] on API 29+ and
+     * [writeToDownloadsLegacy] on API 26-28. Both helpers share the same
+     * contract:
+     *
+     *  - The new content is written to a temporary location that is invisible
+     *    to other apps (a pending MediaStore entry, or a `.tmp-…` sibling).
+     *  - Only after the content is fully written is the previous file (if
+     *    any) deleted and the new one renamed to its canonical name.
+     *  - Any failure — including [InterruptedException] from a cancelled
+     *    copy loop — discards the partial new file and leaves the previous
+     *    dump in place.
+     *
+     * @return the final `content://` URI of the newly written file.
+     * @throws SecurityException when `WRITE_EXTERNAL_STORAGE` is required and
+     *   not granted (API 26-28 only).
+     * @throws IOException on any other I/O failure.
+     * @throws InterruptedException when the worker thread is interrupted
+     *   while the content lambda is streaming.
      */
     private fun writeToDownloads(
         context: Context,
         fileName: String,
         content: (Writer) -> Unit
-    ): Uri? {
+    ): Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        writeToDownloadsApi29(context, fileName, content)
+    } else {
+        writeToDownloadsLegacy(context, fileName, content)
+    }
+
+    /**
+     * API 29+ implementation: MediaStore pending-then-rename.
+     *
+     * The sequence is deliberately:
+     *
+     *  1. Find the current canonical file (do **not** touch it yet).
+     *  2. Insert a **new** MediaStore entry under a unique temp name with
+     *     `IS_PENDING = 1`, so the partial write is invisible to file
+     *     managers and to other apps.
+     *  3. Stream the new content into that entry. Any failure here is caught
+     *     by the caller's `finally` block, which deletes the pending entry —
+     *     the previous canonical file is untouched.
+     *  4. Delete the previous canonical file. Because the new entry is
+     *     pending and under a temp name, there is no possible collision at
+     *     this point.
+     *  5. Rename the pending entry to its canonical name and clear the
+     *     pending flag in one `update()` call, making it visible.
+     *
+     * If step 4 fails (rare), the pending entry is renamed on top of the
+     * existing one and MediaStore auto-appends `(1)` — the next
+     * [cleanupDuplicateShareFiles] pass will consolidate the names.
+     */
+    private fun writeToDownloadsApi29(
+        context: Context,
+        fileName: String,
+        content: (Writer) -> Unit
+    ): Uri {
         val resolver = context.contentResolver
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val relativePath = Environment.DIRECTORY_DOWNLOADS + "/" + DOWNLOAD_DIRECTORY
-            val projection = arrayOf(MediaStore.MediaColumns._ID)
-            val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ?"
-            val selectionArgs = arrayOf(fileName)
+        val relativePath = Environment.DIRECTORY_DOWNLOADS + "/" + DOWNLOAD_DIRECTORY
 
-            var existingUri: Uri? = null
-            resolver.query(
-                MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, selectionArgs, null
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
-                    existingUri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
-                }
+        // 1. Snapshot the current canonical file URI (if any). Never touched
+        //    until the new content is fully written.
+        val existingUri = findExistingDownloadFile(resolver, fileName)
+
+        // 2. Insert a new entry under a unique temp name.
+        val uniqueName = ".tmp-${System.nanoTime()}-$fileName"
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, uniqueName)
+            put(MediaStore.MediaColumns.MIME_TYPE, MIME_TEXT)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+        val newUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: throw IOException("MediaStore did not provide a URI.")
+        logger("[INFO] Inserted pending MediaStore entry: $newUri")
+
+        try {
+            // 3. Write the content into the pending entry.
+            resolver.openOutputStream(newUri)?.use { stream ->
+                OutputStreamWriter(stream, Charsets.UTF_8).use(content)
+            } ?: throw IOException("MediaStore did not provide an output stream.")
+
+            // 4. Delete the previous canonical file. Best effort: on failure
+            //    the step-5 rename will collide and MediaStore will append
+            //    `(n)`, which cleanup consolidates on the next run.
+            if (existingUri != null && existingUri != newUri) {
+                runCatching { resolver.delete(existingUri, null, null) }
+                    .onSuccess { logger("[INFO] Deleted previous file: $existingUri") }
+                    .onFailure { logger("[WARN] Could not delete previous file: ${it.message}") }
             }
 
-            if (existingUri != null) {
-                try {
-                    logger("[INFO] Overwriting existing file in Downloads.")
-                    resolver.openOutputStream(existingUri, "wt")?.use { stream ->
-                        OutputStreamWriter(stream, Charsets.UTF_8).use(content)
-                    }
-                    resolver.update(existingUri, ContentValues().apply {
-                        put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis() / 1000)
-                    }, null, null)
-                    return existingUri
-                } catch (e: Exception) {
-                    logger("[WARN] Overwrite failed; falling back to delete+insert. Cause: ${e.message}")
-                    resolver.delete(existingUri, null, null)
-                }
-            }
-
-            logger("[INFO] Creating new file in Downloads.")
-            val values = ContentValues().apply {
+            // 5. Rename the pending entry to its canonical name and publish.
+            val finalizeValues = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, MIME_TEXT)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+                put(MediaStore.MediaColumns.DATE_MODIFIED, System.currentTimeMillis() / 1000)
             }
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
-            try {
-                resolver.openOutputStream(uri)?.use { stream ->
-                    OutputStreamWriter(stream, Charsets.UTF_8).use(content)
-                } ?: throw IOException("MediaStore did not provide an output stream.")
-                if (resolver.update(uri, ContentValues().apply {
-                        put(MediaStore.MediaColumns.IS_PENDING, 0)
-                    }, null, null) <= 0) {
-                    throw IOException("MediaStore could not finalize the file.")
-                }
-                uri
-            } catch (error: Exception) {
-                resolver.delete(uri, null, null)
-                throw error
+            if (resolver.update(newUri, finalizeValues, null, null) <= 0) {
+                throw IOException("MediaStore could not finalize the file.")
             }
-        } else {
-            @Suppress("DEPRECATION")
-            val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val targetDirectory = File(downloads, DOWNLOAD_DIRECTORY)
-            if (!targetDirectory.exists() && !targetDirectory.mkdirs()) {
-                throw IOException("Unable to create ${targetDirectory.path}")
-            }
-            val file = File(targetDirectory, fileName)
-            try {
-                file.outputStream().use { output -> OutputStreamWriter(output, Charsets.UTF_8).use(content) }
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DATA, file.absolutePath)
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                    put(MediaStore.MediaColumns.MIME_TYPE, MIME_TEXT)
-                }
-                @Suppress("DEPRECATION")
-                resolver.insert(MediaStore.Files.getContentUri("external"), values)
-            } catch (error: Exception) {
-                runCatching { file.delete() }
-                throw error
-            }
+            return newUri
+        } catch (e: Exception) {
+            // Any failure above: discard the pending entry. The previous
+            // canonical file is untouched because step 4 had not run yet
+            // (or, if it had, the exception came from step 5 and the old
+            // file is already gone — but at that point the new content is
+            // fully written and only the rename failed, so this is a
+            // best-effort cleanup).
+            runCatching { resolver.delete(newUri, null, null) }
+            throw e
         }
     }
 
     /**
-     * Removes any `OneCodeForAI_Share_Latest*.txt` files left behind by previous
-     * SHARE runs so the canonical file is the only one visible.
+     * API 26-28 implementation: `File`-based atomic write.
      *
-     * Only files matching the base name (optionally suffixed by ` (n)`, which is
-     * how MediaStore de-duplicates names) are removed; timestamped SAVE files
-     * are intentionally preserved.
+     * Writes the content to a `.tmp-…` sibling inside the target directory,
+     * then calls [File.renameTo] to move it over the target. On POSIX
+     * filesystems (which Android uses) `renameTo` atomically replaces the
+     * destination, so the previous dump is never missing for more than the
+     * duration of the rename syscall. A fallback path handles the rare case
+     * where `renameTo` refuses to overwrite an existing file.
+     *
+     * Finally, the file is registered with `MediaStore.Files` and its
+     * `content://` URI is returned so the share intent and the "Save"
+     * follow-up can open it uniformly with the API 29+ path.
+     *
+     * @throws SecurityException when `WRITE_EXTERNAL_STORAGE` is not granted.
      */
-    private fun cleanupDuplicateShareFiles(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        val resolver = context.contentResolver
-        val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
-        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?"
-        val selectionArgs = arrayOf("$SHARE_FILE_BASE%")
-        val duplicatePattern = Regex("""^${Regex.escape(SHARE_FILE_BASE)}( \(\d+\))?\.txt$""")
+    private fun writeToDownloadsLegacy(
+        context: Context,
+        fileName: String,
+        content: (Writer) -> Unit
+    ): Uri {
+        if (context.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            != PackageManager.PERMISSION_GRANTED) {
+            throw SecurityException("WRITE_EXTERNAL_STORAGE permission not granted on API < 29.")
+        }
 
-        val toDelete = mutableListOf<Uri>()
+        @Suppress("DEPRECATION")
+        val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val targetDir = File(downloads, DOWNLOAD_DIRECTORY)
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            throw IOException("Unable to create ${targetDir.path}")
+        }
+
+        val targetFile = File(targetDir, fileName)
+        val tempFile = File(targetDir, ".tmp-${System.nanoTime()}-$fileName")
+
+        try {
+            // 1. Write the content to a temp file in the same directory.
+            //    `finally` in the caller deletes the cache temp; this temp is
+            //    deleted by the catch below if anything goes wrong.
+            tempFile.outputStream().use { stream ->
+                OutputStreamWriter(stream, Charsets.UTF_8).use(content)
+            }
+
+            // 2. Atomic replace via renameTo. On POSIX this overwrites the
+            //    target atomically; if it fails (some filesystems refuse to
+            //    overwrite), fall back to delete-then-rename. The fallback is
+            //    not atomic, but it is only used on filesystems that cannot
+            //    do an atomic overwrite, which is rare on Android.
+            if (!tempFile.renameTo(targetFile)) {
+                if (targetFile.exists() && !targetFile.delete()) {
+                    throw IOException("Could not delete existing file.")
+                }
+                if (!tempFile.renameTo(targetFile)) {
+                    throw IOException("Could not finalize file.")
+                }
+            }
+        } catch (e: Exception) {
+            runCatching { tempFile.delete() }
+            throw e
+        }
+
+        // 3. Register the file with MediaStore.Files so we can hand back a
+        //    `content://` URI. This is what makes the file shareable via
+        //    Intent.ACTION_SEND with FLAG_GRANT_READ_URI_PERMISSION on
+        //    API 26-28 (a bare `file://` URI would trigger
+        //    FileUriExposedException on API 24+).
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DATA, targetFile.absolutePath)
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, MIME_TEXT)
+        }
+        @Suppress("DEPRECATION")
+        val filesCollection = MediaStore.Files.getContentUri("external")
+        val uri = context.contentResolver.insert(filesCollection, values)
+            ?: queryFileUriByPath(context.contentResolver, filesCollection, targetFile.absolutePath)
+            ?: throw IOException("Could not register file with MediaStore.")
+        return uri
+    }
+
+    /**
+     * Finds the canonical file URI for [fileName] inside the plugin's own
+     * Downloads subfolder, scoped by `RELATIVE_PATH` so we never touch a
+     * same-named file that a previous run (or another app) placed elsewhere.
+     * Returns `null` when no such file exists.
+     */
+    private fun findExistingDownloadFile(resolver: ContentResolver, fileName: String): Uri? {
+        val projection = arrayOf(MediaStore.MediaColumns._ID)
+        val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND " +
+            "(${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR " +
+            "${MediaStore.MediaColumns.RELATIVE_PATH} = ?)"
+        val selectionArgs = arrayOf(
+            fileName,
+            "Download/$DOWNLOAD_DIRECTORY",
+            "Download/$DOWNLOAD_DIRECTORY/"
+        )
         resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, selectionArgs, null)
             ?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID))
+                    return ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
+                }
+            }
+        return null
+    }
+
+    /** Looks up a `MediaStore.Files` URI by absolute path; used by the legacy path. */
+    private fun queryFileUriByPath(
+        resolver: ContentResolver,
+        collection: Uri,
+        absolutePath: String
+    ): Uri? {
+        @Suppress("DEPRECATION")
+        val projection = arrayOf(MediaStore.MediaColumns._ID)
+        @Suppress("DEPRECATION")
+        val selection = "${MediaStore.MediaColumns.DATA} = ?"
+        resolver.query(collection, projection, selection, arrayOf(absolutePath), null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val id = cursor.getLong(0)
+                    return ContentUris.withAppendedId(collection, id)
+                }
+            }
+        return null
+    }
+
+    /**
+     * Removes any `OneCodeForAI_Share_Latest*.txt` files left behind by previous
+     * SHARE/GENERATE runs so the canonical file is the only one visible.
+     *
+     * Only files matching the base name (optionally suffixed by ` (n)`, which is
+     * how MediaStore de-duplicates names) inside `Downloads/OneCodeForAI` are
+     * removed; timestamped SAVE files and same-named files in other Downloads
+     * subfolders are intentionally preserved.
+     *
+     * [preserveFileName] protects the file that was just written in this run,
+     * so an unlucky name match can never delete the result we are about to
+     * hand back to the user.
+     *
+     * Both API branches are now implemented: API 29+ uses MediaStore queries,
+     * API 26-28 uses a direct `File` directory scan. The legacy branch also
+     * cleans up `.tmp-…` files older than one hour — those are leftovers from
+     * interrupted writes that never reached the rename step.
+     */
+    private fun cleanupDuplicateShareFiles(context: Context, preserveFileName: String) {
+        val duplicatePattern = Regex("""^${Regex.escape(SHARE_FILE_BASE)}( \(\d+\))?\.txt$""")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = context.contentResolver
+            val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
+            val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? AND " +
+                "(${MediaStore.MediaColumns.RELATIVE_PATH} = ? OR " +
+                "${MediaStore.MediaColumns.RELATIVE_PATH} = ?)"
+            val selectionArgs = arrayOf(
+                "$SHARE_FILE_BASE%",
+                "Download/$DOWNLOAD_DIRECTORY",
+                "Download/$DOWNLOAD_DIRECTORY/"
+            )
+
+            val toDelete = mutableListOf<Uri>()
+            resolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI, projection, selection, selectionArgs, null
+            )?.use { cursor ->
                 val idIdx = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val nameIdx = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
                 while (cursor.moveToNext()) {
                     val name = cursor.getString(nameIdx) ?: continue
+                    if (name == preserveFileName) continue
                     if (duplicatePattern.matches(name)) {
                         toDelete += ContentUris.withAppendedId(
                             MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(idIdx)
@@ -490,10 +739,44 @@ class ExportCoordinator(
                     }
                 }
             }
-        toDelete.forEach { uri ->
-            runCatching {
-                resolver.delete(uri, null, null)
-                logger("[CLEANUP] Removed duplicate share file: $uri")
+            toDelete.forEach { uri ->
+                runCatching {
+                    resolver.delete(uri, null, null)
+                    logger("[CLEANUP] Removed duplicate: $uri")
+                }
+            }
+        } else {
+            // Legacy branch: scan the directory directly. Requires
+            // WRITE_EXTERNAL_STORAGE, which is always granted at this point
+            // (the write that produced `preserveFileName` needed it).
+            if (context.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+                logger("[CLEANUP] Skipping: no WRITE_EXTERNAL_STORAGE permission.")
+                return
+            }
+            @Suppress("DEPRECATION")
+            val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val dir = File(downloads, DOWNLOAD_DIRECTORY)
+            if (!dir.isDirectory) return
+
+            dir.listFiles()?.forEach { file ->
+                if (file.name == preserveFileName) return@forEach
+                if (duplicatePattern.matches(file.name)) {
+                    runCatching { file.delete() }
+                        .onSuccess { if (it) logger("[CLEANUP] Removed duplicate: ${file.name}") }
+                }
+            }
+
+            // Stale temp files from interrupted writes that never reached the
+            // rename step. Only delete files older than an hour so a parallel
+            // write from another instance is never clobbered.
+            val staleThreshold = System.currentTimeMillis() - 60L * 60L * 1000L
+            dir.listFiles()?.forEach { file ->
+                if (file.name.startsWith(".tmp-") && file.name.endsWith(".txt") &&
+                    file.lastModified() < staleThreshold) {
+                    runCatching { file.delete() }
+                        .onSuccess { if (it) logger("[CLEANUP] Removed stale temp: ${file.name}") }
+                }
             }
         }
     }
@@ -644,15 +927,28 @@ class ExportCoordinator(
         )
     }
 
-    private fun showCompletionNotification(context: Context, fileName: String) {
+    /**
+     * Posts the completion notification.
+     *
+     * When [readErrors] is greater than zero the title switches to
+     * [R.string.notification_ready_title_partial] so the user is told that
+     * some files could not be read, without pretending the export failed —
+     * the dump is still complete for every other file and is fully usable.
+     * The pluralization and the count are handled entirely by the resource
+     * string, so no extra branching is needed here.
+     */
+    private fun showCompletionNotification(context: Context, fileName: String, readErrors: Int) {
         ensureChannel(context, ACTIONS_CHANNEL_ID, R.string.notification_channel_actions, NotificationManager.IMPORTANCE_DEFAULT)
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(context, ACTIONS_CHANNEL_ID)
         } else { @Suppress("DEPRECATION") Notification.Builder(context) }
+        val title = if (readErrors > 0)
+            context.pluginString(R.string.notification_ready_title_partial, readErrors)
+        else context.pluginString(R.string.notification_ready_title)
         manager.notify(
             COMPLETION_NOTIFICATION_ID,
-            builder.setContentTitle(context.pluginString(R.string.notification_ready_title))
+            builder.setContentTitle(title)
                 .setContentText(fileName)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setAutoCancel(true)
@@ -692,6 +988,13 @@ class ExportCoordinator(
 
         private const val MIME_TEXT = "text/plain"
         private const val DOWNLOAD_DIRECTORY = "OneCodeForAI"
+
+        /**
+         * Subdirectory of `cacheDir` used for the in-flight dump. Private to
+         * the plugin, never exposed through a `ContentProvider`.
+         */
+        private const val TEMP_SUBDIR = "tmp"
+
         const val SHARE_FILE_NAME = "OneCodeForAI_Share_Latest.txt"
         private const val SHARE_FILE_BASE = "OneCodeForAI_Share_Latest"
         private const val PROGRESS_CHANNEL_ID = "onecode_progress"

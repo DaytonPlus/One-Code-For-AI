@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- Permite compartir archivos de la subcarpeta "share" dentro del cacheDir -->
+    <!-- Temp dumps used for sharing before the user decides to save. -->
     <cache-path name="shared_files" path="share/" />
 </paths>

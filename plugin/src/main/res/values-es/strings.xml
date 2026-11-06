@@ -139,6 +139,10 @@
     <string name="error_git_export_no_ref">La exportación Git está activada pero no se seleccionó ninguna referencia.</string>
     <string name="unknown_error">Error desconocido</string>
 
+    <string name="error_storage_permission">Permiso de almacenamiento requerido. Concédelo en Ajustes → Aplicaciones → One Code For AI → Permisos.</string>
+    <string name="notification_ready_title_partial">Contexto listo · %1$d errores de lectura</string>
+    <string name="error_source_file_missing">El archivo generado ya no está disponible. Puede haber sido eliminado o movido. Genera el contexto de nuevo para recrearlo.</string>
+    
     <!-- ===== Sharing ===== -->
     <string name="share_with">Compartir volcado con:</string>
     <string name="share_error">❌ Error al compartir: %1$s</string>
