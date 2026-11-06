@@ -10,7 +10,7 @@
 [plugin]
 id = "com.devdayton.onecodeforai"
 name = "One Code For AI"
-version = "1.0.80"
+version = "1.0.84"
 minIdeVersion = "3.33"
 
 # The fully qualified class name of the main plugin entry point.
