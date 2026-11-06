@@ -174,7 +174,7 @@
     <string name="no_app_for_link">No app available to open links</string>
 
     <!-- > What's New -->
-    <string name="whats_new_title">WHAT'S NEW</string>
+    <string name="whats_new_title">WHAT\'S NEW</string>
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_item_1">Added a native Settings Page to toggle Git, Animations, and Notifications globally.</string>
     <string name="whats_new_item_2">Introduced a Git Kill Switch with a smart .gitignore ancestor fallback.</string>
@@ -269,7 +269,7 @@
     <string name="help_a9">Absolutely not. The plugin does not require internet permission. All scanning, filtering, and generation happens 100% locally on your device.</string>
     
     <string name="help_q10">Where are the generated files saved?</string>
-    <string name="help_a10">Exported files are saved to your device's public storage under Downloads/OneCodeForAI.</string>
+    <string name="help_a10">Exported files are saved to your device\'s public storage under Downloads/OneCodeForAI.</string>
     
     <!-- > Contextual Help -->
     <string name="help_icon_description">Section help</string>

@@ -15,6 +15,7 @@ import android.content.res.ColorStateList
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -763,12 +764,96 @@ class ProjectTreeView(
     // ScrollViews custom
     // ------------------------------------------------------------------
 
+    /**
+     * A specialized [ScrollView] designed to coordinate touch events with its parent container
+     * (typically the configuration dialog's main scroll view).
+     *
+     * ### The Scroll Conflict Problem
+     * By default, nested scroll containers in Android aggressively consume touch events, preventing
+     * the parent from scrolling. This creates a "scroll trap" where the user can scroll the inner
+     * tree but cannot scroll the outer dialog to reach UI elements above or below the tree.
+     *
+     * ### Solutions Implemented
+     * 1. **Empty Space Handoff:** The [dispatchTouchEvent] method checks if the initial touch
+     *    occurred in the blank area below the tree's actual content. Since [ScrollView] inherently
+     *    consumes `ACTION_DOWN` even when it has no content to scroll, we explicitly reject the
+     *    event in this area so the parent dialog can handle it naturally.
+     * 2. **Boundary-Aware Interception:** The [onInterceptTouchEvent] method dynamically toggles
+     *    `requestDisallowInterceptTouchEvent` based on the scroll direction and the tree's current
+     *    scroll position. If the tree is at its top or bottom edge, the gesture is handed off
+     *    to the parent dialog.
+     */
     private class NestedScrollView(context: Context) : ScrollView(context) {
+        private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+        private var lastY = 0f
+
+        /**
+         * Determines if the initial touch falls within the empty, non-scrollable space
+         * below the tree's content (the [horizontalScroll] wrapper).
+         *
+         * @param ev The motion event to evaluate.
+         * @return `true` if the touch is in the empty space during `ACTION_DOWN`, `false` otherwise.
+         */
+        private fun isTouchInEmptySpace(ev: MotionEvent): Boolean {
+            if (ev.actionMasked != MotionEvent.ACTION_DOWN) return false
+            val child = getChildAt(0) ?: return false
+            return ev.y > child.bottom
+        }
+
+        /**
+         * Intercepts the touch event stream before it reaches child views or the default
+         * `onTouchEvent` handler.
+         *
+         * If the user taps in the empty space below the tree, we return `false` to signal
+         * that this `ViewGroup` does not want to handle the gesture. This allows the parent
+         * `ScrollView` to receive the complete gesture sequence (from `ACTION_DOWN` onwards)
+         * and scroll the dialog normally.
+         */
+        override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+            if (isTouchInEmptySpace(ev)) {
+                // Reject the event so the parent dialog's ScrollView can take over.
+                return false
+            }
+            return super.dispatchTouchEvent(ev)
+        }
+
+        /**
+         * Monitors touch events to determine when to yield control to the parent view.
+         *
+         * We evaluate the vertical swipe direction after the movement exceeds [touchSlop]:
+         * - Swipe down (finger moving down) checks if the tree can scroll up (`canScrollVertically(-1)`).
+         * - Swipe up (finger moving up) checks if the tree can scroll down (`canScrollVertically(1)`).
+         *
+         * If the tree cannot scroll further in the intended direction, we release the
+         * `requestDisallowInterceptTouchEvent` lock, allowing the parent `ScrollView`
+         * to intercept and handle the remaining gesture.
+         */
         override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
             when (ev.actionMasked) {
-                MotionEvent.ACTION_DOWN -> parent?.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                MotionEvent.ACTION_DOWN -> {
+                    lastY = ev.rawY
+                    // Initially assume the user wants to scroll the tree.
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = ev.rawY - lastY
+                    if (kotlin.math.abs(dy) >= touchSlop) {
+                        val fingerDown = dy > 0
+                        val treeCanStillScroll = if (fingerDown) {
+                            canScrollVertically(-1)
+                        } else {
+                            canScrollVertically(1)
+                        }
+                        
+                        // Handoff: If tree cannot scroll further, let the parent handle it.
+                        parent?.requestDisallowInterceptTouchEvent(treeCanStillScroll)
+                        lastY = ev.rawY
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // Always release the lock when the gesture ends or is cancelled.
                     parent?.requestDisallowInterceptTouchEvent(false)
+                }
             }
             return super.onInterceptTouchEvent(ev)
         }
