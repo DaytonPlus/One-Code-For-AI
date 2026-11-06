@@ -163,7 +163,11 @@
     <string name="settings_animations_desc">Transiciones de fundido y escala en el diálogo, el árbol y el selector de perfiles. Desactívalas en dispositivos de gama baja.</string>
     <string name="settings_notifications">Notificaciones de generación</string>
     <string name="settings_notifications_desc">Notificaciones de progreso, finalización y error durante la exportación. Desactívalas para silenciar la bandeja.</string>
-
+    <string name="settings_force_english">Forzar interfaz en inglés</string>
+    <string name="settings_force_english_desc">Fuerza la interfaz del plugin a usar inglés sin importar el idioma del IDE. Los diálogos y pantallas nuevos usan inglés; las ventanas ya abiertas mantienen su idioma actual hasta que se vuelvan a abrir.</string>
+    <string name="settings_total_export_limit">Límite total de exportación (KB)</string>
+    <string name="settings_total_export_limit_desc">Tope máximo, en kilobytes, del tamaño total de un volcado. Al alcanzarlo, la exportación deja de incluir archivos y añade un aviso de truncado. Útil sobre todo cuando el límite por archivo está desactivado. Pon 0 para no tener límite.</string>
+    
     <string name="git_disabled_globally">Git está desactivado globalmente en los ajustes de CodeAssist. Actívalo ahí para usar ramas, etiquetas y commits.</string>
     
     <!-- ===== Info activity ===== -->
@@ -185,7 +189,10 @@
     <string name="whats_new_item_3">Perfiles rediseñados con opciones profesionales para Android y exclusiones inteligentes.</string>
     <string name="whats_new_item_4">Soporte completo de patrones glob (*.log, build/, **/generated/**) y filtrado de directorios.</string>
     <string name="whats_new_item_5">Ayuda contextual, logs nativos del IDE y corrección de bugs de reflexión y animaciones.</string>
-
+    <string name="whats_new_item_6">Nuevo interruptor \"Forzar interfaz en inglés\" para ignorar el idioma del IDE cuando sigues tutoriales o documentación en inglés.</string>
+    <string name="whats_new_item_7">Nuevo límite total de exportación para evitar volcados de varios GB cuando el límite por archivo está desactivado.</string>
+    <string name="whats_new_item_8">Ayuda contextual para la exclusión de binarios y el árbol de archivos; todos los iconos de ayuda usan un tamaño visual menor con un área táctil mayor.</string>
+    
     <!-- > Installation guide -->
     <string name="guide_header_title">Guía de instalación</string>
     <string name="guide_header_subtitle">Sigue estos pasos para activar One Code For AI en tu IDE.</string>
@@ -285,5 +292,14 @@
     
     <string name="help_gitignore_title">Reglas de .gitignore</string>
     <string name="help_gitignore_body">Reglas detectadas en el archivo .gitignore del proyecto.\n\nEsta lista es de solo lectura \u2014 edita .gitignore directamente para modificarla.\n\nLas inclusiones y exclusiones tienen prioridad sobre estas reglas: añadir una inclusión o exclusión que coincida fuerza la entrada o salida del archivo aunque .gitignore diga lo contrario. Las reglas anuladas se marcan en ámbar.</string>
+    
+    <string name="help_binaries_title">Exclusión de binarios</string>
+    <string name="help_binaries_body">Los archivos binarios se detectan con una lista fija de ~40 extensiones conocidas (imágenes, vídeo, audio, archivos comprimidos, binarios compilados, fuentes, bases de datos). Los archivos con estas extensiones se omiten para mantener el volcado centrado en código legible.\n\nLa detección se basa solo en la extensión. Para omitir un formato binario poco común, añade su extensión a Exclusiones. Para forzar su inclusión, añádela a Inclusiones.\n\nDesactivar este interruptor incluye las extensiones de la lista en la exportación, algo raramente útil para contexto de IA.</string>
+
+    <string name="help_tree_title">Vista previa del árbol</string>
+    <string name="help_tree_body">Muestra el árbol del proyecto con todas las entradas que coinciden con los filtros actuales. Desmarca cualquier archivo o carpeta para excluirlo de la exportación sin escribir una regla de exclusión.\n\nExcluir una carpeta excluye automáticamente a sus hijos. Volver a incluir un hijo concreto dentro de una carpeta excluida restaura solo esa entrada, imitando el comportamiento de la negación en .gitignore.\n\nUsa la casilla de la cabecera para incluir o excluir todo el proyecto en un toque. El árbol es una vista previa: no regenera archivos, solo refleja el estado de inclusión actual.</string>
+
+    <string name="help_max_size_title">Límite de tamaño por archivo</string>
+    <string name="help_max_size_body">Cuando está activo, los archivos que superan el tamaño indicado se omiten. Esto protege el volcado frente a un único archivo enorme (por ejemplo, un recurso empaquetado o un SQL generado) que dominaría la salida.\n\nCuando está desactivado, se incluye todo archivo de texto sin importar su tamaño, lo que puede generar volcados muy grandes. Combínalo con el límite total de exportación de los Ajustes para mantener las exportaciones acotadas.</string>
     
 </resources>

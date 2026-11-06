@@ -32,6 +32,87 @@ import java.io.File
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicLong
 
+/**
+ * Interactive preview of the project tree shown inside the configuration
+ * dialog.
+ *
+ * ### Purpose
+ * Renders every entry that matches the current filters, letting the user
+ * include or exclude files and folders before the export runs. Excluded
+ * entries are written into [FilterConfig.excludedPaths], which is the same
+ * state the export pipeline reads from — so what the user sees is exactly
+ * what will be included in the dump.
+ *
+ * ### Layout structure
+ * The view is a three-part vertical stack:
+ *
+ *  1. **[stickyScroll]**: a horizontally-scrollable header that always shows
+ *     the root row, pinned above the scrolling content so the "include all"
+ *     checkbox stays reachable no matter how far the user scrolls.
+ *  2. **[dividerView]**: a 1dp separator.
+ *  3. **[verticalScroll]**: the scrollable body. It wraps a
+ *     [WrapHorizontalScrollView] that lets long paths extend past the right
+ *     edge without forcing the whole row to wrap.
+ *
+ * The two horizontal scroll views are synchronized via
+ * [isSyncingScroll], so the sticky header always lines up with the body
+ * column even after the user pans left or right.
+ *
+ * ### Scanning
+ * [scanAsync] walks the project on a background thread and reports progress
+ * back on the UI thread. Cancellation is token-based: every call to
+ * [scanAsync] increments [scanToken] and captures its own copy, so a new
+ * scan implicitly cancels the previous one without any flags or thread
+ * interruption. [cancelScan] simply bumps the token, which is enough to
+ * make the in-flight worker drop its result on the floor.
+ *
+ * The walk is **iterative** (an explicit [ArrayDeque] of pending
+ * directories) rather than recursive, because a deliberately deep directory
+ * tree on network storage would otherwise blow the stack on some devices.
+ *
+ * ### Exclusion semantics
+ * Exclusions are stored as a flat list of relative paths in
+ * [FilterConfig.excludedPaths]. The contract is:
+ *
+ *  - Excluding a folder implicitly excludes every child. Children are **not**
+ *    individually added to the list; instead [TreeNode.ancestorExcluded] is
+ *    computed top-down after any change.
+ *  - Re-including a child inside an excluded folder removes the ancestor
+ *    from the list *and* re-adds the sibling subtrees that the ancestor
+ *    exclusion had implicitly covered. That is what [setNodeIncluded]
+ *    implements in its `include = true` branch, and it mirrors the negation
+ *    behavior of `.gitignore`.
+ *
+ * ### Performance
+ * Two optimizations keep large trees responsive:
+ *
+ *  - [refreshVisibleRows] updates the checkbox, icon and text color of the
+ *    currently visible rows in place, instead of tearing down and rebuilding
+ *    the whole tree when a single checkbox flips. Without it, toggling the
+ *    root checkbox on a project with thousands of nodes would drop frames
+ *    for seconds.
+ *  - [TreeNode] keeps direct references to its row views so a refresh never
+ *    has to search the hierarchy for the widget it needs to update.
+ *
+ * ### Related views
+ *  - [com.devdayton.onecodeforai.ui.ConfigurationDialog] embeds this view and
+ *    owns the surrounding form.
+ *  - [NestedScrollView] and [WrapHorizontalScrollView] are private helper
+ *    subclasses that solve the nested-scroll and wrap-content measurement
+ *    problems respectively; their KDocs live next to the subclasses.
+ *
+ * @param activity        Host activity used to inflate every view. Must be a
+ *                        real activity (not a service context) because the
+ *                        tree instantiates platform widgets.
+ * @param projectRoot     Canonical root of the tree. The scan never leaves
+ *                        this directory.
+ * @param onExcludedPathsChanged invoked on the UI thread whenever the set of
+ *                        excluded relative paths changes, so the caller can
+ *                        mirror the new list into its own [FilterConfig].
+ * @param onStatsChanged  invoked on the UI thread whenever the aggregate
+ *                        [PreviewStats] change (initial render, checkbox
+ *                        flip, expand/collapse when it affects visibility).
+ */
 class ProjectTreeView(
     private val activity: Activity,
     private val projectRoot: File,
@@ -39,37 +120,110 @@ class ProjectTreeView(
     private val onStatsChanged: (PreviewStats) -> Unit
 ) {
     private companion object {
+        /**
+         * Minimum number of scanned files between two progress callbacks.
+         * Keeps the notification text updating on large projects without
+         * flooding the UI thread on every directory entry.
+         */
         const val PROGRESS_FILE_INTERVAL = 200
+
+        /**
+         * Minimum wall-clock time, in milliseconds, between two progress
+         * callbacks. Whichever threshold is hit first (this or
+         * [PROGRESS_FILE_INTERVAL]) triggers an update, so small but slow
+         * directory trees still report progress.
+         */
         const val PROGRESS_INTERVAL_MS = 120L
     }
 
+    /** Configuration currently applied to the tree. Updated by [scanAsync]. */
     private var currentConfig: FilterConfig = FilterConfig()
+
+    /** Root of the last successfully scanned tree, or `null` before first scan. */
     private var rootNode: TreeNode? = null
+
+    /**
+     * Relative paths of currently-expanded directories.
+     *
+     * Persisted across re-renders so that expanding a folder, changing a
+     * filter, and re-scanning does not collapse the user's manual expansion
+     * state.
+     */
     private val expandedPaths = mutableSetOf<String>()
+
+    /**
+     * Relative path of a row that should flash once its view has been
+     * attached. Used to draw the eye to the row that just changed inclusion
+     * state without blocking the caller on layout.
+     *
+     * An empty string means "pulse the root (sticky) row".
+     */
     private var pendingPulsePath: String? = null
+
+    /**
+     * Reentrancy guard for the bidirectional scroll synchronization between
+     * [stickyScroll] and [horizontalScroll]. Without it, syncing one side
+     * would fire the other side's `onScrollChange` and cause an infinite
+     * feedback loop.
+     */
     private var isSyncingScroll = false
 
-    // [PERF] Permite actualizar los checkboxes sin re-disparar sus listeners.
+    /**
+     * [PERF] Suppresses the checkbox listeners while [refreshNodeRow] is
+     * updating `isChecked` programmatically. Without this guard, updating a
+     * checkbox in response to a state change would re-trigger
+     * [setNodeIncluded] with the new value, creating an echo that flips the
+     * exclusion list back and forth on every refresh.
+     */
     private var isRefreshingRows = false
 
-    // [PERF] Referencia al checkbox del encabezado sticky (root).
-    // Permite actualizarlo in-place en lugar de reconstruirlo.
+    /**
+     * [PERF] Live reference to the sticky header's "include all" checkbox, so
+     * [refreshVisibleRows] can update it in place instead of rebuilding the
+     * header.
+     */
     private var stickyCheckbox: CheckBox? = null
 
-
+    /**
+     * Whether animations are enabled according to
+     * [PluginSettings.areAnimationsEnabled].
+     *
+     * Read through a getter rather than cached at construction so a change
+     * made in the settings page mid-dialog is applied on the next animation
+     * without needing to recreate the view.
+     */
     private val animationsEnabled: Boolean
         get() = PluginSettings.areAnimationsEnabled(activity)
-    
 
+    /**
+     * Generation counter used to cancel in-flight scans.
+     *
+     * Each [scanAsync] captures its own value; workers check
+     * `scanToken.get() == myToken` between entries and bail out silently if
+     * a newer scan has started. [cancelScan] simply increments the token.
+     */
     private val scanToken = AtomicLong(0L)
 
-    // --- Contenido (debajo del sticky) ---
+    // ------------------------------------------------------------------
+    // View hierarchy (constructed once, reused across renders)
+    // ------------------------------------------------------------------
+
+    /**
+     * Container for every tree row except the sticky header.
+     *
+     * Each row is added as a direct child and hidden/shown by the
+     * expand/collapse logic rather than being re-inflated.
+     */
     private val rowsContainer = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         layoutParams = ViewGroup.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
         setPadding(dp(6), dp(6), dp(6), dp(6))
     }
 
+    /**
+     * Horizontal scroller wrapping [rowsContainer]. Lets long paths extend
+     * past the right edge instead of forcing every row to wrap.
+     */
     private val horizontalScroll = WrapHorizontalScrollView(activity).apply {
         isHorizontalScrollBarEnabled = true
         isVerticalScrollBarEnabled = false
@@ -77,6 +231,11 @@ class ProjectTreeView(
         addView(rowsContainer, ViewGroup.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
     }
 
+    /**
+     * Vertical scroller wrapping [horizontalScroll]. Owns the tall part of
+     * the layout and coordinates with the parent dialog through
+     * [NestedScrollView].
+     */
     private val verticalScroll = NestedScrollView(activity).apply {
         isVerticalScrollBarEnabled = true
         isHorizontalScrollBarEnabled = false
@@ -85,6 +244,11 @@ class ProjectTreeView(
         addView(horizontalScroll, ViewGroup.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
     }
 
+    /**
+     * Sticky header showing the root row. Never scrolls vertically, so the
+     * "include all" checkbox stays reachable regardless of body scroll
+     * position.
+     */
     private val stickyScroll = HorizontalScrollView(activity).apply {
         isHorizontalScrollBarEnabled = false
         isVerticalScrollBarEnabled = false
@@ -92,11 +256,13 @@ class ProjectTreeView(
         layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT)
     }
 
+    /** 1dp separator between the sticky header and the scrollable body. */
     private val dividerView = View(activity).apply {
         setBackgroundColor(CodeAssistTheme.OUTLINE)
         layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, dp(1))
     }
 
+    /** Root of the whole view; what [getView] returns. */
     private val outerContainer = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         layoutParams = ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
@@ -105,6 +271,14 @@ class ProjectTreeView(
         addView(verticalScroll)
     }
 
+    /**
+     * Minimum width a non-sticky row must occupy.
+     *
+     * Computed once from the dialog dimensions so short rows still fill the
+     * full width, which keeps the "tap the row to toggle" hit target
+     * predictable even for a file with a one-character name. Values are
+     * approximated from [ConfigurationDialog]'s hard-coded padding.
+     */
     private val rowMinWidth: Int = run {
         val screenW = activity.resources.displayMetrics.widthPixels
         val dialogW = (screenW * 0.94f).toInt()
@@ -112,6 +286,10 @@ class ProjectTreeView(
     }
 
     init {
+        // Keep the sticky header and the scrollable body in lockstep when
+        // either side is panned horizontally. The `isSyncingScroll` guard is
+        // what prevents the sync call on one side from bouncing back into
+        // the other side and creating an infinite loop.
         stickyScroll.setOnScrollChangeListener { _, scrollX, _, _, _ ->
             if (isSyncingScroll) return@setOnScrollChangeListener
             isSyncingScroll = true
@@ -126,12 +304,40 @@ class ProjectTreeView(
         }
     }
 
+    /** Returns the view to embed in the parent layout. */
     fun getView(): View = outerContainer
 
     // ------------------------------------------------------------------
-    // Escaneo asíncrono
+    // Async scan
     // ------------------------------------------------------------------
 
+    /**
+     * Walks [projectRoot] on a background thread and delivers the resulting
+     * tree to [onComplete] on the UI thread.
+     *
+     * Cancellation is implicit: calling this method again before the
+     * previous walk has finished invalidates the older worker via
+     * [scanToken], and the older worker silently drops its result. That makes
+     * "user changed a filter" trivial to handle: the caller just calls
+     * [scanAsync] again and the previous walk becomes a no-op.
+     *
+     * The tree itself is built on the worker thread; only [onProgress] and
+     * [onComplete] / [onError] are dispatched to the UI thread, so a large
+     * scan never blocks the dialog.
+     *
+     * @param config      Filter configuration to apply. The value is
+     *                    normalized internally so a misconfigured caller
+     *                    cannot crash [FileFilter].
+     * @param onProgress  invoked periodically on the UI thread with the
+     *                    number of files scanned so far. The callbacks
+     *                    respect [PROGRESS_FILE_INTERVAL] and
+     *                    [PROGRESS_INTERVAL_MS] to avoid spamming the UI.
+     * @param onComplete  invoked on the UI thread with the fully-built tree
+     *                    root. The caller is expected to call [renderTree].
+     * @param onError     invoked on the UI thread if the scan throws. A new
+     *                    scan will not be started automatically; the caller
+     *                    is responsible for retrying.
+     */
     fun scanAsync(
         config: FilterConfig,
         onProgress: (scannedFiles: Int) -> Unit,
@@ -152,7 +358,8 @@ class ProjectTreeView(
                 val pendingDirectories = ArrayDeque<TreeNode>()
                 pendingDirectories.addLast(root)
 
-                // Iterative depth-first traversal avoids stack overflows on deeply nested trees.
+                // Iterative depth-first traversal avoids stack overflows on
+                // very deep trees and keeps the token check cheap.
                 while (pendingDirectories.isNotEmpty()) {
                     if (scanToken.get() != myToken) return@Thread
                     val node = pendingDirectories.removeLast()
@@ -171,10 +378,17 @@ class ProjectTreeView(
                         } else {
                             "${node.relativePath}/${file.name}"
                         }
+                        // Exclusion flags are computed top-down so an excluded
+                        // ancestor propagates to every descendant without the
+                        // excludedPaths list having to enumerate them all.
                         val selfExcluded = normalizedConfig.excludedPaths.any { it == relativePath }
                         val ancestorExcluded = node.selfExcluded || node.ancestorExcluded
 
                         if (file.isDirectory) {
+                            // `respectExcludedPaths = false` so the tree still
+                            // shows directories that the user manually
+                            // excluded — otherwise the user could not
+                            // re-include them from this very view.
                             if (!filter.include(file, respectExcludedPaths = false)) continue
                             val child = TreeNode(
                                 file, true, node.depth + 1, relativePath, file.name
@@ -208,6 +422,8 @@ class ProjectTreeView(
                         }
                     }
 
+                    // Reversed so the traversal visits siblings in the
+                    // declared sort order; the stack pops from the tail.
                     childDirectories.asReversed().forEach(pendingDirectories::addLast)
                 }
 
@@ -220,6 +436,9 @@ class ProjectTreeView(
                     }
                 }
             } catch (error: Exception) {
+                // Swallow errors from superseded scans: if a newer scan has
+                // already started, whatever this worker failed on is
+                // irrelevant and surfacing it would confuse the user.
                 if (scanToken.get() == myToken) {
                     activity.runOnUiThread {
                         if (scanToken.get() == myToken) onError(error)
@@ -233,29 +452,54 @@ class ProjectTreeView(
         }
     }
 
+    /**
+     * Cancels the in-flight scan, if any. The worker will finish its current
+     * directory entry and then exit silently; no [scanAsync] callback is
+     * invoked for a cancelled run.
+     */
     fun cancelScan() {
         scanToken.incrementAndGet()
     }
 
     // ------------------------------------------------------------------
-    // Render
+    // Rendering
     // ------------------------------------------------------------------
 
+    /**
+     * Renders [root] and notifies the caller of the aggregate stats.
+     *
+     * Kept as a public entry point so [scanAsync]'s `onComplete` callback can
+     * delegate without knowing about [renderInternal]'s `fireStats` flag.
+     */
     fun renderTree(root: TreeNode) {
         rootNode = root
         renderInternal(fireStats = true)
     }
 
+    /**
+     * Rebuilds the entire view hierarchy from [rootNode].
+     *
+     * Used only on the initial render and after [expandAll] / [collapseAll],
+     * because both of those invalidate the visibility of every row at once
+     * and an in-place refresh would be more expensive than a clean rebuild.
+     * Per-checkbox changes use [refreshVisibleRows] instead.
+     *
+     * @param fireStats when `false`, the caller is expected to compute and
+     *   forward stats itself. [expandAll] and [collapseAll] pass `false`
+     *   because visibility does not affect the aggregates; re-emitting them
+     *   would only cause redundant work in the parent dialog.
+     */
     private fun renderInternal(fireStats: Boolean) {
         val root = rootNode ?: return
 
-        // Sticky (sin chevron)
+        // Sticky header: only the root row, never any children.
         stickyScroll.removeAllViews()
         stickyCheckbox = null
         val rootRow = buildRow(root, isSticky = true)
         stickyScroll.addView(rootRow, ViewGroup.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
 
-        // Contenido
+        // Body: the root's children, rendered recursively into their own
+        // wrapper so expand/collapse can toggle a single sub-ViewGroup.
         rowsContainer.removeAllViews()
         if (root.children.isEmpty()) {
             rowsContainer.addView(
@@ -271,6 +515,9 @@ class ProjectTreeView(
             root.children.forEach { child -> renderNode(child, rowsContainer) }
         }
 
+        // An empty pendingPulsePath targets the sticky root row, which has
+        // just been rebuilt above — so this is the only place that pulse
+        // can be applied.
         if (pendingPulsePath == "") {
             pendingPulsePath = null
             pulseRow(rootRow)
@@ -279,6 +526,16 @@ class ProjectTreeView(
         if (fireStats) onStatsChanged(computeStatsFromTree(root))
     }
 
+    /**
+     * Adds [node] (and, if it is an expanded directory, its subtree) under
+     * [parent].
+     *
+     * Children of a directory are rendered **lazily**: an unexpanded
+     * directory gets an empty [TreeNode.childrenWrapper] and its subtree is
+     * only inflated the first time it is expanded. That is what keeps
+     * initial render cost proportional to the number of *visible* rows
+     * rather than to the total number of nodes in the project.
+     */
     private fun renderNode(node: TreeNode, parent: LinearLayout) {
         val wrapper = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -307,6 +564,15 @@ class ProjectTreeView(
         }
     }
 
+    /**
+     * Renders [node]'s direct children into its [TreeNode.childrenWrapper].
+     *
+     * Guarded against double-render: the first call inflates the subtree,
+     * subsequent calls are no-ops. This is what makes the lazy expansion
+     * pattern work — [renderNode] can safely call this whenever a node is
+     * expanded without having to track whether the children have already
+     * been created.
+     */
     private fun populateChildren(node: TreeNode) {
         val cw = node.childrenWrapper ?: return
         if (cw.childCount > 0) return
@@ -314,16 +580,22 @@ class ProjectTreeView(
     }
 
     // ------------------------------------------------------------------
-    // [PERF] Actualización in-place de filas visibles
+    // [PERF] In-place refresh of visible rows
     // ------------------------------------------------------------------
 
     /**
-     * Refresca únicamente las filas actualmente visibles en lugar de destruir
-     * y reconstruir todo el árbol. Coste O(visibles) en vez de O(todos).
+     * [PERF] Refreshes only the rows that are currently visible, instead of
+     * destroying and rebuilding the whole tree.
      *
-     * Necesario tras `setNodeIncluded` / `toggleAllMarked`, donde antes se
-     * llamaba a `renderInternal(fireStats = true)` — recreando cientos o miles
-     * de Views para reflejar cambios en un solo nodo y sus descendientes.
+     * Cost is O(visible) rather than O(all). Called from [setNodeIncluded]
+     * and [toggleAllMarked], where previously every call went through
+     * `renderInternal(fireStats = true)` — recreating hundreds or thousands
+     * of Views just to reflect a change in one subtree.
+     *
+     * @param fireStats whether to recompute and forward [PreviewStats].
+     *   Always `true` in the current call sites, because every path that
+     *   reaches this method changes the inclusion state and therefore the
+     *   aggregates.
      */
     private fun refreshVisibleRows(fireStats: Boolean = true) {
         val root = rootNode ?: return
@@ -336,6 +608,12 @@ class ProjectTreeView(
         if (fireStats) onStatsChanged(computeStatsFromTree(root))
     }
 
+    /**
+     * Depth-first walk that refreshes every rendered descendant of
+     * [directoryNode]. Unrendered subtrees (collapsed directories) are
+     * skipped, because their rows have not been built yet and will pick up
+     * the fresh state automatically the first time they are expanded.
+     */
     private fun refreshNodeVisible(directoryNode: TreeNode) {
         directoryNode.children.forEach { child ->
             refreshNodeRow(child)
@@ -345,6 +623,15 @@ class ProjectTreeView(
         }
     }
 
+    /**
+     * Updates the checkbox, icon tint and text color of a single [node]'s
+     * row based on its current exclusion state.
+     *
+     * The checkbox toggle is wrapped in [isRefreshingRows] so that the
+     * programmatic `isChecked = included` assignment does not fire the
+     * `setOnCheckedChangeListener` installed in [buildRow], which would
+     * otherwise call [setNodeIncluded] and re-trigger the whole refresh.
+     */
     private fun refreshNodeRow(node: TreeNode) {
         val included = !node.selfExcluded && !node.ancestorExcluded
         node.checkbox?.let { cb ->
@@ -366,9 +653,26 @@ class ProjectTreeView(
     }
 
     // ------------------------------------------------------------------
-    // Construcción de fila
+    // Row construction
     // ------------------------------------------------------------------
 
+    /**
+     * Builds a single row view for [node].
+     *
+     * Row anatomy, left to right: optional expand/collapse chevron, optional
+     * checkbox, type icon, display name, and (for files) size label. Each
+     * widget is stored on the node so [refreshNodeRow] can update it
+     * without a lookup.
+     *
+     * The row is made clickable in the non-sticky case so tapping anywhere
+     * outside the chevron toggles inclusion. This is a deliberate ergonomic
+     * choice — the checkbox itself is only 36dp wide, which would be a poor
+     * primary hit target on a phone.
+     *
+     * @param isSticky `true` for the pinned header row (root). Sticky rows
+     *   skip the chevron, use the "include all" checkbox handler, and never
+     *   respond to row-wide taps.
+     */
     private fun buildRow(node: TreeNode, isSticky: Boolean = false): View {
         val isRoot = node.depth == 0
         val indent = if (isSticky) 0 else dp(14 * node.depth)
@@ -382,7 +686,10 @@ class ProjectTreeView(
             layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
         }
 
-        // Chevron con contenedor de 32dp (área táctil ampliada, ícono de 16dp centrado)
+        // Chevron — wrapped in a 32dp container so the tap target is
+        // generous even though the icon itself is 16dp. Files and root use
+        // an invisible spacer of the same width so that the checkbox and
+        // icon columns line up across every row.
         val hasChildren = node.isDirectory && node.children.isNotEmpty()
         if (hasChildren && !isSticky) {
             val res = if (node.expanded) R.drawable.ic_tech_chevron_down
@@ -404,13 +711,15 @@ class ProjectTreeView(
             node.arrow = arrow
             row.addView(arrowContainer)
         } else {
-            // Spacer (root o archivos sin hijos): mismo ancho que el chevron
+            // Spacer that matches the chevron column so subsequent widgets
+            // stay aligned regardless of whether the row can expand.
             row.addView(View(activity).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(32), 1)
             })
         }
 
-        // Checkbox
+        // Checkbox — enabled for every node except the non-sticky root.
+        // The root's "include all" affordance lives on the sticky header.
         val showCheckbox = isSticky || !isRoot
         if (showCheckbox) {
             val cb = CheckBox(activity).apply {
@@ -426,6 +735,8 @@ class ProjectTreeView(
                     marginStart = dp(2)
                     marginEnd = dp(2)
                 }
+                // Compress the platform checkbox visual without shrinking
+                // the hit target; the container still occupies 36x32dp.
                 minWidth = 0
                 minHeight = 0
                 setPadding(0, 0, 0, 0)
@@ -436,7 +747,7 @@ class ProjectTreeView(
                 scaleX = 0.78f
                 scaleY = 0.78f
                 setOnCheckedChangeListener { _, checked ->
-                    // [PERF] Ignora los cambios programáticos de refreshNodeRow.
+                    // [PERF] Ignore programmatic updates from refreshNodeRow.
                     if (isRefreshingRows) return@setOnCheckedChangeListener
                     if (isSticky) toggleAllMarked() else setNodeIncluded(node, checked)
                 }
@@ -450,7 +761,7 @@ class ProjectTreeView(
             })
         }
 
-        // Icono
+        // Type icon (folder or file).
         val iconRes = if (node.isDirectory) R.drawable.ic_tech_folder else R.drawable.ic_tech_file
         val tint = when {
             !isSticky && (node.ancestorExcluded || node.selfExcluded) -> CodeAssistTheme.TEXT_MUTED
@@ -466,7 +777,9 @@ class ProjectTreeView(
         node.iconView = icon
         row.addView(icon)
 
-        // Nombre
+        // Display name — the root gets a trailing slash so it reads as a
+        // directory, and bold styling so the sticky header stands out from
+        // the body rows.
         val nameColor = if (!isSticky && (node.ancestorExcluded || node.selfExcluded))
             CodeAssistTheme.TEXT_MUTED else CodeAssistTheme.TEXT_PRIMARY
         val nameText = if (isRoot) "${node.displayName}/" else node.displayName
@@ -479,7 +792,8 @@ class ProjectTreeView(
         node.nameView = nameView
         row.addView(nameView)
 
-        // Tamaño
+        // Size label for files only; directories do not have a meaningful
+        // single size to show.
         if (!node.isDirectory) {
             row.addView(
                 UiFactory.run {
@@ -491,7 +805,9 @@ class ProjectTreeView(
             )
         }
 
-        // Tocar la fila togglea el marcado
+        // Row-wide tap toggles inclusion, but not on the sticky header
+        // (which has its own dedicated checkbox). The nested click listeners
+        // on the chevron and checkbox take precedence over this one.
         if (!isSticky) {
             row.isClickable = true
             row.setOnClickListener {
@@ -503,7 +819,7 @@ class ProjectTreeView(
     }
 
     // ------------------------------------------------------------------
-    // Acciones
+    // Actions
     // ------------------------------------------------------------------
 
     /**
@@ -592,12 +908,38 @@ class ProjectTreeView(
             }.start()
     }
 
+    /**
+     * Applies an inclusion decision to [node], updating
+     * [FilterConfig.excludedPaths] and refreshing the visible rows.
+     *
+     * ### Including
+     * Walks from the node up to the root and removes every ancestor from
+     * the excluded list, since including a child of an excluded folder
+     * implies the folder is no longer fully excluded. Because the ancestor
+     * exclusion was implicit (a single path in the list covered the whole
+     * subtree), the sibling subtrees it used to cover have to be
+     * re-excluded explicitly here: the loop over `parts` re-adds each
+     * sibling of every ancestor that was originally excluded. That mirrors
+     * the negation semantics of `.gitignore` and keeps the list minimal.
+     *
+     * ### Excluding
+     * Adds the node's path and drops any explicit child exclusions, since
+     * the ancestor's exclusion now subsumes them. Keeping the children in
+     * the list would be redundant and would break the ancestor/subtree
+     * invariant that [refreshExclusionFlags] depends on.
+     *
+     * The aggregate stats are recomputed once at the end via
+     * [refreshVisibleRows] rather than incrementally, because the
+     * sibling re-exclusion loop above can add or remove an arbitrary number
+     * of paths.
+     */
     private fun setNodeIncluded(node: TreeNode, include: Boolean) {
         val excluded = currentConfig.excludedPaths.toMutableList()
         val originalExcluded = currentConfig.excludedPaths.toSet()
         val parts = node.relativePath.split('/')
 
         if (include) {
+            // Clear ancestor exclusions so the target node is reachable.
             for (i in 1 until parts.size) {
                 val parentPath = parts.subList(0, i).joinToString("/")
                 excluded.removeAll { it == parentPath }
@@ -605,6 +947,9 @@ class ProjectTreeView(
             excluded.removeAll { it == node.relativePath }
             if (node.isDirectory) excluded.removeAll { it.startsWith("${node.relativePath}/") }
 
+            // Re-add siblings of every originally-excluded ancestor: the
+            // ancestor's single exclusion used to cover those siblings, and
+            // removing it above would otherwise implicitly re-include them.
             var anyAncestorExcluded = false
             for (i in 1 until parts.size) {
                 val parentPath = parts.subList(0, i).joinToString("/")
@@ -620,6 +965,8 @@ class ProjectTreeView(
                 }
             }
         } else {
+            // Explicit exclusion of the node; drop any now-redundant child
+            // exclusions that the ancestor path subsumes.
             if (node.relativePath !in excluded) excluded.add(node.relativePath)
             if (node.isDirectory) excluded.removeAll { it.startsWith("${node.relativePath}/") }
         }
@@ -629,11 +976,21 @@ class ProjectTreeView(
 
         rootNode?.let { refreshExclusionFlags(it, ancestorExcluded = false) }
 
-        // [PERF] En vez de reconstruir todo el árbol, actualiza solo las filas visibles.
+        // [PERF] Update only the visible rows rather than rebuilding the
+        // whole tree.
         refreshVisibleRows(fireStats = true)
         node.rowView?.let { pulseRow(it) }
     }
 
+    /**
+     * Recomputes every node's exclusion flags based on the current
+     * [FilterConfig.excludedPaths].
+     *
+     * The walk is top-down: a node is excluded if its own path is in the
+     * list *or* its parent was excluded. Caching the ancestor result in
+     * [TreeNode.ancestorExcluded] is what lets [refreshNodeRow] answer
+     * "should this row look included?" with a single boolean read.
+     */
     private fun refreshExclusionFlags(node: TreeNode, ancestorExcluded: Boolean) {
         node.selfExcluded = currentConfig.excludedPaths.any { it == node.relativePath }
         node.ancestorExcluded = ancestorExcluded
@@ -641,6 +998,15 @@ class ProjectTreeView(
         node.children.forEach { refreshExclusionFlags(it, next) }
     }
 
+    /**
+     * Handles the sticky header's "include all" checkbox: toggles between
+     * "nothing excluded" and "everything excluded".
+     *
+     * When switching to "everything excluded", only the root's direct
+     * children are written into the list; the ancestor propagation in
+     * [refreshExclusionFlags] then marks every descendant as excluded
+     * without the list having to enumerate the whole tree.
+     */
     private fun toggleAllMarked() {
         val currentlyAllMarked = currentConfig.excludedPaths.isEmpty()
         val newExcluded: List<String> = if (currentlyAllMarked) {
@@ -656,16 +1022,27 @@ class ProjectTreeView(
         onExcludedPathsChanged(newExcluded)
         rootNode?.let { refreshExclusionFlags(it, ancestorExcluded = false) }
 
-        // [PERF] Igual que arriba: solo filas visibles + pulso en el sticky.
+        // [PERF] Same in-place refresh as setNodeIncluded, plus a pulse on
+        // the sticky row to draw attention to the bulk change.
         refreshVisibleRows(fireStats = true)
         pendingPulsePath = null
         stickyScroll.getChildAt(0)?.let { pulseRow(it) }
     }
 
     // ------------------------------------------------------------------
-    // Stats desde el árbol
+    // Aggregate statistics
     // ------------------------------------------------------------------
 
+    /**
+     * Walks [root]'s rendered subtree and aggregates file count, byte size,
+     * and estimated tokens.
+     *
+     * Token estimation uses the ~4-bytes-per-token heuristic the rest of the
+     * plugin already relies on, so the number shown here matches the number
+     * shown in the export result panel. Files inside an excluded subtree are
+     * skipped entirely — this is what makes the preview respond live to
+     * inclusion changes.
+     */
     private fun computeStatsFromTree(root: TreeNode): PreviewStats {
         var totalFiles = 0
         var totalTokens = 0L
@@ -700,9 +1077,17 @@ class ProjectTreeView(
     }
 
     // ------------------------------------------------------------------
-    // Expand / collapse
+    // Expand / collapse all
     // ------------------------------------------------------------------
 
+    /**
+     * Expands every directory and rebuilds the tree.
+     *
+     * Uses a full rebuild because the visibility of every row changes at
+     * once; an in-place refresh would be strictly more expensive than a
+     * clean render here. Stats are not re-fired because the aggregate set
+     * of files is unchanged — only their visibility is.
+     */
     fun expandAll() {
         val root = rootNode ?: return
         markAllExpanded(root, true)
@@ -711,6 +1096,12 @@ class ProjectTreeView(
         renderInternal(fireStats = false)
     }
 
+    /**
+     * Collapses every directory and rebuilds the tree.
+     *
+     * Same rationale as [expandAll] regarding the full rebuild and the
+     * `fireStats = false` flag.
+     */
     fun collapseAll() {
         val root = rootNode ?: return
         markAllExpanded(root, false)
@@ -718,11 +1109,17 @@ class ProjectTreeView(
         renderInternal(fireStats = false)
     }
 
+    /** Recursively sets [expanded] on [node] and every descendant. */
     private fun markAllExpanded(node: TreeNode, expanded: Boolean) {
         node.expanded = expanded
         node.children.forEach { markAllExpanded(it, expanded) }
     }
 
+    /**
+     * Returns the relative paths of every directory that can be expanded
+     * (i.e. every directory with at least one child), so [expandAll] can
+     * populate [expandedPaths] in one pass.
+     */
     private fun collectExpandable(node: TreeNode): List<String> {
         val out = mutableListOf<String>()
         if (node.isDirectory && node.children.isNotEmpty()) {
@@ -733,7 +1130,7 @@ class ProjectTreeView(
     }
 
     // ------------------------------------------------------------------
-    // Utils
+    // Utilities
     // ------------------------------------------------------------------
 
     /**
@@ -752,16 +1149,18 @@ class ProjectTreeView(
             .setInterpolator(DecelerateInterpolator()).start()
     }
 
+    /** Formats a byte count as `B`, `KB` or `MB`, matching the export panel. */
     private fun formatSize(bytes: Long): String = when {
         bytes < 1024 -> "$bytes B"
         bytes < 1024L * 1024L -> "%.1f KB".format(bytes / 1024.0)
         else -> "%.2f MB".format(bytes / (1024.0 * 1024.0))
     }
 
+    /** Converts density-independent pixels to actual screen pixels. */
     private fun dp(value: Int): Int = CodeAssistTheme.dp(activity, value)
 
     // ------------------------------------------------------------------
-    // ScrollViews custom
+    // Custom scroll views
     // ------------------------------------------------------------------
 
     /**
@@ -845,7 +1244,8 @@ class ProjectTreeView(
                             canScrollVertically(1)
                         }
                         
-                        // Handoff: If tree cannot scroll further, let the parent handle it.
+                        // Handoff: if the tree cannot scroll further, let the
+                        // parent handle the remaining gesture.
                         parent?.requestDisallowInterceptTouchEvent(treeCanStillScroll)
                         lastY = ev.rawY
                     }
@@ -859,6 +1259,22 @@ class ProjectTreeView(
         }
     }
 
+    /**
+     * A [HorizontalScrollView] that sizes itself to the *content* width when
+     * the parent passes `AT_MOST` or `UNSPECIFIED` measure specs.
+     *
+     * The default [HorizontalScrollView.onMeasure] always reports the full
+     * available width, which would make the tree always scroll horizontally
+     * even when every path fits. By measuring the child with
+     * `UNSPECIFIED` first and clamping the final width to either the content
+     * width or the available width — whichever is smaller — long paths
+     * still scroll while short paths render naturally at full width.
+     *
+     * This is the single reason the tree does not need to compute path
+     * widths itself: the scroll view answers that question once, during the
+     * measure pass, using the same `TextView` measurements the renderer
+     * already produced.
+     */
     private class WrapHorizontalScrollView(context: Context) : HorizontalScrollView(context) {
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
             val child = getChildAt(0)
@@ -882,6 +1298,25 @@ class ProjectTreeView(
 
     // ------------------------------------------------------------------
 
+    /**
+     * One node in the rendered tree.
+     *
+     * Holds both the immutable identity of the entry (`file`,
+     * `relativePath`, `displayName`, `isDirectory`, `depth`) and the
+     * mutable UI state that [refreshNodeRow] and [toggleExpanded] need to
+     * update without re-rendering the row:
+     *
+     *  - `expanded` / `selfExcluded` / `ancestorExcluded` describe the
+     *    user-visible state at any point in time.
+     *  - `rowView`, `childrenWrapper`, `arrow`, `checkbox`, `iconView`,
+     *    `nameView` are the widget references used for in-place updates.
+     *    They are nullable because a row may not have been rendered yet
+     *    (collapsed subtrees) or may have been discarded by a rebuild.
+     *
+     * Instances are created on the worker thread during [scanAsync] and
+     * then mutated on the UI thread during rendering. The two phases do not
+     * overlap for the same tree, so no synchronization is required.
+     */
     class TreeNode(
         val file: File,
         val isDirectory: Boolean,

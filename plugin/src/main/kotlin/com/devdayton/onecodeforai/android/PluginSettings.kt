@@ -15,6 +15,11 @@ import android.content.Context
  * ### Default Values
  * All flags default to `true`, matching the "everything enabled" expectation of a
  * fresh install. If a key is missing from [SharedPreferences], the fallback is `true`.
+ * The two exceptions are [isForceEnglishEnabled] and [getTotalExportLimitKb],
+ * which default to `false` and `0` respectively: they are opt-in switches that
+ * must only take effect once the user explicitly turns them on in the settings
+ * page, so a fresh install preserves the previous behavior (follow the host IDE
+ * language, no total-size cap) without any migration.
  *
  * ### Threading
  * `SharedPreferences` reads and writes are synchronous in memory and safe to call
@@ -34,6 +39,8 @@ object PluginSettings {
     private const val KEY_GIT_ENABLED = "git_enabled"
     private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
     private const val KEY_ANIMATIONS_ENABLED = "animations_enabled"
+    private const val KEY_FORCE_ENGLISH = "force_english"
+    private const val KEY_TOTAL_EXPORT_LIMIT_KB = "total_export_limit_kb"
 
     /** Tag for logging read/write operations in debug builds. */
     private const val TAG = "Settings"
@@ -102,6 +109,74 @@ object PluginSettings {
         write(context, KEY_ANIMATIONS_ENABLED, enabled)
 
     // ------------------------------------------------------------------
+    // Language override
+    // ------------------------------------------------------------------
+
+    /**
+     * Forces the plugin UI to use English regardless of the IDE language.
+     *
+     * When `true`, [com.devdayton.onecodeforai.android.LanguageHelper.detectIdeLocale]
+     * short-circuits to [java.util.Locale.ENGLISH] **before** consulting either
+     * of its caches. This means a newly opened `ConfigurationDialog` or
+     * `OneCodeForAIInfoActivity` picks up the selected language automatically,
+     * without requiring a process restart. Already-rendered windows keep their
+     * current language until reopened, which matches the standard Android
+     * locale-switch behavior.
+     *
+     * Defaults to `false` so the plugin keeps following the host IDE language
+     * out of the box, and so existing installs are unaffected by the addition
+     * of this setting.
+     */
+    fun isForceEnglishEnabled(context: Context): Boolean =
+        read(context, KEY_FORCE_ENGLISH, false)
+
+    /**
+     * Persists the force-English preference.
+     *
+     * Callers are expected to also invoke
+     * [com.devdayton.onecodeforai.android.LanguageHelper.invalidateCache] and
+     * [com.devdayton.onecodeforai.ui.UiFactory.invalidateLocalizedCtxCache]
+     * after this write so the next locale resolution rebuilds its cached
+     * context. The settings page does exactly this inside `onChanged`.
+     */
+    fun setForceEnglishEnabled(context: Context, enabled: Boolean) =
+        write(context, KEY_FORCE_ENGLISH, enabled)
+
+    // ------------------------------------------------------------------
+    // Total export size limit
+    // ------------------------------------------------------------------
+
+    /**
+     * Hard cap, in kilobytes, on the total size of a single dump.
+     *
+     * `0` means "no limit". This is a defence-in-depth safety net for the case
+     * where the per-file size limit is disabled: without it, a project with
+     * large generated files or vendored dependencies can produce multi-gigabyte
+     * dumps that take a long time to generate and are unusable for AI context.
+     * When the cap is reached, [com.devdayton.onecodeforai.core.CodeDumpGenerator]
+     * stops including further files and appends a truncation notice to the
+     * generated file so the consuming model can tell why it is incomplete.
+     *
+     * Read fresh on every export by
+     * [com.devdayton.onecodeforai.android.ExportCoordinator], so changing the
+     * value while a ConfigurationDialog is open takes effect on the next run.
+     *
+     * Defaults to `0` (no limit) so existing behavior is preserved for users
+     * who never open the settings page.
+     */
+    fun getTotalExportLimitKb(context: Context): Int =
+        readInt(context, KEY_TOTAL_EXPORT_LIMIT_KB, 0)
+
+    /**
+     * Persists the total export size limit. Negative values are clamped to `0`
+     * (no limit) because a negative cap has no meaningful interpretation and
+     * would otherwise be silently treated as "reject everything" by the
+     * generator's `> 0L` guard.
+     */
+    fun setTotalExportLimitKb(context: Context, value: Int) =
+        writeInt(context, KEY_TOTAL_EXPORT_LIMIT_KB, value.coerceAtLeast(0))
+
+    // ------------------------------------------------------------------
     // Low-level access
     // ------------------------------------------------------------------
 
@@ -134,6 +209,46 @@ object PluginSettings {
             .putBoolean(key, value)
             .apply()
             
+        PluginLogger.d(TAG, "WRITE [$key] -> $value")
+    }
+
+    /**
+     * Reads an integer from the plugin's shared preferences.
+     *
+     * Mirrors [read] but uses the `Int` overload. Kept as a separate helper
+     * rather than a generic one so that `SharedPreferences.getBoolean` vs
+     * `getInt` mismatches surface as compile-time errors instead of silent
+     * `ClassCastException`s at runtime.
+     *
+     * @param context The application or activity context.
+     * @param key The preference key to read.
+     * @param fallback The value to return if the key doesn't exist or has the
+     *   wrong type (e.g. was written as a boolean by an older version).
+     */
+    private fun readInt(context: Context, key: String, fallback: Int): Int {
+        val value = runCatching {
+            context.getSharedPreferences(SETTINGS_FILE, Context.MODE_PRIVATE)
+                .getInt(key, fallback)
+        }.getOrDefault(fallback)
+
+        PluginLogger.d(TAG, "READ [$key] -> $value (fallback=$fallback)")
+
+        return value
+    }
+
+    /**
+     * Writes an integer to the plugin's shared preferences.
+     *
+     * @param context The application or activity context.
+     * @param key The preference key to write.
+     * @param value The value to save.
+     */
+    private fun writeInt(context: Context, key: String, value: Int) {
+        context.getSharedPreferences(SETTINGS_FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(key, value)
+            .apply()
+
         PluginLogger.d(TAG, "WRITE [$key] -> $value")
     }
 }

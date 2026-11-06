@@ -52,6 +52,24 @@ fun interface FileProgressListener {
  *    output, and report a real failure. [InterruptedException] is never
  *    caught and re-wrapped as a read error.
  *
+ * Total export size limit
+ * -----------------------
+ * When [totalLimitBytes] is greater than zero, the generator enforces a hard
+ * cap on the accumulated byte count of included files. Files that would push
+ * the accumulator past the cap are excluded, and a truncation notice is
+ * appended to the output so the consuming model understands why the dump
+ * stops early. The check is performed **before** the file's content is
+ * written (based on the known file length), which means a single file larger
+ * than the remaining budget is skipped whole rather than written partially —
+ * a partial file block would be worse than no file block, because the model
+ * has no way to know the content was cut mid-stream.
+ *
+ * This cap is enforced here rather than in the caller because it needs to
+ * interact with the generator's own progress reporting and read-error
+ * bookkeeping, and because it is applied identically to working-tree and Git
+ * modes. A post-write size check in the caller would waste the entire
+ * scan/write time on a dump destined to be discarded.
+ *
  * Source selection
  * ----------------
  * When [gitRef] is `null` or blank the generator walks the working tree. When
@@ -66,13 +84,18 @@ fun interface FileProgressListener {
  *   in the inline marker, so callers can aggregate it into a summary (e.g.
  *   the completion notification's "N read errors" line) without parsing the
  *   dump. Cancellation does **not** trigger this callback.
+ * @param totalLimitBytes hard cap on the total bytes written, `0` meaning
+ *   "no limit". When a file would push the accumulator past this value, the
+ *   loop stops including further files and a truncation notice is appended.
+ *   See the class-level *Total export size limit* note for the full rationale.
  */
 class CodeDumpGenerator(
     private val root: File,
     private val filter: FileFilter = FileFilter(root),
     private val gitRef: String? = null,
     private val onProgress: FileProgressListener? = null,
-    private val onReadError: ((String) -> Unit)? = null
+    private val onReadError: ((String) -> Unit)? = null,
+    private val totalLimitBytes: Long = 0L
 ) {
     companion object {
         private const val SEPARATOR = "================================================\n"
@@ -125,6 +148,19 @@ class CodeDumpGenerator(
      *
      * Inside a single file the chunk-level check in [copyNormalizedText] takes
      * over, so a multi-megabyte file never stalls the Cancel button.
+     *
+     * Total size limit
+     * ----------------
+     * When [totalLimitBytes] > 0, each file's `length()` is compared against
+     * the remaining budget **before** opening it. A file that would overflow
+     * the budget is skipped (not written partially) and `truncated` flips to
+     * `true`. Once `truncated` is set, every subsequent file is also skipped
+     * — including ones small enough to fit — because continuing to include
+     * files after crossing the cap would make the cut point depend on the
+     * order of files in the tree, which is deterministic but hard for a
+     * human reviewer to reason about. The final truncation notice records
+     * exactly how many files were skipped, so the reviewer can decide
+     * whether to raise the limit or narrow the filters.
      */
     private fun generateWorkingTree(writer: Writer) {
         ensureActive()
@@ -139,8 +175,19 @@ class CodeDumpGenerator(
 
         var processed = 0
         var bytesAccum = 0L
+        var truncated = false
+        var skippedFiles = 0
         files.forEach { file ->
             ensureActive()
+            // Hard total-size cap. Checked before the file is opened so a
+            // file that would overflow the budget is never partially written
+            // (a partial block is worse than no block: the model cannot tell
+            // where the content ends and the next banner begins).
+            if (totalLimitBytes > 0L && bytesAccum + file.length() > totalLimitBytes) {
+                truncated = true
+                skippedFiles++
+                return@forEach
+            }
             val relativePath = relativePath(file)
             writeFileHeader(writer, relativePath)
             try {
@@ -159,6 +206,7 @@ class CodeDumpGenerator(
             bytesAccum += file.length()
             onProgress?.onProgress(processed, total, relativePath, bytesAccum, totalBytes)
         }
+        if (truncated) writeTruncationNotice(writer, skippedFiles)
     }
 
     /**
@@ -175,6 +223,14 @@ class CodeDumpGenerator(
      * behaviour. Cancellation propagates out of [GitUtils.withSnapshot]
      * unchanged because [GitUtils.copyNormalizedText] throws
      * [InterruptedException] on an interrupted worker thread.
+     *
+     * Total size limit
+     * ----------------
+     * Same contract as [generateWorkingTree]: each blob's size is compared
+     * against the remaining budget **before** its content is streamed, and
+     * a blob that would overflow the budget is skipped whole. Once the cap is
+     * crossed, every subsequent blob is also skipped so the cut point is
+     * stable regardless of the tree traversal order.
      */
     private fun generateGitSnapshot(writer: Writer, ref: String) {
         GitUtils.withSnapshot(root, ref) { snapshot ->
@@ -194,8 +250,18 @@ class CodeDumpGenerator(
             val totalBytes = includedFiles.sumOf { it.size }
             var processed = 0
             var bytesAccum = 0L
+            var truncated = false
+            var skippedFiles = 0
             includedFiles.forEach { file ->
                 ensureActive()
+                // Same pre-open cap check as the working-tree branch, applied
+                // to the blob size reported by the Git tree rather than to
+                // `File.length()`.
+                if (totalLimitBytes > 0L && bytesAccum + file.size > totalLimitBytes) {
+                    truncated = true
+                    skippedFiles++
+                    return@forEach
+                }
                 writeFileHeader(writer, file.path)
                 try {
                     if (!snapshot.writeFileContent(file.path, writer)) {
@@ -211,6 +277,7 @@ class CodeDumpGenerator(
                 bytesAccum += file.size
                 onProgress?.onProgress(processed, total, file.path, bytesAccum, totalBytes)
             }
+            if (truncated) writeTruncationNotice(writer, skippedFiles)
         }
     }
 
@@ -227,6 +294,31 @@ class CodeDumpGenerator(
         writer.write("FILE: ")
         writer.write(relativePath)
         writer.write("\n")
+        writer.write(SEPARATOR)
+    }
+
+    /**
+     * Appends a truncation marker to the dump when [totalLimitBytes] caused
+     * one or more files to be skipped.
+     *
+     * The notice is written **inside the generated content** (like the
+     * `[File read error: …]` markers) rather than as a user-facing error,
+     * so the consuming model can tell why the dump is incomplete. It is
+     * deliberately English-only and bypasses `R.string.*`: `core/` has no
+     * `android.*` imports and must stay unit-testable on the JVM.
+     *
+     * [skippedFiles] records how many eligible files were dropped. This is
+     * useful for the reviewer: a single skipped file is probably fine, but a
+     * large number suggests the limit should be raised or the filters
+     * narrowed.
+     */
+    private fun writeTruncationNotice(writer: Writer, skippedFiles: Int) {
+        writer.write("\n")
+        writer.write(SEPARATOR)
+        writer.write(
+            "[Export truncated: total size limit reached. " +
+                "$skippedFiles file(s) not included.]\n"
+        )
         writer.write(SEPARATOR)
     }
 

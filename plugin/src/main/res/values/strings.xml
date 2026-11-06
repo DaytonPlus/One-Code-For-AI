@@ -163,7 +163,11 @@
     <string name="settings_animations_desc">Fade and scale transitions in the dialog, tree and preset spinner. Disable on low-end devices.</string>
     <string name="settings_notifications">Generation notifications</string>
     <string name="settings_notifications_desc">Progress, completion, and error notifications while exporting. Disable to silence the notification tray.</string>
-
+    <string name="settings_force_english">Force English UI</string>
+    <string name="settings_force_english_desc">Force the plugin interface to use English regardless of the IDE language. Newly opened dialogs and screens use English; already-open windows keep their current language until reopened.</string>
+    <string name="settings_total_export_limit">Total export size limit (KB)</string>
+    <string name="settings_total_export_limit_desc">Hard cap, in kilobytes, on the total size of a single dump. When reached, the export stops including files and appends a truncation notice. Most useful when the per-file size limit is disabled. Set to 0 for no limit.</string>
+    
     <string name="git_disabled_globally">Git is disabled globally in CodeAssist settings. Enable it there to use branches, tags, and commits.</string>
     
     <!-- ===== Info activity ===== -->
@@ -185,7 +189,10 @@
     <string name="whats_new_item_3">Overhauled presets with professional Android-focused profiles and smart exclusions.</string>
     <string name="whats_new_item_4">Added full glob pattern support (*.log, build/, **/generated/**) and directory filtering.</string>
     <string name="whats_new_item_5">Added contextual help dialogs, IDE native logging, and fixed reflection bugs.</string>
-
+    <string name="whats_new_item_6">Added a \"Force English UI\" toggle so the plugin can ignore the IDE language when following English tutorials or documentation.</string>
+    <string name="whats_new_item_7">Added a global total export size limit to prevent multi-gigabyte dumps when the per-file limit is disabled.</string>
+    <string name="whats_new_item_8">Added contextual help for binary exclusion and the project tree; all help icons now use a smaller visual with a larger touch area.</string>
+    
     <!-- > Installation guide -->
     <string name="guide_header_title">Installation guide</string>
     <string name="guide_header_subtitle">Follow these steps to enable One Code For AI in your IDE.</string>
@@ -286,4 +293,12 @@
     <string name="help_gitignore_title">Gitignore rules</string>
     <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only \u2014 edit .gitignore directly to change it.\n\nInclusions and exclusions take priority over these rules: adding a matching inclusion or exclusion forces the file in or out regardless of .gitignore. Overridden rules are highlighted in amber.</string>
     
+    <string name="help_binaries_title">Binary exclusion</string>
+    <string name="help_binaries_body">Binary files are detected by a fixed list of ~40 known binary extensions (images, video, audio, archives, compiled binaries, fonts, databases). Files with these extensions are skipped so the dump stays focused on readable source code.\n\nDetection is extension-based only. To skip an uncommon binary format, add its extension to Exclusions. To force-include one, add it to Inclusions.\n\nDisabling this toggle includes the listed extensions in the export, which is rarely useful for AI context.</string>
+
+    <string name="help_tree_title">Project tree preview</string>
+    <string name="help_tree_body">Shows the project tree with every entry that matches the current filters. Uncheck any file or folder to exclude it from the export without writing an exclusion rule.\n\nExcluding a folder automatically excludes its children. Re-including a single child inside an excluded folder restores only that entry, mirroring the behavior of .gitignore negation.\n\nUse the header checkbox to include or exclude the entire project in one tap. The tree is a preview: it does not regenerate files, it only reflects the current inclusion state.</string>
+
+    <string name="help_max_size_title">Per-file size limit</string>
+    <string name="help_max_size_body">When enabled, files larger than the selected size are skipped. This protects the dump from a single huge file (e.g. a bundled asset or generated SQL) dominating the output.\n\nWhen disabled, every text file is included regardless of size, which can produce very large dumps. Combine it with the total export size limit in Settings to keep exports bounded.</string>
 </resources>

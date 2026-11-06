@@ -118,6 +118,16 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  * notice instead of the interactive branch/commit controls. This explains
  * to the user why Git features are missing, regardless of whether the
  * selected folder is a repository or not.
+ *
+ * Total export size limit
+ * -----------------------
+ * The total export size limit is configured on the plugin settings page (see
+ * [com.devdayton.onecodeforai.OneCodeForAISettingsPage]) and enforced by
+ * [com.devdayton.onecodeforai.core.CodeDumpGenerator]. This dialog does not
+ * expose it: the value is read fresh by
+ * [com.devdayton.onecodeforai.android.ExportCoordinator] at the start of
+ * every export, so the user can change it from Settings while the dialog is
+ * minimized and the next export will already respect the new cap.
  */
 class ConfigurationDialog(
     private val activity: Activity,
@@ -577,7 +587,12 @@ class ConfigurationDialog(
                 if (!isUpdatingUI) { markAsCustom(); updateTagsUI(animate = true) }
             }
         }
-        basePanel.addView(cbBinaries)
+        // Binary exclusion ships with a dedicated help icon so the fixed
+        // extension list and its override rules are discoverable without
+        // opening the FAQ. The checkbox is wrapped in a horizontal row
+        // because the help icon must sit outside the checkbox's touch target
+        // to avoid toggling the value when the user taps the "?" icon.
+        basePanel.addView(rowWithHelp(cbBinaries, R.string.help_binaries_title, R.string.help_binaries_body))
         basePanel.addView(cbGitignore)
 
         // Max size row
@@ -679,7 +694,14 @@ class ConfigurationDialog(
 
         // Tree
         if (treeEnabledGlobally) {
-            configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_tree)))
+            // The tree section ships with a help icon (same "?" affordance as
+            // the filter sections) so the include/exclude semantics of the
+            // checkboxes are discoverable without leaving the dialog.
+            configContainer.addView(sectionTitleWithHelp(
+                R.string.section_tree,
+                R.string.help_tree_title,
+                R.string.help_tree_body
+            ))
             val treeTogglePanel = panel()
             cbShowTree = activity.checkBox(activity.pluginString(R.string.show_tree)).apply {
                 isChecked = false
@@ -810,24 +832,65 @@ class ConfigurationDialog(
     // Section help (?)
     // ==================================================================
 
-    /** Creates an inline help icon ("?") that shows a contextual dialog when tapped. */
-    private fun helpIcon(helpTitleRes: Int, helpBodyRes: Int): View =
-        ImageView(activity).apply {
-            setImageDrawable(activity.loadPluginDrawable(R.drawable.ic_tech_help))
-            setColorFilter(CodeAssistTheme.ACCENT)
-            scaleType = ImageView.ScaleType.CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                CodeAssistTheme.dp(activity, 20), CodeAssistTheme.dp(activity, 20)
-            ).apply { marginStart = CodeAssistTheme.dp(activity, 4) }
-            setPadding(
-                CodeAssistTheme.dp(activity, 2), CodeAssistTheme.dp(activity, 2),
-                CodeAssistTheme.dp(activity, 2), CodeAssistTheme.dp(activity, 2)
-            )
+    /**
+     * Creates an inline help icon ("?") with a small visual footprint and a
+     * touch-friendly hit area.
+     *
+     * The icon is a 14 dp vector centered inside a 40 dp transparent
+     * [FrameLayout]. The frame (not the icon itself) owns the click handler,
+     * so the user can reliably tap the affordance without accidentally
+     * triggering the adjacent section title or checkbox. This matches the
+     * plugin's minimum tap-target rule while keeping the visual weight low
+     * enough that it does not compete with the section title.
+     *
+     * `FIT_CENTER` (rather than `CENTER`) is used because the underlying
+     * vector is 24 dp and must be scaled down inside the 14 dp frame; using
+     * `CENTER` would crop it.
+     */
+    private fun helpIcon(helpTitleRes: Int, helpBodyRes: Int): View {
+        val touchSize = CodeAssistTheme.dp(activity, 40)
+        val iconSize = CodeAssistTheme.dp(activity, 14)
+
+        val container = FrameLayout(activity).apply {
+            layoutParams = LinearLayout.LayoutParams(touchSize, touchSize).apply {
+                marginStart = CodeAssistTheme.dp(activity, 2)
+            }
             contentDescription = activity.pluginString(R.string.help_icon_description)
             isClickable = true
             isFocusable = true
             setOnClickListener { showSectionHelp(helpTitleRes, helpBodyRes) }
         }
+        container.addView(
+            ImageView(activity).apply {
+                setImageDrawable(activity.loadPluginDrawable(R.drawable.ic_tech_help))
+                setColorFilter(CodeAssistTheme.ACCENT)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                layoutParams = FrameLayout.LayoutParams(iconSize, iconSize, Gravity.CENTER)
+            }
+        )
+        return container
+    }
+
+    /**
+     * Wraps a [CheckBox] in a horizontal row with a trailing help icon.
+     *
+     * Used for checkboxes that benefit from an inline "?" affordance (binary
+     * exclusion today, potentially others in the future). The checkbox is
+     * given `weight = 1` so its touch target fills the remaining width, and
+     * the help icon sits at the far right without overlapping the checkbox's
+     * own hit area — that isolation is what prevents a tap on the "?" from
+     * also toggling the value.
+     */
+    private fun rowWithHelp(cb: CheckBox, helpTitleRes: Int, helpBodyRes: Int): LinearLayout {
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        cb.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        row.addView(cb)
+        row.addView(helpIcon(helpTitleRes, helpBodyRes))
+        return row
+    }
 
     /** Opens the contextual help dialog with the given title and body resources. */
     private fun showSectionHelp(titleRes: Int, bodyRes: Int) {

@@ -76,6 +76,23 @@ enum class ExportAction {
  * cache file added ~1.2 MB to the APK for a single edge case. Users on
  * API 26-28 who see the error can grant the permission once and retry.
  *
+ * Total export size limit
+ * -----------------------
+ * A configurable byte cap ([PluginSettings.getTotalExportLimitKb], expressed
+ * in kilobytes) protects against runaway dumps when the per-file size limit
+ * is disabled. The value is read **fresh at the start of every run**, so a
+ * change made in the settings page while the configuration dialog is
+ * minimized takes effect on the next export without reopening the dialog.
+ *
+ * A value of `0` means "no limit" and preserves the previous behavior for
+ * users who never open the settings page. When the cap is reached, the
+ * underlying [CodeDumpGenerator] stops including files and appends a
+ * truncation notice to the dump so the consuming model understands why the
+ * output is shorter than expected. The limit is applied at the *generator*
+ * level rather than as a post-write size check because a post-write check
+ * would still spend the entire scan/write time on a dump destined to be
+ * discarded.
+ *
  * Cancellation
  * ------------
  * Cancellation is cooperative: [cancel] interrupts the worker thread and every
@@ -133,6 +150,11 @@ class ExportCoordinator(
      * "Save" action after generation completes. The source is treated as
      * already-validated content and is streamed verbatim into the new temp
      * file, then published to Downloads exactly like a fresh generation.
+     *
+     * The total export size limit is intentionally **not** applied on this
+     * path: the source was already produced by a previous, size-checked
+     * generation, so re-checking it would reject a valid Save on a user who
+     * happened to lower the limit between runs.
      */
     fun export(
         root: File,
@@ -177,6 +199,12 @@ class ExportCoordinator(
      * The temp-then-atomic-publish structure is what makes the "never lose
      * the previous dump" guarantee possible — see the class-level
      * *Delivery strategy* note.
+     *
+     * The total export size limit is read **once**, at the top of the content
+     * generation phase, so the whole run is bound by a single consistent
+     * value even if the user changes the setting while the export is running.
+     * Reading it inside the per-file loop would allow the cap to move
+     * mid-stream, which would make truncation behavior non-deterministic.
      */
     private fun runExport(
         root: File,
@@ -210,6 +238,21 @@ class ExportCoordinator(
                            else generateSmartFileName(root)
             logger("[INFO] Target filename: $fileName")
 
+            // Read the total export size limit once, before generation starts.
+            // `0` means "no limit"; any positive value is converted from the
+            // user-facing KB unit into bytes for the generator's byte-cap check.
+            // Skipped entirely for the "Save" path (sourceUri != null) because
+            // the source was already produced by a previous, size-checked run.
+            val totalLimitKb = PluginSettings.getTotalExportLimitKb(context)
+            val totalLimitBytes = if (sourceUri == null && totalLimitKb > 0) {
+                totalLimitKb.toLong() * FilterConfig.BYTES_PER_KB
+            } else {
+                0L
+            }
+            if (totalLimitBytes > 0L) {
+                logger("[INFO] Total export size limit: ${totalLimitKb} KB (${totalLimitBytes} bytes).")
+            }
+
             // ---- STEP 1: produce the content in a private cache temp file ----
             // Nothing here touches Downloads, so a failure or a Cancel at this
             // stage leaves the previous dump in Downloads/OneCodeForAI intact.
@@ -230,6 +273,7 @@ class ExportCoordinator(
                         copyFromUri(context, sourceUri, writer)
                     } else {
                         generateContent(root, config, writer,
+                            totalLimitBytes = totalLimitBytes,
                             onFileProgress = { processed, total, _, bytesProcessed, bytesTotal ->
                                 if (isCancelled.get()) throw InterruptedException("Export cancelled.")
                                 finalFiles = processed
@@ -352,11 +396,20 @@ class ExportCoordinator(
      * writes the failure inline and continues, so a single unreadable file
      * cannot lose the whole dump. See [CodeDumpGenerator] for the exact
      * contract.
+     *
+     * [totalLimitBytes] is the byte cap for the whole dump, `0` meaning "no
+     * limit". It is forwarded unchanged to [CodeDumpGenerator], which applies
+     * it at the per-file boundary: a file that would push the accumulated
+     * output past the cap is skipped, and once the cap is exceeded the
+     * remaining files are excluded and a truncation notice is appended. The
+     * cap is not enforced here because it needs to interact with the
+     * generator's own progress and read-error bookkeeping.
      */
     private fun generateContent(
         root: File,
         config: FilterConfig,
         writer: Writer,
+        totalLimitBytes: Long = 0L,
         onFileProgress: FileProgressListener,
         onReadError: ((String) -> Unit)? = null
     ) {
@@ -365,7 +418,14 @@ class ExportCoordinator(
             config.gitRef?.trim()?.takeIf(String::isNotEmpty)
                 ?: throw IllegalStateException("Git export enabled but no reference selected.")
         } else null
-        CodeDumpGenerator(root, filter, selectedRef, onFileProgress, onReadError).generateTo(writer)
+        CodeDumpGenerator(
+            root = root,
+            filter = filter,
+            gitRef = selectedRef,
+            onProgress = onFileProgress,
+            onReadError = onReadError,
+            totalLimitBytes = totalLimitBytes
+        ).generateTo(writer)
     }
 
     /** Streams an already-generated file into the destination writer. */

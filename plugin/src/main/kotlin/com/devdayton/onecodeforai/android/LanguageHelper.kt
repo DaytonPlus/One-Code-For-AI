@@ -25,6 +25,21 @@ import java.util.Locale
  *  2. Exposing [wrapContextWithIdeLocale] so plugin-owned activities can
  *     inherit the host locale before their `onCreate` runs.
  *
+ * User override
+ * -------------
+ * The user can force the plugin UI to English from the plugin settings page
+ * ([PluginSettings.isForceEnglishEnabled]). When that toggle is on,
+ * [detectIdeLocale] returns [Locale.ENGLISH] **unconditionally** and never
+ * consults the host activity or the cache, so the override is honoured even
+ * on devices whose IDE is running in another language.
+ *
+ * The override is checked on **every** call rather than once at process
+ * start. This is deliberate: it means the next `ConfigurationDialog` or
+ * `OneCodeForAIInfoActivity` instance opened after the toggle is flipped
+ * uses the new language immediately, without requiring a CodeAssist restart.
+ * Already-rendered windows keep their current language until reopened, which
+ * matches standard Android behavior for runtime locale changes.
+ *
  * Detection cost and caching
  * --------------------------
  * The lookup itself goes through [HostEnvironment.currentActivity], which
@@ -35,6 +50,11 @@ import java.util.Locale
  * dialog requests 50+ strings during construction, so [detectIdeLocale]
  * caches the result for the process lifetime. Call [invalidateCache] if the
  * host ever exposes a runtime language switch and you need to react to it.
+ *
+ * The force-English check runs **before** the cache read on purpose: a
+ * `SharedPreferences` boolean read is an in-memory map lookup after the
+ * first load, which is far cheaper than a cache miss, and checking it first
+ * guarantees the toggle is never masked by a stale cached locale.
  */
 object LanguageHelper {
 
@@ -47,22 +67,52 @@ object LanguageHelper {
      * `Context`. That fallback depends on the caller and must not poison the
      * cache: a later call with an activity available would otherwise keep
      * returning the wrong locale forever.
+     *
+     * This cache is intentionally **not** consulted when the user has enabled
+     * the "Force English UI" preference; see the class-level *User override*
+     * note.
      */
     @Volatile
     private var cachedIdeLocale: Locale? = null
 
     /**
-     * Returns the locale the host IDE is currently using.
+     * Returns the locale the plugin UI should use.
      *
-     * Prefers the configuration of the foreground host activity. When no
-     * activity is available, falls back to the caller's `Context` (or the
-     * system default) so callers such as background notification builders
-     * still get a usable value.
+     * Resolution order:
      *
-     * The result is cached on the first successful host lookup; subsequent
-     * calls become a single volatile read.
+     *  1. **Force English override.** When [PluginSettings.isForceEnglishEnabled]
+     *     returns `true`, [Locale.ENGLISH] is returned immediately, skipping
+     *     both the cache and the host activity lookup. This is what allows a
+     *     newly opened dialog to switch language as soon as the user flips
+     *     the toggle, without a process restart.
+     *  2. **Cached host locale.** The result of the previous successful host
+     *     lookup, if any.
+     *  3. **Live host lookup.** Reads the foreground host activity's
+     *     `Configuration` and caches the result.
+     *  4. **Caller fallback.** Uses the supplied [context]'s configuration
+     *     (typically the system default). Not cached, because it depends on
+     *     the caller and would otherwise poison the cache for later calls
+     *     that do have a host activity available.
+     *
+     * Callers that only need a formatted string should go through
+     * [com.devdayton.onecodeforai.ui.UiFactory.pluginString], which also
+     * handles loading the plugin's own `Resources` with this locale applied.
      */
     fun detectIdeLocale(context: Context): Locale {
+        // Honour the user's explicit "Force English UI" preference before
+        // touching either the cache or the host activity. SharedPreferences
+        // reads are in-memory after the first load, so this check is cheap
+        // even though `pluginString` resolves a locale for every string in
+        // the configuration dialog.
+        //
+        // Checking on every call (rather than memoizing the result) is what
+        // guarantees that reopening the dialog after toggling the preference
+        // shows the new language. Already-open windows keep their previous
+        // language, which matches Android's standard locale-switch behavior.
+        if (PluginSettings.isForceEnglishEnabled(context)) {
+            return Locale.ENGLISH
+        }
+
         cachedIdeLocale?.let { return it }
 
         val host = findHostActivity()
@@ -80,9 +130,16 @@ object LanguageHelper {
     /**
      * Clears the cached locale so the next call re-detects it from the host.
      *
-     * Intended for hosts that support a runtime language switch. The default
-     * CodeAssist flow requires restarting the IDE after changing its language,
-     * so this is normally unnecessary.
+     * Called by [com.devdayton.onecodeforai.OneCodeForAISettingsPage] when
+     * the "Force English UI" preference changes, and also available for hosts
+     * that support a runtime language switch. The default CodeAssist flow
+     * requires restarting the IDE after changing its language, so a manual
+     * call is normally unnecessary outside those two cases.
+     *
+     * Note that clearing this cache is not strictly required for the
+     * force-English toggle to work (it is checked before the cache read), but
+     * it keeps the "toggle off after the host language changed" path
+     * equivalent to a fresh process launch.
      */
     fun invalidateCache() {
         cachedIdeLocale = null
@@ -90,13 +147,17 @@ object LanguageHelper {
 
     /**
      * Returns a new `Context` based on [base] whose resources are configured
-     * with the IDE's locale.
+     * with the locale returned by [detectIdeLocale].
      *
      * Meant to be called from `attachBaseContext` in plugin-owned activities
      * (see `OneCodeForAIInfoActivity`) so the rest of the Activity lifecycle
      * runs with the correct configuration. `createConfigurationContext` does
      * not mutate [base]; it returns a new wrapper that shares the same
      * resource graph.
+     *
+     * Because [detectIdeLocale] honours the force-English preference, an
+     * activity created *after* the toggle is flipped will automatically
+     * start in English without any extra plumbing here.
      */
     fun wrapContextWithIdeLocale(base: Context): Context {
         val locale = detectIdeLocale(base)

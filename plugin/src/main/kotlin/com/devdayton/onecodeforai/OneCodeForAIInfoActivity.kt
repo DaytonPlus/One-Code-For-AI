@@ -36,6 +36,15 @@ import java.io.File
  *   7. Links           - repository, issues, license, open CodeAssist
  *   8. Technical info  - version, package, min/target SDK, APK size, language, status
  *   9. Footer          - "Made with love" + author
+ *
+ * Localization
+ * ------------
+ * [attachBaseContext] wraps the base context with the locale returned by
+ * [LanguageHelper.wrapContextWithIdeLocale]. That helper honours the
+ * "Force English UI" preference, so an InfoActivity opened *after* the user
+ * flips the toggle starts in English automatically, without any additional
+ * plumbing here. Already-open instances keep the language they were created
+ * with, matching the standard Android behavior for runtime locale changes.
  */
 class OneCodeForAIInfoActivity : Activity() {
 
@@ -66,7 +75,7 @@ class OneCodeForAIInfoActivity : Activity() {
         column.addView(spacer(12))
         column.addView(buildHeader())
         column.addView(spacer(12))
-        column.addView(buildWhatsNewSection()) // <-- Nueva sección
+        column.addView(buildWhatsNewSection()) // <-- Changelog section
         column.addView(spacer(16))
         column.addView(buildPluginInstallSection())
         column.addView(spacer(12))
@@ -154,6 +163,12 @@ class OneCodeForAIInfoActivity : Activity() {
     /**
      * Builds the "What's New" changelog section.
      * Highlights the most important features introduced in the current version.
+     *
+     * Items are rendered in the order they appear in the list. New entries are
+     * appended at the end so the historical order stays stable across releases:
+     * `whats_new_item_6..8` in this version add the force-English toggle, the
+     * total export size limit, and the contextual help improvements (binary
+     * exclusion, project tree, smaller help icons with larger tap targets).
      */
     private fun buildWhatsNewSection(): View {
         val card = sectionCard()
@@ -173,6 +188,9 @@ class OneCodeForAIInfoActivity : Activity() {
             R.string.whats_new_item_3,
             R.string.whats_new_item_4,
             R.string.whats_new_item_5,
+            R.string.whats_new_item_6,
+            R.string.whats_new_item_7,
+            R.string.whats_new_item_8,
         )
         
         changes.forEach { 
