@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">Kapat</string>
+    <string name="cancel">İptal</string>
+    <string name="accept">Tamam</string>
+    <string name="save">Kaydet</string>
+    <string name="delete">Sil</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">BAĞLAM OLUŞTURUCU  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Dışa aktarma profili</string>
+    <string name="save_preset">Profili kaydet</string>
+    <string name="delete_preset">Profili sil</string>
+    <string name="delete_preset_message">\"%1$s\" profili silinsin mi? Bu işlem geri alınamaz.</string>
+    <string name="custom_preset">Özel</string>
+    <string name="preset_name_hint">Profil adı</string>
+    <string name="preset_name_reserved">Bu ad yerleşik bir profil için ayrılmıştır.</string>
+    <string name="preset_name_duplicate">\"%1$s\" adlı bir profil zaten mevcut.</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Temel filtreler</string>
+    <string name="exclude_binaries">İkili dosyaları hariç tut</string>
+    <string name="respect_gitignore">.gitignore kurallarına uy</string>
+    <string name="max_size">Maksimum boyut</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Dahil etmeler</string>
+    <string name="section_exclusions">Hariç tutmalar</string>
+    <string name="section_gitignore_rules">.gitignore içinde algılanan kurallar</string>
+    <string name="no_inclusions">Ek uzantı yok</string>
+    <string name="no_exclusions">Özel hariç tutma yok</string>
+    <string name="no_gitignore_rules">.gitignore içinde kural bulunamadı</string>
+    <string name="add_inclusion_title">Dahil etme ekle</string>
+    <string name="add_exclusion_title">Hariç tutma ekle</string>
+    <string name="edit_extension">Uzantıyı düzenle</string>
+    <string name="delete_rule">Kuralı sil</string>
+    <string name="extension_hint">Örn.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Ekle</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Sürüm kontrolü</string>
+    <string name="git_info">Dal: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">dal yok</string>
+    <string name="no_commit">commit yok</string>
+    <string name="read_from_git">Bir Git referansından oku</string>
+    <string name="git_refresh">Git bilgisini yenile</string>
+    <string name="git_uncommitted_changes">Uyarı: %1$d işlenmemiş değişiklik</string>
+    <string name="git_ref_hint">Örn.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Referanslara göz at</string>
+    <string name="git_preview_diff">Çalışma ağacına göre farkı önizle</string>
+    <string name="git_resolving">Çözümleniyor…</string>
+    <string name="git_resolved_as">Çözümlendi: %1$s</string>
+    <string name="git_ref_invalid">Geçersiz Git referansı</string>
+    <string name="git_ref_empty">Bir Git referansı girin veya seçin</string>
+    <string name="git_not_repo">Bu klasör bir Git deposu değil</string>
+    <string name="git_open_parent_root">Proje köküne git: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Git referansı seç</string>
+    <string name="git_tab_branches">Dallar</string>
+    <string name="git_tab_tags">Etiketler</string>
+    <string name="git_tab_commits">Commit\'ler</string>
+    <string name="git_local_branches">Yerel dallar</string>
+    <string name="git_remote_branches">Uzak dallar</string>
+    <string name="git_no_branches">Dal bulunamadı</string>
+    <string name="git_no_tags">Etiket bulunamadı</string>
+    <string name="git_no_commits">Commit bulunamadı</string>
+    <string name="git_current_marker">geçerli</string>
+    <string name="git_remote_marker">uzak</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Fark: %1$s ve çalışma ağacı</string>
+    <string name="git_diff_stats">%1$d dosya  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Değişiklik algılanmadı</string>
+    <string name="git_diff_content">Fark içeriği</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Dosya ağacı</string>
+    <string name="show_tree">Dosya ağacını göster</string>
+    <string name="action_expand">Genişlet</string>
+    <string name="action_collapse">Daralt</string>
+    <string name="action_reload">Yeniden yükle</string>
+    <string name="analyzing">Analiz ediliyor…</string>
+    <string name="analyzing_files">Analiz ediliyor… %1$d dosya</string>
+    <string name="canceled_retry">İptal edildi. Yeniden denemek için bir filtreye dokunun.</string>
+    <string name="tree_scan_error">Proje ağacı taranamadı: %1$s</string>
+    <string name="no_tree_matches">Filtrelerle eşleşen dosya yok</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Bağlam oluştur</string>
+    <string name="generate_description">Tek bir .txt dosyası oluşturulup Download\'a kaydedilecek.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Bağlam oluşturuluyor…</string>
+    <string name="preparing_export">Hazırlanıyor…</string>
+    <string name="processing_progress">İşleniyor: %1$d/%2$d dosya</string>
+    <string name="generation_complete">Oluşturma tamamlandı</string>
+    <string name="generation_failed">Oluşturma başarısız</string>
+    <string name="generation_minimize_hint">Bu iletişim kutusunu küçültebilirsiniz. Oluşturma arka planda devam eder.</string>
+    <string name="saved_to_downloads">Download/OneCodeForAI\'a kaydedildi: %1$s</string>
+    <string name="export_already_running">Zaten bir dışa aktarma sürüyor.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Kaydet</string>
+    <string name="action_share">Paylaş</string>
+    <string name="action_regenerate">Yeniden oluştur</string>
+    <string name="action_edit_settings">Ayarları düzenle</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d dosya</item>
+        <item quantity="other">%1$d dosya</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s token</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Bağlam TXT oluştur (Paylaş/Dışa aktar)</string>
+    <string name="dialog_already_open">Yapılandırma penceresi zaten açık.</string>
+    <string name="no_folder_selected">Klasör seçilmedi.</string>
+    <string name="select_valid_folder">Geçerli bir klasör seçin.</string>
+    <string name="error_opening_dialog">Hata: pencere açılamadı.</string>
+    <string name="opening_config">Yapılandırma açılıyor…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Dosya yazma başarısız.</string>
+    <string name="error_source_uri_unreadable">Kaynak dosya açılamadı.</string>
+    <string name="error_output_stream_unavailable">Hedef bir çıktı akışı sağlamadı.</string>
+    <string name="error_media_store_finalize">Hedef dosya tamamlanamadı.</string>
+    <string name="error_downloads_dir_create">Download klasörü oluşturulamadı: %1$s</string>
+    <string name="error_project_root_not_dir">Proje kökü bir klasör değil: %1$s</string>
+    <string name="error_git_repo_unreadable">Seçilen klasör okunabilir bir Git deposu değil.</string>
+    <string name="error_git_ref_unresolved">\"%1$s\" Git referansı çözümlenemedi.</string>
+    <string name="error_git_export_no_ref">Git dışa aktarma etkin ancak hiçbir referans seçilmedi.</string>
+    <string name="unknown_error">Bilinmeyen hata</string>
+    <string name="error_storage_permission">Depolama izni gerekli. Ayarlar > Uygulamalar > One Code For AI > İzinler bölümünden verin.</string>
+    <string name="error_source_file_missing">Oluşturulan dosya artık kullanılamıyor. Bağlamı yeniden oluşturun.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Bağlam hazır - %1$d okuma hatası</item>
+        <item quantity="other">Bağlam hazır - %1$d okuma hatası</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Dökümü şununla paylaş:</string>
+    <string name="share_error">Paylaşma hatası: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Bağlam hazır</string>
+    <string name="error_notification_title">One Code hatası</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Hatası</string>
+    <string name="notification_channel_actions">One Code sonuçları</string>
+    <string name="generating_dump">Kod dökümü oluşturuluyor…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Git entegrasyonu</string>
+    <string name="settings_git_global_desc">Depoları algılar ve tüm Git özelliklerini etkinleştirir. Bir depo içinde bile düz klasör modunu zorlamak için devre dışı bırakın. .gitignore kuralları yine de uygulanır.</string>
+    <string name="settings_animations">Animasyonlar</string>
+    <string name="settings_animations_desc">İletişim kutusu, ağaç ve profil seçicide solma ve ölçeklendirme geçişleri. Düşük donanımlı cihazlarda devre dışı bırakın.</string>
+    <string name="settings_notifications">Oluşturma bildirimleri</string>
+    <string name="settings_notifications_desc">Dışa aktarma sırasında ilerleme, tamamlanma ve hata bildirimleri. Bildirim çekmecesini sessize almak için devre dışı bırakın.</string>
+    <string name="settings_force_english">İngilizce arayüzü zorla</string>
+    <string name="settings_force_english_desc">IDE dilinden bağımsız olarak eklenti arayüzünü İngilizce kullanmaya zorlar. Yeni açılan iletişim kutuları ve ekranlar İngilizce kullanır; zaten açık pencereler yeniden açılana kadar mevcut dillerini korur.</string>
+    <string name="settings_total_export_limit">Toplam dışa aktarma boyutu sınırı (KB)</string>
+    <string name="settings_total_export_limit_desc">Tek bir dökümün toplam boyutu için kilobayt cinsinden sert üst sınır. Sınıra ulaşıldığında dışa aktarma dosya eklemeyi durdurur ve bir kesme bildirimi ekler. Dosya başına sınır devre dışı bırakıldığında en kullanışlıdır. Sınırsız için 0 olarak ayarlayın.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git, CodeAssist ayarlarında genel olarak devre dışı bırakıldı. Dalları, etiketleri ve commit\'leri kullanmak için orada etkinleştirin.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">BİLGİ</string>
+    <string name="info_subtitle">CodeAssist için eklenti</string>
+    <string name="open_codeassist">CodeAssist\'i aç</string>
+    <string name="footer_made_with">Topluluk için ❤️ ile yapıldı</string>
+    <string name="creator_dev">Bağımsız geliştirici</string>
+    <string name="codeassist_not_installed">CodeAssist yüklü değil</string>
+    <string name="codeassist_open_error">CodeAssist açılamadı</string>
+    <string name="no_app_for_link">Bağlantıları açmak için uygulama yok</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">YENİLİKLER</string>
+    <string name="whats_new_version">Sürüm %1$s</string>
+    <string name="whats_new_item_1">Git, animasyonlar ve bildirimleri genel olarak açıp kapatmak için yerel bir Ayarlar sayfası eklendi.</string>
+    <string name="whats_new_item_2">Üst klasörlerde akıllı .gitignore araması yapan bir Git ana anahtarı eklendi.</string>
+    <string name="whats_new_item_3">Profesyonel Android profilleri ve akıllı hariç tutmalarla ön ayarlar yenilendi.</string>
+    <string name="whats_new_item_4">Tam glob desen desteği (*.log, build/, **/generated/**) ve dizin filtreleme eklendi.</string>
+    <string name="whats_new_item_5">Bağlamsal yardım iletişim kutuları, yerel IDE günlüğü ve yansıma hataları düzeltmeleri eklendi.</string>
+    <string name="whats_new_item_6">İngilizce eğitimleri veya belgeleri takip ederken IDE dilini yok saymak için \"İngilizce arayüzü zorla\" anahtarı eklendi.</string>
+    <string name="whats_new_item_7">Dosya başına sınır devre dışı bırakıldığında birkaç GB\'lık dökümleri önlemek için genel bir toplam dışa aktarma boyutu sınırı eklendi.</string>
+    <string name="whats_new_item_8">İkili dosya hariç tutma ve proje ağacı için bağlamsal yardım eklendi; tüm yardım simgeleri artık daha küçük görsel boyut ve daha büyük dokunma alanı kullanıyor.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Kurulum kılavuzu</string>
+    <string name="guide_header_subtitle">One Code For AI\'ı IDE\'nizde etkinleştirmek için bu adımları izleyin.</string>
+    <string name="guide_step1_title">APK\'yı indirin</string>
+    <string name="guide_step1_desc">Resmi depodan veya dağıtım kanalından en son .apk\'yı alın.</string>
+    <string name="guide_step2_title">Uygulamayı yükleyin</string>
+    <string name="guide_step2_desc">Cihazınızda APK\'yı açın ve istenirse bilinmeyen kaynaklardan yüklemeyi kabul edin.</string>
+    <string name="guide_step3_title">CodeAssist\'i açın</string>
+    <string name="guide_step3_desc">Yüklendikten sonra cihazınızda CodeAssist uygulamasını başlatın.</string>
+    <string name="guide_step4_title">Eklentiyi etkinleştirin</string>
+    <string name="guide_step4_desc">Ayarlar > Eklentiler > Yüklü öğesine gidin ve One Code For AI\'ı etkinleştirin. Otomatik olarak yüklenecektir.</string>
+    <string name="guide_step5_title">IDE\'yi yeniden başlatın</string>
+    <string name="guide_step5_desc">Tüm bileşenlerin doğru yüklenmesi için CodeAssist\'i kapatın ve yeniden açın.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">CodeAssist entegrasyonu</string>
+    <string name="step_1_title">Bir proje açın</string>
+    <string name="step_1_desc">CodeAssist\'te proje dosya ağacına dokunun</string>
+    <string name="step_2_title">Bir klasöre uzun basın</string>
+    <string name="step_2_desc">Seçenekler bağlam menüsü açılacaktır</string>
+    <string name="step_3_title">One Code For AI\'ı seçin</string>
+    <string name="step_3_desc">Dökümü oluşturma seçeneği görünecektir</string>
+    <string name="step_4_title">Dışa aktarın veya paylaşın</string>
+    <string name="step_4_desc">.txt dosyasını Download\'a kaydedin veya yapay zekanıza gönderin</string>
+
+    <!-- > Features -->
+    <string name="features_title">Özellikler</string>
+    <string name="feature_1">Gelişmiş Glob Filtreleri: *.log, build/ veya **/generated/** gibi desenleri kullanın</string>
+    <string name="feature_2">Git Entegrasyonu: Dallardan, etiketlerden, commit\'lerden dışa aktarın veya farkları önizleyin</string>
+    <string name="feature_3">Profesyonel Ön Ayarlar: Android (Kotlin, Kaynak, Kaynaklar), Web, Python, Metin</string>
+    <string name="feature_4">Bağlamsal Yardım: Satır içi iletişim kutuları filtreleri, desenleri ve .gitignore önceliğini açıklar</string>
+    <string name="feature_5">Genel Git Ana Anahtarı: .gitignore yedeğini korurken Git\'i tamamen devre dışı bırakın</string>
+    <string name="feature_6">Proje Ağacı Hariç Tutmaları: Dışa aktarmadan önce dosyaları ve klasörleri manuel olarak işaretleyin/kaldırın</string>
+    <string name="feature_7">Bayt Düzeyinde İlerleme: Arka plan işleme ile dışa aktarma ilerlemesini gerçek zamanlı olarak izleyin</string>
+    <string name="feature_8">Yerel IDE Günlüğü: Hata ayıklama otomatik parçalama ile CodeAssist konsoluna yönlendirilir</string>
+    <string name="feature_9">Genel Ayarlar Sayfası: Git, animasyonlar ve bildirimler için yerel anahtarlar</string>
+    <string name="feature_10">%100 Çevrimdışı ve Gizli: Telemetri yok, internet izni yok, tamamen yerel</string>
+
+    <!-- > Links -->
+    <string name="links_title">Bağlantılar</string>
+    <string name="link_repository">GitHub deposu</string>
+    <string name="link_report_bug">Sorun bildir</string>
+    <string name="link_license">MIT Lisansı</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Teknik bilgiler</string>
+    <string name="tech_info_version">Sürüm</string>
+    <string name="tech_info_package">Paket</string>
+    <string name="tech_info_min_sdk">Min. SDK</string>
+    <string name="tech_info_target_sdk">Hedef SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Dil</string>
+    <string name="tech_info_status">Durum</string>
+    <string name="tech_info_status_stable">Kararlı</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">YARDIM VE SSS</string>
+    <string name="help_header_subtitle">Yaygın sorunlara yanıtlar bulun ve eklentiden en iyi şekilde yararlanmayı öğrenin.</string>
+
+    <string name="help_q1">Git işlevini tamamen nasıl devre dışı bırakırım?</string>
+    <string name="help_a1">CodeAssist Ayarlarına, ardından Eklentiler\'e gidin ve One Code For AI ayarlarını açın. Orada \"Git entegrasyonu\" anahtarını bulacaksınız. Devre dışı bırakıldığında eklenti klasörünüzü düz dosyalar olarak ele alır.</string>
+
+    <string name="help_q2">Git devre dışıyken .gitignore neden hala çalışıyor?</string>
+    <string name="help_a2">Git devre dışıysa eklenti, seçilen klasörde ve üst dizinlerinde (5 seviyeye kadar) bir .gitignore dosyasını otomatik olarak arar. Bu, filtreleme kurallarınızın bozulmadan kalmasını sağlar.</string>
+
+    <string name="help_q3">Kehribar rengi .gitignore kuralları ne anlama geliyor?</string>
+    <string name="help_a3">Manuel bir dahil etme veya hariç tutma filtreniz bir kuralı etkin şekilde geçersiz kılıyorsa kural kehribar rengiyle vurgulanır. Dahil etmeler ve hariç tutmalar her zaman .gitignore\'a göre önceliklidir.</string>
+
+    <string name="help_q4">Filtrelerde glob desenlerini nasıl kullanırım?</string>
+    <string name="help_a4">Standart glob sözdizimini kullanın: *.log (herhangi bir günlük dosyası), build/ (belirli klasör), **/generated/** (iç içe geçmiş herhangi bir oluşturulmuş klasör). Hızlı bir kılavuz için filtre bölümlerinin yanındaki \"?\" simgesine dokunun.</string>
+
+    <string name="help_q5">Yeni Android ön ayarları ne yapar?</string>
+    <string name="help_a5">Android (Kotlin) her şeyi dışa aktarır. Android (source only) testleri ve belgeleri kaldırır. Android (Resources) yalnızca XML\'leri (düzenler/temalar) dışa aktarır. R.java gibi oluşturulmuş dosyaları otomatik olarak hariç tutarlar.</string>
+
+    <string name="help_q6">Animasyonlar ve bildirimler için ayarlar nerede?</string>
+    <string name="help_a6">Bu eklenti için yerel CodeAssist ayarlarındadır. Animasyonları devre dışı bırakmak düşük donanımlı cihazlarda performansa yardımcı olur. Bildirimleri devre dışı bırakmak ilerleme ve tamamlanma uyarılarını sessize alır.</string>
+
+    <string name="help_q7">Bütün bir klasörü kolayca nasıl hariç tutarım?</string>
+    <string name="help_a7">Yapılandırma iletişim kutusunda dosya ağacı önizlemesini açın. Hariç tutmak istediğiniz klasörün işaretini kaldırın. Bu, karmaşık hariç tutma kuralları yazmaktan daha hızlı ve daha güvenlidir.</string>
+
+    <string name="help_q8">Çalışırken bir dışa aktarmayı iptal edebilir miyim?</string>
+    <string name="help_a8">Evet. İletişim kutusunda \"İptal\"e dokunabilir veya iletişim kutusunu kapatabilirsiniz. Dışa aktarma arka planda güvenli şekilde çalışır ve istediğiniz zaman geri dönüp ilerlemesini kontrol edebilirsiniz.</string>
+
+    <string name="help_q9">Kodum bir sunucuya yükleniyor mu?</string>
+    <string name="help_a9">Kesinlikle hayır. Eklenti internet izni gerektirmez. Tüm tarama, filtreleme ve oluşturma cihazınızda %100 yerel olarak gerçekleşir.</string>
+
+    <string name="help_q10">Oluşturulan dosyalar nereye kaydedilir?</string>
+    <string name="help_a10">Dışa aktarılan dosyalar cihazınızın genel depolama alanında Download/OneCodeForAI altında kaydedilir.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Bölüm yardımı</string>
+    <string name="help_inclusions_title">Dahil etmeler</string>
+    <string name="help_inclusions_body">Uzantılar ve glob desenlerinin beyaz listesi, .gitignore\'dan önce değerlendirilir.\n\nDesteklenen sözdizimi (.gitignore desenleriyle aynı):\n- Uzantılar: kt, json, xml\n- Joker karakterler: *.log, **/*.kt, src/*.kt\n- Dizinler: build/, **/generated/**\n\nBir dahil etmeyle eşleşen herhangi bir dosya, .gitignore veya hariç tutmalar onu atlayacak olsa bile dışa aktarılır.\n\nDahil etmeler, hariç tutmalara ve .gitignore\'a göre önceliklidir. Belirli dosya veya uzantıları zorla dahil etmek için kullanın.</string>
+
+    <string name="help_exclusions_title">Hariç tutmalar</string>
+    <string name="help_exclusions_body">Uzantılar ve glob desenlerinin kara listesi.\n\nDesteklenen sözdizimi (.gitignore desenleriyle aynı):\n- Uzantılar: log, tmp, pyc\n- Joker karakterler: *.log, **/*.test.kt, src/*.bak\n- Dizinler: build/, **/generated/**\n\nBir hariç tutmayla eşleşen herhangi bir dosya, .gitignore onu dahil edecek olsa bile atlanır. Dahil etmeler, hariç tutmalara göre önceliklidir.\n\nBir desen yazmadan belirli bir klasörü hariç tutmak için aşağıdaki dosya ağacını kullanın.</string>
+
+    <string name="help_gitignore_title">.gitignore kuralları</string>
+    <string name="help_gitignore_body">Projenin .gitignore dosyasında algılanan kurallar.\n\nBu liste salt okunurdur - değiştirmek için doğrudan .gitignore\'u düzenleyin.\n\nDahil etmeler ve hariç tutmalar bu kurallara göre önceliklidir: eşleşen bir dahil etme veya hariç tutma eklemek, .gitignore\'dan bağımsız olarak dosyayı zorla içeri veya dışarı iter. Geçersiz kılınan kurallar kehribar rengiyle vurgulanır. Olumsuzlanmış kurallar (\'!\' ile başlayanlar), olumlu kurallardan ayırt edilebilmeleri için farklı bir arka planla gösterilir.</string>
+
+    <string name="help_binaries_title">İkili dosya hariç tutma</string>
+    <string name="help_binaries_body">İkili dosyalar bilinen ikili uzantıların sabit bir listesiyle algılanır (görüntüler, video, ses, arşivler, derlenmiş ikili dosyalar, yazı tipleri, veritabanları). Bu uzantılara sahip dosyalar, dökümün okunabilir kaynak koduna odaklanmasını sağlamak için atlanır.\n\nAlgılama yalnızca uzantı tabanlıdır. Yaygın olmayan bir ikili biçimi atlamak için uzantısını Hariç Tutmalara ekleyin. Zorla dahil etmek için Dahil Etmelere ekleyin.\n\nBu anahtarı devre dışı bırakmak, listelenen uzantıları dışa aktarmaya dahil eder; bu, yapay zeka bağlamı için nadiren yararlıdır.</string>
+
+    <string name="help_tree_title">Proje ağacı önizlemesi</string>
+    <string name="help_tree_body">Mevcut filtrelerle eşleşen her girişi içeren proje ağacını gösterir. Bir hariç tutma kuralı yazmadan dışa aktarmadan hariç tutmak için herhangi bir dosya veya klasörün işaretini kaldırın.\n\nBir klasörü hariç tutmak, alt öğelerini otomatik olarak hariç tutar. Hariç tutulan bir klasör içindeki tek bir alt öğeyi yeniden dahil etmek yalnızca o girişi geri yükler ve .gitignore olumsuzlamasının davranışını yansıtır.\n\nTüm projeyi tek bir dokunuşla dahil etmek veya hariç tutmak için başlıktaki onay kutusunu kullanın. Ağaç bir önizlemedir: dosyaları yeniden oluşturmaz, yalnızca geçerli dahil etme durumunu yansıtır.</string>
+
+    <string name="help_max_size_title">Dosya başına boyut sınırı</string>
+    <string name="help_max_size_body">Etkinleştirildiğinde, seçilen boyuttan daha büyük dosyalar atlanır. Bu, dökümü tek bir büyük dosyanın (ör. paketlenmiş bir varlık veya oluşturulmuş SQL) çıktıya hakim olmasından korur.\n\nDevre dışı bırakıldığında, boyutundan bağımsız olarak her metin dosyası dahil edilir ve bu çok büyük dökümlere neden olabilir. Dışa aktarmaları sınırlı tutmak için Ayarlar\'daki toplam dışa aktarma boyutu sınırıyla birleştirin.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

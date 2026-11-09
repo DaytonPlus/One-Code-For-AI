@@ -29,6 +29,13 @@ import android.content.pm.ApplicationInfo
  * Every log message is prefixed with the provided tag in brackets.
  * Example output: [Settings] READ [git_enabled] -> false
  *
+ * ### Throwable handling
+ * The host logger API has historically exposed either a single-`String`
+ * method (`info(String)`) or a two-argument form (`info(String, Throwable)`).
+ * The two-argument form is preferred when available because it preserves the
+ * stack trace; if it is not present, the throwable's class name and message
+ * are appended to the single-string call so no information is lost.
+ *
  * ### Usage Example
  * ```kotlin
  * PluginLogger.d("ExportWorker", "Starting export for folder: $folderName")
@@ -165,35 +172,61 @@ object PluginLogger {
      * Core logging implementation that invokes the host logger via reflection.
      *
      * The host logger API may change slightly between CodeAssist versions.
-     * By using reflection to look for methods named "info", "warn", or "error"
-     * that accept a single String, we ensure compatibility across versions.
+     * By using reflection, we look for methods named "info", "warn", or "error"
+     * that accept the parameters this plugin has historically found:
      *
-     * If a throwable is provided, its class name and message are appended to
-     * the log string, since the host logger may not accept a Throwable directly.
+     *  - **Preferred:** a two-argument form `(String, Throwable)`. This form
+     *    preserves the stack trace and is used whenever it exists.
+     *  - **Fallback:** a single-argument `(String)` form. The throwable (if
+     *    any) is folded into the message string, so no information is lost
+     *    even on hosts that only expose the one-arg overload.
+     *
+     * If neither form is found, the call is silently dropped.
      *
      * @param level The host logger method name ("info", "warn", "error").
      * @param tag The raw tag to include in brackets.
      * @param message The message to log.
-     * @param throwable An optional exception whose details will be appended.
+     * @param throwable An optional exception to attach or append.
      */
     private fun logToHost(level: String, tag: String, message: String, throwable: Throwable?) {
         val logger = hostLogger ?: return
 
-        val finalMessage = if (throwable != null) {
-            "[$tag] $message | Exception: ${throwable.javaClass.simpleName}: ${throwable.message}"
-        } else {
-            "[$tag] $message"
-        }
+        // The bracketed tag is the same in both branches so log filters keep
+        // working after a host upgrade changes which overload is available.
+        val finalMessage = "[$tag] $message"
 
         try {
-            val method = logger.javaClass.methods.firstOrNull {
-                it.name.equals(level, ignoreCase = true) &&
-                it.parameterTypes.size == 1 &&
-                it.parameterTypes[0] == String::class.java
+            // Preferred: two-arg overload with a real Throwable parameter.
+            if (throwable != null) {
+                val methodWithThrowable = logger.javaClass.methods.firstOrNull {
+                    it.name.equals(level, ignoreCase = true) &&
+                        it.parameterTypes.size == 2 &&
+                        it.parameterTypes[0] == String::class.java &&
+                        Throwable::class.java.isAssignableFrom(it.parameterTypes[1])
+                }
+                if (methodWithThrowable != null) {
+                    methodWithThrowable.invoke(logger, finalMessage, throwable)
+                    return
+                }
             }
-            method?.invoke(logger, finalMessage)
+
+            // Fallback: single-string overload. When a throwable is present,
+            // its class name and message are appended inline; the stack trace
+            // itself cannot be preserved through this path, which is why the
+            // two-arg form above is preferred.
+            val enrichedMessage = if (throwable != null) {
+                "$finalMessage | ${throwable.javaClass.simpleName}: ${throwable.message}"
+            } else {
+                finalMessage
+            }
+            val methodStringOnly = logger.javaClass.methods.firstOrNull {
+                it.name.equals(level, ignoreCase = true) &&
+                    it.parameterTypes.size == 1 &&
+                    it.parameterTypes[0] == String::class.java
+            }
+            methodStringOnly?.invoke(logger, enrichedMessage)
         } catch (_: Exception) {
-            // Fail silently to prevent logging from crashing the plugin
+            // Fail silently to prevent logging from crashing the plugin.
         }
     }
 }

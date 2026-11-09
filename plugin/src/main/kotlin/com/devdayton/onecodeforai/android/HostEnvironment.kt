@@ -12,10 +12,14 @@ import android.content.Context
  * `android.app.ActivityThread`, which is exposed here behind a small, typed
  * facade so no other class has to repeat the reflection dance.
  *
- * All operations are best-effort: on Android versions or host builds where the
- * reflective calls fail, they return `null` rather than throwing. Callers are
- * expected to handle the null case (e.g. surface a toast or bail out of the
- * flow).
+ * **This is fragile by design.** `ActivityThread` is not part of the public
+ * Android SDK; its field names (`mActivities`) have been stable for many
+ * releases but are not contractually guaranteed and have already differed on
+ * some OEM forks. Every operation here is wrapped in `runCatching` and logs a
+ * `[WARN]` when reflection fails, so a breaking change on the host side shows
+ * up in the IDE console instead of silently disabling every UI entry point.
+ * Callers must handle the `null` return (e.g. surface a toast or bail out of
+ * the flow) — there is no non-reflective fallback for this API surface.
  */
 object HostEnvironment {
 
@@ -23,8 +27,11 @@ object HostEnvironment {
      * Returns the host application's `Context`, or `null` when the reflective
      * lookup fails.
      *
-     * The result is the *application* context (already unwrapped from the
-     * `ActivityThread`), which is safe to retain beyond an Activity's lifetime
+     * `ActivityThread.currentApplication()` already returns the `Application`
+     * instance, which is itself a `Context`. Calling `.applicationContext` on
+     * it (as a previous version did) is redundant — the extra call is removed.
+     *
+     * The returned instance is safe to retain beyond an Activity's lifetime
      * and is what [com.devdayton.onecodeforai.android.ExportCoordinator] uses
      * for notifications, `MediaStore` and share intents.
      */
@@ -32,7 +39,7 @@ object HostEnvironment {
         Class.forName(ACTIVITY_THREAD_CLASS)
             .getMethod("currentApplication")
             .invoke(null) as? Context
-    }.getOrNull()?.applicationContext
+    }.getOrNull()
 
     /**
      * Returns the foreground host activity, or `null` when the IDE is not
@@ -48,6 +55,11 @@ object HostEnvironment {
      * views and by [com.devdayton.onecodeforai.OneCodeForAIPlugin] to post the
      * dialog-creation runnable. Returning `null` here means the plugin cannot
      * open UI right now; callers should defer or notify the user.
+     *
+     * Failures (reflection unavailable, field renamed by an OEM fork, or the
+     * host's `ActivityThread` not yet initialized) are logged once and
+     * reported as `null`; see the class-level note about the fragility of
+     * this API.
      */
     fun currentActivity(): Activity? = runCatching {
         val activityThreadClass = Class.forName(ACTIVITY_THREAD_CLASS)
@@ -66,6 +78,13 @@ object HostEnvironment {
                 !activity.isFinishing && !activity.isDestroyed
             }
         }
+    }.onFailure { error ->
+        PluginLogger.w(
+            "HostEnvironment",
+            "Failed to resolve current activity via ActivityThread reflection; " +
+                "UI entry points may be unavailable on this host build.",
+            error
+        )
     }.getOrNull()
 
     private const val ACTIVITY_THREAD_CLASS = "android.app.ActivityThread"

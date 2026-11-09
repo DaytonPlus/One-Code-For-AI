@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">Κλείσιμο</string>
+    <string name="cancel">Άκυρο</string>
+    <string name="accept">OK</string>
+    <string name="save">Αποθήκευση</string>
+    <string name="delete">Διαγραφή</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">ΓΕΝΝΗΤΡΙΑ ΠΛΑΙΣΙΟΥ  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Προφίλ εξαγωγής</string>
+    <string name="save_preset">Αποθήκευση προφίλ</string>
+    <string name="delete_preset">Διαγραφή προφίλ</string>
+    <string name="delete_preset_message">Διαγραφή προφίλ \"%1$s\"; Αυτή η ενέργεια δεν αναιρείται.</string>
+    <string name="custom_preset">Προσαρμοσμένο</string>
+    <string name="preset_name_hint">Όνομα προφίλ</string>
+    <string name="preset_name_reserved">Αυτό το όνομα προορίζεται για ενσωματωμένο προφίλ.</string>
+    <string name="preset_name_duplicate">Υπάρχει ήδη προφίλ με όνομα \"%1$s\".</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Βασικά φίλτρα</string>
+    <string name="exclude_binaries">Εξαίρεση δυαδικών αρχείων</string>
+    <string name="respect_gitignore">Σεβασμός κανόνων .gitignore</string>
+    <string name="max_size">Μέγιστο μέγεθος</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Συμπερίληψη</string>
+    <string name="section_exclusions">Εξαιρέσεις</string>
+    <string name="section_gitignore_rules">Κανόνες που εντοπίστηκαν στο .gitignore</string>
+    <string name="no_inclusions">Δεν υπάρχουν πρόσθετες επεκτάσεις</string>
+    <string name="no_exclusions">Δεν υπάρχουν προσαρμοσμένες εξαιρέσεις</string>
+    <string name="no_gitignore_rules">Δεν βρέθηκαν κανόνες στο .gitignore</string>
+    <string name="add_inclusion_title">Προσθήκη συμπερίληψης</string>
+    <string name="add_exclusion_title">Προσθήκη εξαίρεσης</string>
+    <string name="edit_extension">Επεξεργασία επέκτασης</string>
+    <string name="delete_rule">Διαγραφή κανόνα</string>
+    <string name="extension_hint">Π.χ.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Προσθήκη</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Έλεγχος έκδοσης</string>
+    <string name="git_info">Κλάδος: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">χωρίς κλάδο</string>
+    <string name="no_commit">χωρίς commit</string>
+    <string name="read_from_git">Ανάγνωση από αναφορά Git</string>
+    <string name="git_refresh">Ανανέωση πληροφοριών Git</string>
+    <string name="git_uncommitted_changes">Προειδοποίηση: %1$d μη δεσμευμένες αλλαγές</string>
+    <string name="git_ref_hint">Π.χ.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Περιήγηση αναφορών</string>
+    <string name="git_preview_diff">Προεπισκόπηση diff με το δέντρο εργασίας</string>
+    <string name="git_resolving">Επίλυση…</string>
+    <string name="git_resolved_as">Επιλύθηκε: %1$s</string>
+    <string name="git_ref_invalid">Μη έγκυρη αναφορά Git</string>
+    <string name="git_ref_empty">Εισαγάγετε ή επιλέξτε αναφορά Git</string>
+    <string name="git_not_repo">Αυτός ο φάκελος δεν είναι αποθετήριο Git</string>
+    <string name="git_open_parent_root">Μετάβαση στη ρίζα του έργου: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Επιλογή αναφοράς Git</string>
+    <string name="git_tab_branches">Κλάδοι</string>
+    <string name="git_tab_tags">Ετικέτες</string>
+    <string name="git_tab_commits">Commits</string>
+    <string name="git_local_branches">Τοπικοί κλάδοι</string>
+    <string name="git_remote_branches">Απομακρυσμένοι κλάδοι</string>
+    <string name="git_no_branches">Δεν βρέθηκαν κλάδοι</string>
+    <string name="git_no_tags">Δεν βρέθηκαν ετικέτες</string>
+    <string name="git_no_commits">Δεν βρέθηκαν commits</string>
+    <string name="git_current_marker">τρέχων</string>
+    <string name="git_remote_marker">απομακρυσμένος</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s έναντι δέντρου εργασίας</string>
+    <string name="git_diff_stats">%1$d αρχεία  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Δεν εντοπίστηκαν αλλαγές</string>
+    <string name="git_diff_content">Περιεχόμενο diff</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Δέντρο αρχείων</string>
+    <string name="show_tree">Εμφάνιση δέντρου αρχείων</string>
+    <string name="action_expand">Ανάπτυξη</string>
+    <string name="action_collapse">Σύμπτυξη</string>
+    <string name="action_reload">Επαναφόρτωση</string>
+    <string name="analyzing">Ανάλυση…</string>
+    <string name="analyzing_files">Ανάλυση… %1$d αρχεία</string>
+    <string name="canceled_retry">Ακυρώθηκε. Πατήστε ένα φίλτρο για επανάληψη.</string>
+    <string name="tree_scan_error">Δεν είναι δυνατή η σάρωση του δέντρου έργου: %1$s</string>
+    <string name="no_tree_matches">Κανένα αρχείο δεν ταιριάζει με τα φίλτρα</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Δημιουργία πλαισίου</string>
+    <string name="generate_description">Θα δημιουργηθεί ένα μόνο αρχείο .txt και θα αποθηκευτεί στο Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Δημιουργία πλαισίου…</string>
+    <string name="preparing_export">Προετοιμασία…</string>
+    <string name="processing_progress">Επεξεργασία: %1$d/%2$d αρχεία</string>
+    <string name="generation_complete">Η δημιουργία ολοκληρώθηκε</string>
+    <string name="generation_failed">Η δημιουργία απέτυχε</string>
+    <string name="generation_minimize_hint">Μπορείτε να ελαχιστοποιήσετε αυτόν τον διάλογο. Η δημιουργία συνεχίζεται στο παρασκήνιο.</string>
+    <string name="saved_to_downloads">Αποθηκεύτηκε στο Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Μια εξαγωγή βρίσκεται ήδη σε εξέλιξη.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Αποθήκευση</string>
+    <string name="action_share">Κοινή χρήση</string>
+    <string name="action_regenerate">Επαναδημιουργία</string>
+    <string name="action_edit_settings">Επεξεργασία ρυθμίσεων</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d αρχείο</item>
+        <item quantity="other">%1$d αρχεία</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s token</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Δημιουργία πλαισίου TXT (Κοινή χρήση/Εξαγωγή)</string>
+    <string name="dialog_already_open">Το παράθυρο διαμόρφωσης είναι ήδη ανοιχτό.</string>
+    <string name="no_folder_selected">Δεν έχει επιλεγεί φάκελος.</string>
+    <string name="select_valid_folder">Επιλέξτε έναν έγκυρο φάκελο.</string>
+    <string name="error_opening_dialog">Σφάλμα: δεν είναι δυνατό το άνοιγμα του παραθύρου.</string>
+    <string name="opening_config">Άνοιγμα διαμόρφωσης…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Η εγγραφή αρχείου απέτυχε.</string>
+    <string name="error_source_uri_unreadable">Δεν είναι δυνατό το άνοιγμα του αρχείου προέλευσης.</string>
+    <string name="error_output_stream_unavailable">Ο προορισμός δεν παρείχε ροή εξόδου.</string>
+    <string name="error_media_store_finalize">Δεν είναι δυνατή η ολοκλήρωση του αρχείου προορισμού.</string>
+    <string name="error_downloads_dir_create">Δεν είναι δυνατή η δημιουργία του φακέλου Download: %1$s</string>
+    <string name="error_project_root_not_dir">Η ρίζα του έργου δεν είναι φάκελος: %1$s</string>
+    <string name="error_git_repo_unreadable">Ο επιλεγμένος φάκελος δεν είναι αναγνώσιμο αποθετήριο Git.</string>
+    <string name="error_git_ref_unresolved">Δεν είναι δυνατή η επίλυση της αναφοράς Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">Η εξαγωγή Git είναι ενεργοποιημένη αλλά δεν έχει επιλεγεί αναφορά.</string>
+    <string name="unknown_error">Άγνωστο σφάλμα</string>
+    <string name="error_storage_permission">Απαιτείται άδεια αποθήκευσης. Παραχωρήστε τη στις Ρυθμίσεις > Εφαρμογές > One Code For AI > Άδειες.</string>
+    <string name="error_source_file_missing">Το αρχείο που δημιουργήθηκε δεν είναι πλέον διαθέσιμο. Δημιουργήστε ξανά το πλαίσιο.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Το πλαίσιο είναι έτοιμο - %1$d σφάλμα ανάγνωσης</item>
+        <item quantity="other">Το πλαίσιο είναι έτοιμο - %1$d σφάλματα ανάγνωσης</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Κοινή χρήση dump με:</string>
+    <string name="share_error">Σφάλμα κοινής χρήσης: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Το πλαίσιο είναι έτοιμο</string>
+    <string name="error_notification_title">Σφάλμα One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Σφάλμα</string>
+    <string name="notification_channel_actions">Αποτελέσματα One Code</string>
+    <string name="generating_dump">Δημιουργία dump κώδικα…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Ενσωμάτωση Git</string>
+    <string name="settings_git_global_desc">Εντοπίζει αποθετήρια και ενεργοποιεί όλες τις λειτουργίες Git. Απενεργοποιήστε για να επιβάλετε λειτουργία απλού φακέλου ακόμη και μέσα σε αποθετήριο. Οι κανόνες .gitignore εξακολουθούν να ισχύουν.</string>
+    <string name="settings_animations">Κινούμενα σχέδια</string>
+    <string name="settings_animations_desc">Μεταβάσεις fade και κλιμάκωσης στον διάλογο, το δέντρο και τον επιλογέα προφίλ. Απενεργοποιήστε σε συσκευές χαμηλής κατηγορίας.</string>
+    <string name="settings_notifications">Ειδοποιήσεις δημιουργίας</string>
+    <string name="settings_notifications_desc">Ειδοποιήσεις προόδου, ολοκλήρωσης και σφάλματος κατά την εξαγωγή. Απενεργοποιήστε για σίγαση της θυρίδας ειδοποιήσεων.</string>
+    <string name="settings_force_english">Επιβολή αγγλικού UI</string>
+    <string name="settings_force_english_desc">Επιβάλλει στο UI του plugin να χρησιμοποιεί αγγλικά ανεξάρτητα από τη γλώσσα του IDE. Νέοι διάλογοι και οθόνες χρησιμοποιούν αγγλικά· τα ήδη ανοιχτά παράθυρα διατηρούν την τρέχουσα γλώσσα έως ότου ανοίξουν ξανά.</string>
+    <string name="settings_total_export_limit">Συνολικό όριο μεγέθους εξαγωγής (KB)</string>
+    <string name="settings_total_export_limit_desc">Σκληρό όριο, σε kilobyte, στο συνολικό μέγεθος ενός μόνο dump. Όταν επιτευχθεί, η εξαγωγή σταματά να περιλαμβάνει αρχεία και προσθέτει ειδοποίηση περικοπής. Πιο χρήσιμο όταν το όριο ανά αρχείο είναι απενεργοποιημένο. Ορίστε το σε 0 για κανένα όριο.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Το Git είναι καθολικά απενεργοποιημένο στις ρυθμίσεις CodeAssist. Ενεργοποιήστε το εκεί για να χρησιμοποιήσετε κλάδους, ετικέτες και commits.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">ΠΛΗΡΟΦΟΡΙΕΣ</string>
+    <string name="info_subtitle">Plugin για CodeAssist</string>
+    <string name="open_codeassist">Άνοιγμα CodeAssist</string>
+    <string name="footer_made_with">Φτιαγμένο με ❤️ για την κοινότητα</string>
+    <string name="creator_dev">Ανεξάρτητος προγραμματιστής</string>
+    <string name="codeassist_not_installed">Το CodeAssist δεν είναι εγκατεστημένο</string>
+    <string name="codeassist_open_error">Δεν είναι δυνατό το άνοιγμα του CodeAssist</string>
+    <string name="no_app_for_link">Καμία εφαρμογή διαθέσιμη για άνοιγμα συνδέσμων</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">ΤΙ ΝΕΟ ΥΠΑΡΧΕΙ</string>
+    <string name="whats_new_version">Έκδοση %1$s</string>
+    <string name="whats_new_item_1">Προστέθηκε εγγενής σελίδα ρυθμίσεων για καθολική εναλλαγή Git, κινούμενων σχεδίων και ειδοποιήσεων.</string>
+    <string name="whats_new_item_2">Εισήχθη κύριος διακόπτης Git με έξυπνη αναζήτηση .gitignore σε γονικούς φακέλους.</string>
+    <string name="whats_new_item_3">Ανανεώθηκαν οι προεπιλογές με επαγγελματικά προφίλ Android και έξυπνες εξαιρέσεις.</string>
+    <string name="whats_new_item_4">Προστέθηκε πλήρης υποστήριξη μοτίβων glob (*.log, build/, **/generated/**) και φιλτράρισμα καταλόγων.</string>
+    <string name="whats_new_item_5">Προστέθηκαν διάλογοι συμφραζόμενης βοήθειας, εγγενής καταγραφή IDE και διορθώσεις σφαλμάτων αντανάκλασης.</string>
+    <string name="whats_new_item_6">Προστέθηκε διακόπτης \"Επιβολή αγγλικού UI\" ώστε το plugin να μπορεί να αγνοεί τη γλώσσα του IDE κατά την παρακολούθηση αγγλικών οδηγών ή τεκμηρίωσης.</string>
+    <string name="whats_new_item_7">Προστέθηκε καθολικό όριο συνολικού μεγέθους εξαγωγής για αποφυγή dump πολλών GB όταν το όριο ανά αρχείο είναι απενεργοποιημένο.</string>
+    <string name="whats_new_item_8">Προστέθηκε συμφραζόμενη βοήθεια για την εξαίρεση δυαδικών αρχείων και το δέντρο έργου· όλα τα εικονίδια βοήθειας χρησιμοποιούν τώρα μικρότερο οπτικό μέγεθος με μεγαλύτερη περιοχή αφής.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Οδηγός εγκατάστασης</string>
+    <string name="guide_header_subtitle">Ακολουθήστε αυτά τα βήματα για να ενεργοποιήσετε το One Code For AI στο IDE σας.</string>
+    <string name="guide_step1_title">Κατεβάστε το APK</string>
+    <string name="guide_step1_desc">Αποκτήστε το πιο πρόσφατο .apk από το επίσημο αποθετήριο ή το κανάλι διανομής.</string>
+    <string name="guide_step2_title">Εγκαταστήστε την εφαρμογή</string>
+    <string name="guide_step2_desc">Ανοίξτε το APK στη συσκευή σας και αποδεχτείτε την εγκατάσταση από άγνωστες πηγές αν σας ζητηθεί.</string>
+    <string name="guide_step3_title">Ανοίξτε το CodeAssist</string>
+    <string name="guide_step3_desc">Μόλις εγκατασταθεί, εκκινήστε την εφαρμογή CodeAssist στη συσκευή σας.</string>
+    <string name="guide_step4_title">Ενεργοποιήστε το plugin</string>
+    <string name="guide_step4_desc">Μεταβείτε στις Ρυθμίσεις > Plugins > Εγκατεστημένα και ενεργοποιήστε το One Code For AI. Θα φορτωθεί αυτόματα.</string>
+    <string name="guide_step5_title">Επανεκκινήστε το IDE</string>
+    <string name="guide_step5_desc">Κλείστε και ανοίξτε ξανά το CodeAssist για να φορτωθούν σωστά όλα τα στοιχεία.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Ενσωμάτωση CodeAssist</string>
+    <string name="step_1_title">Ανοίξτε ένα έργο</string>
+    <string name="step_1_desc">Πατήστε το δέντρο αρχείων του έργου στο CodeAssist</string>
+    <string name="step_2_title">Πατήστε παρατεταμένα σε έναν φάκελο</string>
+    <string name="step_2_desc">Θα ανοίξει το αναδυόμενο μενού επιλογών</string>
+    <string name="step_3_title">Επιλέξτε One Code For AI</string>
+    <string name="step_3_desc">Θα εμφανιστεί η επιλογή δημιουργίας του dump</string>
+    <string name="step_4_title">Εξαγωγή ή κοινή χρήση</string>
+    <string name="step_4_desc">Αποθηκεύστε το .txt στο Download ή στείλτε το στο AI σας</string>
+
+    <!-- > Features -->
+    <string name="features_title">Δυνατότητες</string>
+    <string name="feature_1">Προηγμένα φίλτρα glob: χρησιμοποιήστε μοτίβα όπως *.log, build/ ή **/generated/**</string>
+    <string name="feature_2">Ενσωμάτωση Git: εξαγωγή από κλάδους, ετικέτες, commits ή προεπισκόπηση diff</string>
+    <string name="feature_3">Επαγγελματικές προεπιλογές: Android (Kotlin, Πηγή, Πόροι), Web, Python, Κείμενο</string>
+    <string name="feature_4">Συμφραζόμενη βοήθεια: ενσωματωμένοι διάλογοι εξηγούν φίλτρα, μοτίβα και προτεραιότητα .gitignore</string>
+    <string name="feature_5">Κύριος διακόπτης Git: απενεργοποιήστε πλήρως το Git διατηρώντας το fallback .gitignore</string>
+    <string name="feature_6">Εξαιρέσεις δέντρου έργου: επιλέξτε/αποεπιλέξτε μη αυτόματα αρχεία και φακέλους πριν την εξαγωγή</string>
+    <string name="feature_7">Ακριβής πρόοδος σε byte: παρακολουθήστε την πρόοδο της εξαγωγής σε πραγματικό χρόνο με επεξεργασία στο παρασκήνιο</string>
+    <string name="feature_8">Εγγενής καταγραφή IDE: το debug δρομολογείται στην κονσόλα CodeAssist με αυτόματη κατάτμηση</string>
+    <string name="feature_9">Σελίδα καθολικών ρυθμίσεων: εγγενείς διακόπτες για Git, κινούμενα σχέδια και ειδοποιήσεις</string>
+    <string name="feature_10">100% offline και ιδιωτικό: χωρίς τηλεμετρία, χωρίς άδεια internet, πλήρως τοπικό</string>
+
+    <!-- > Links -->
+    <string name="links_title">Σύνδεσμοι</string>
+    <string name="link_repository">Αποθετήριο GitHub</string>
+    <string name="link_report_bug">Αναφορά προβλήματος</string>
+    <string name="link_license">Άδεια MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Τεχνικές πληροφορίες</string>
+    <string name="tech_info_version">Έκδοση</string>
+    <string name="tech_info_package">Πακέτο</string>
+    <string name="tech_info_min_sdk">Ελάχιστο SDK</string>
+    <string name="tech_info_target_sdk">SDK προορισμού</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Γλώσσα</string>
+    <string name="tech_info_status">Κατάσταση</string>
+    <string name="tech_info_status_stable">Σταθερή</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">ΒΟΗΘΕΙΑ ΚΑΙ ΣΥΧΝΕΣ ΕΡΩΤΗΣΕΙΣ</string>
+    <string name="help_header_subtitle">Βρείτε απαντήσεις σε συνηθισμένα προβλήματα και μάθετε πώς να αξιοποιήσετε στο έπακρο το plugin.</string>
+
+    <string name="help_q1">Πώς απενεργοποιώ πλήρως τη λειτουργία Git;</string>
+    <string name="help_a1">Μεταβείτε στις Ρυθμίσεις CodeAssist, μετά στα Plugins, και ανοίξτε τις ρυθμίσεις του One Code For AI. Εκεί θα βρείτε τον διακόπτη \"Ενσωμάτωση Git\". Όταν είναι απενεργοποιημένος, το plugin αντιμετωπίζει τον φάκελό σας ως απλά αρχεία.</string>
+
+    <string name="help_q2">Γιατί το .gitignore λειτουργεί ακόμη όταν το Git είναι απενεργοποιημένο;</string>
+    <string name="help_a2">Αν το Git είναι απενεργοποιημένο, το plugin αναζητά αυτόματα αρχείο .gitignore στον επιλεγμένο φάκελο και τους γονικούς του (έως 5 επίπεδα). Αυτό διασφαλίζει ότι οι κανόνες φιλτραρίσματός σας παραμένουν άθικτοι.</string>
+
+    <string name="help_q3">Τι σημαίνουν οι κεχριμπαρένιοι κανόνες .gitignore;</string>
+    <string name="help_a3">Ένας κανόνας επισημαίνεται με κεχριμπαρένιο χρώμα όταν ένα από τα μη αυτόματα φίλτρα συμπερίληψης ή εξαίρεσής σας τον υπερβαίνει ενεργά. Οι συμπεριλήψεις και οι εξαιρέσεις έχουν πάντα προτεραιότητα έναντι του .gitignore.</string>
+
+    <string name="help_q4">Πώς χρησιμοποιώ μοτίβα glob στα φίλτρα;</string>
+    <string name="help_a4">Χρησιμοποιήστε τυπική σύνταξη glob: *.log (οποιοδήποτε αρχείο καταγραφής), build/ (συγκεκριμένος φάκελος), **/generated/** (οποιοσδήποτε ένθετος παραγόμενος φάκελος). Πατήστε το εικονίδιο \"?\" δίπλα στις ενότητες φίλτρων για γρήγορο οδηγό.</string>
+
+    <string name="help_q5">Τι κάνουν οι νέες προεπιλογές Android;</string>
+    <string name="help_a5">Το Android (Kotlin) εξάγει τα πάντα. Το Android (source only) αφαιρεί δοκιμές και τεκμηρίωση. Το Android (Resources) εξάγει μόνο XML (layouts/θέματα). Εξαιρούν αυτόματα παραγόμενα αρχεία όπως το R.java.</string>
+
+    <string name="help_q6">Πού είναι οι ρυθμίσεις για κινούμενα σχέδια και ειδοποιήσεις;</string>
+    <string name="help_a6">Βρίσκονται στις εγγενείς ρυθμίσεις CodeAssist για αυτό το plugin. Η απενεργοποίηση κινούμενων σχεδίων βοηθά την απόδοση σε συσκευές χαμηλής κατηγορίας. Η απενεργοποίηση ειδοποιήσεων σιγάζει τις ειδοποιήσεις προόδου και ολοκλήρωσης.</string>
+
+    <string name="help_q7">Πώς εξαιρώ εύκολα έναν ολόκληρο φάκελο;</string>
+    <string name="help_a7">Ανοίξτε την προεπισκόπηση δέντρου αρχείων στον διάλογο διαμόρφωσης. Αποεπιλέξτε τον φάκελο που θέλετε να εξαιρέσετε. Είναι ταχύτερο και ασφαλέστερο από το να γράψετε πολύπλοκους κανόνες εξαίρεσης.</string>
+
+    <string name="help_q8">Μπορώ να ακυρώσω μια εξαγωγή ενώ εκτελείται;</string>
+    <string name="help_a8">Ναι. Μπορείτε να πατήσετε \"Άκυρο\" στον διάλογο ή απλώς να κλείσετε τον διάλογο. Η εξαγωγή εκτελείται με ασφάλεια στο παρασκήνιο και μπορείτε να επιστρέψετε για να ελέγξετε την πρόοδό της ανά πάσα στιγμή.</string>
+
+    <string name="help_q9">Ο κώδικάς μου ανεβαίνει σε διακομιστή;</string>
+    <string name="help_a9">Σε καμία περίπτωση. Το plugin δεν απαιτεί άδεια internet. Όλη η σάρωση, το φιλτράρισμα και η δημιουργία συμβαίνουν 100% τοπικά στη συσκευή σας.</string>
+
+    <string name="help_q10">Πού αποθηκεύονται τα παραγόμενα αρχεία;</string>
+    <string name="help_a10">Τα εξαγόμενα αρχεία αποθηκεύονται στον δημόσιο χώρο αποθήκευσης της συσκευής σας στο Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Βοήθεια ενότητας</string>
+    <string name="help_inclusions_title">Συμπερίληψη</string>
+    <string name="help_inclusions_body">Λευκή λίστα επεκτάσεων και μοτίβων glob, που αξιολογείται πριν από το .gitignore.\n\nΥποστηριζόμενη σύνταξη (ίδια με τα μοτίβα .gitignore):\n- Επεκτάσεις: kt, json, xml\n- Μπαλαντέρ: *.log, **/*.kt, src/*.kt\n- Κατάλογοι: build/, **/generated/**\n\nΚάθε αρχείο που ταιριάζει με μια συμπερίληψη εξάγεται ακόμη κι αν το .gitignore ή οι εξαιρέσεις θα το παρέλειπαν.\n\nΟι συμπεριλήψεις έχουν προτεραιότητα έναντι των εξαιρέσεων και του .gitignore. Χρησιμοποιήστε τις για να επιβάλετε συμπερίληψη συγκεκριμένων αρχείων ή επεκτάσεων.</string>
+
+    <string name="help_exclusions_title">Εξαιρέσεις</string>
+    <string name="help_exclusions_body">Μαύρη λίστα επεκτάσεων και μοτίβων glob.\n\nΥποστηριζόμενη σύνταξη (ίδια με τα μοτίβα .gitignore):\n- Επεκτάσεις: log, tmp, pyc\n- Μπαλαντέρ: *.log, **/*.test.kt, src/*.bak\n- Κατάλογοι: build/, **/generated/**\n\nΚάθε αρχείο που ταιριάζει με μια εξαίρεση παραλείπεται, ακόμη κι αν το .gitignore θα το συμπεριλάμβανε. Οι συμπεριλήψεις έχουν προτεραιότητα έναντι των εξαιρέσεων.\n\nΓια να εξαιρέσετε έναν συγκεκριμένο φάκελο χωρίς να γράψετε μοτίβο, χρησιμοποιήστε το δέντρο αρχείων παρακάτω.</string>
+
+    <string name="help_gitignore_title">Κανόνες .gitignore</string>
+    <string name="help_gitignore_body">Κανόνες που εντοπίστηκαν στο αρχείο .gitignore του έργου.\n\nΑυτή η λίστα είναι μόνο για ανάγνωση - επεξεργαστείτε απευθείας το .gitignore για να την αλλάξετε.\n\nΟι συμπεριλήψεις και οι εξαιρέσεις έχουν προτεραιότητα έναντι αυτών των κανόνων: η προσθήκη συμπερίληψης ή εξαίρεσης που ταιριάζει εξαναγκάζει το αρχείο μέσα ή έξω ανεξάρτητα από το .gitignore. Οι κανόνες που υπερκαλύπτονται επισημαίνονται με κεχριμπαρένιο χρώμα. Οι αρνητικοί κανόνες (που αρχίζουν με \'!\') εμφανίζονται με διακριτό φόντο ώστε να ξεχωρίζουν από τους θετικούς κανόνες.</string>
+
+    <string name="help_binaries_title">Εξαίρεση δυαδικών αρχείων</string>
+    <string name="help_binaries_body">Τα δυαδικά αρχεία εντοπίζονται μέσω σταθερής λίστας γνωστών δυαδικών επεκτάσεων (εικόνες, βίντεο, ήχος, αρχεία, μεταγλωττισμένα δυαδικά, γραμματοσειρές, βάσεις δεδομένων). Τα αρχεία με αυτές τις επεκτάσεις παραλείπονται ώστε το dump να παραμένει εστιασμένο σε αναγνώσιμο πηγαίο κώδικα.\n\nΟ εντοπισμός βασίζεται μόνο στην επέκταση. Για να παραλείψετε μια ασυνήθιστη δυαδική μορφή, προσθέστε την επέκτασή της στις Εξαιρέσεις. Για να την επιβάλετε, προσθέστε την στις Συμπεριλήψεις.\n\nΗ απενεργοποίηση αυτού του διακόπτη περιλαμβάνει τις καταχωρισμένες επεκτάσεις στην εξαγωγή, κάτι σπάνια χρήσιμο για πλαίσιο AI.</string>
+
+    <string name="help_tree_title">Προεπισκόπηση δέντρου έργου</string>
+    <string name="help_tree_body">Εμφανίζει το δέντρο του έργου με κάθε καταχώριση που ταιριάζει με τα τρέχοντα φίλτρα. Αποεπιλέξτε οποιοδήποτε αρχείο ή φάκελο για να το εξαιρέσετε από την εξαγωγή χωρίς να γράψετε κανόνα εξαίρεσης.\n\nΗ εξαίρεση φακέλου εξαιρεί αυτόματα και τα παιδιά του. Η επανασυμπερίληψη ενός παιδιού μέσα σε εξαιρεμένο φάκελο επαναφέρει μόνο εκείνη την καταχώριση, αντικατοπτρίζοντας τη συμπεριφορά άρνησης του .gitignore.\n\nΧρησιμοποιήστε το πλαίσιο ελέγχου στην κεφαλίδα για να συμπεριλάβετε ή να εξαιρέσετε ολόκληρο το έργο με ένα άγγιγμα. Το δέντρο είναι προεπισκόπηση: δεν αναδημιουργεί αρχεία, απλώς αντικατοπτρίζει την τρέχουσα κατάσταση συμπερίληψης.</string>
+
+    <string name="help_max_size_title">Όριο μεγέθους ανά αρχείο</string>
+    <string name="help_max_size_body">Όταν είναι ενεργό, τα αρχεία μεγαλύτερα από το επιλεγμένο μέγεθος παραλείπονται. Αυτό προστατεύει το dump από ένα τεράστιο αρχείο (π.χ. ένα πακέτο πόρων ή παραγόμενο SQL) που θα κυριαρχούσε στην έξοδο.\n\nΌταν είναι απενεργοποιημένο, κάθε αρχείο κειμένου περιλαμβάνεται ανεξάρτητα από το μέγεθος, το οποίο μπορεί να παράγει πολύ μεγάλα dump. Συνδυάστε το με το συνολικό όριο μεγέθους εξαγωγής στις Ρυθμίσεις για να κρατήσετε τις εξαγωγές περιορισμένες.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

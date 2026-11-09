@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.devdayton.onecodeforai.R
+import com.devdayton.onecodeforai.android.LanguageHelper
 import com.devdayton.onecodeforai.core.GitUtils
 import com.devdayton.onecodeforai.ui.UiFactory.iconButton
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
@@ -414,7 +415,9 @@ class GitReferencePickerDialog(
      * branch rows without disappearing entirely.
      */
     private fun sectionLabel(value: String) = activity.textView(
-        value.uppercase(), 10f, CodeAssistTheme.TEXT_MUTED, true
+        // Locale-aware uppercase; see UiFactory.sectionTitle.
+        value.uppercase(LanguageHelper.detectIdeLocale(activity)),
+        10f, CodeAssistTheme.TEXT_MUTED, true
     ).apply {
         setPadding(0, CodeAssistTheme.dp(activity, 10), 0, CodeAssistTheme.dp(activity, 4))
     }

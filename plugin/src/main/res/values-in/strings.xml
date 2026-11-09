@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">Tutup</string>
+    <string name="cancel">Batal</string>
+    <string name="accept">OK</string>
+    <string name="save">Simpan</string>
+    <string name="delete">Hapus</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">PEMBUAT KONTEKS  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Profil ekspor</string>
+    <string name="save_preset">Simpan profil</string>
+    <string name="delete_preset">Hapus profil</string>
+    <string name="delete_preset_message">Hapus profil \"%1$s\"? Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="custom_preset">Kustom</string>
+    <string name="preset_name_hint">Nama profil</string>
+    <string name="preset_name_reserved">Nama ini dicadangkan untuk profil bawaan.</string>
+    <string name="preset_name_duplicate">Profil dengan nama \"%1$s\" sudah ada.</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Filter dasar</string>
+    <string name="exclude_binaries">Kecualikan file biner</string>
+    <string name="respect_gitignore">Patuhi aturan .gitignore</string>
+    <string name="max_size">Ukuran maksimum</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Penyertaan</string>
+    <string name="section_exclusions">Pengecualian</string>
+    <string name="section_gitignore_rules">Aturan yang terdeteksi di .gitignore</string>
+    <string name="no_inclusions">Tidak ada ekstensi tambahan</string>
+    <string name="no_exclusions">Tidak ada pengecualian kustom</string>
+    <string name="no_gitignore_rules">Tidak ada aturan yang ditemukan di .gitignore</string>
+    <string name="add_inclusion_title">Tambah penyertaan</string>
+    <string name="add_exclusion_title">Tambah pengecualian</string>
+    <string name="edit_extension">Edit ekstensi</string>
+    <string name="delete_rule">Hapus aturan</string>
+    <string name="extension_hint">Mis.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Tambah</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Kontrol versi</string>
+    <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">tanpa branch</string>
+    <string name="no_commit">tanpa commit</string>
+    <string name="read_from_git">Baca dari referensi Git</string>
+    <string name="git_refresh">Segarkan info Git</string>
+    <string name="git_uncommitted_changes">Peringatan: %1$d perubahan belum di-commit</string>
+    <string name="git_ref_hint">Mis.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Jelajahi referensi</string>
+    <string name="git_preview_diff">Pratinjau diff dengan working tree</string>
+    <string name="git_resolving">Menyelesaikan…</string>
+    <string name="git_resolved_as">Terselesaikan: %1$s</string>
+    <string name="git_ref_invalid">Referensi Git tidak valid</string>
+    <string name="git_ref_empty">Masukkan atau pilih referensi Git</string>
+    <string name="git_not_repo">Folder ini bukan repositori Git</string>
+    <string name="git_open_parent_root">Pergi ke root proyek: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Pilih referensi Git</string>
+    <string name="git_tab_branches">Branch</string>
+    <string name="git_tab_tags">Tag</string>
+    <string name="git_tab_commits">Commit</string>
+    <string name="git_local_branches">Branch lokal</string>
+    <string name="git_remote_branches">Branch jarak jauh</string>
+    <string name="git_no_branches">Tidak ada branch ditemukan</string>
+    <string name="git_no_tags">Tidak ada tag ditemukan</string>
+    <string name="git_no_commits">Tidak ada commit ditemukan</string>
+    <string name="git_current_marker">saat ini</string>
+    <string name="git_remote_marker">jarak jauh</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s vs working tree</string>
+    <string name="git_diff_stats">%1$d file  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Tidak ada perubahan terdeteksi</string>
+    <string name="git_diff_content">Konten diff</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Pohon file</string>
+    <string name="show_tree">Tampilkan pohon file</string>
+    <string name="action_expand">Perluas</string>
+    <string name="action_collapse">Ciutkan</string>
+    <string name="action_reload">Muat ulang</string>
+    <string name="analyzing">Menganalisis…</string>
+    <string name="analyzing_files">Menganalisis… %1$d file</string>
+    <string name="canceled_retry">Dibatalkan. Ketuk filter untuk mencoba lagi.</string>
+    <string name="tree_scan_error">Tidak dapat memindai pohon proyek: %1$s</string>
+    <string name="no_tree_matches">Tidak ada file yang cocok dengan filter</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Buat konteks</string>
+    <string name="generate_description">Sebuah file .txt tunggal akan dibuat dan disimpan ke Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Membuat konteks…</string>
+    <string name="preparing_export">Menyiapkan…</string>
+    <string name="processing_progress">Memproses: %1$d/%2$d file</string>
+    <string name="generation_complete">Pembuatan selesai</string>
+    <string name="generation_failed">Pembuatan gagal</string>
+    <string name="generation_minimize_hint">Anda dapat meminimalkan dialog ini. Pembuatan berlanjut di latar belakang.</string>
+    <string name="saved_to_downloads">Disimpan ke Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Ekspor sudah berjalan.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Simpan</string>
+    <string name="action_share">Bagikan</string>
+    <string name="action_regenerate">Buat ulang</string>
+    <string name="action_edit_settings">Edit pengaturan</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="other">%1$d file</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s token</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Buat Konteks TXT (Bagikan/Ekspor)</string>
+    <string name="dialog_already_open">Jendela konfigurasi sudah terbuka.</string>
+    <string name="no_folder_selected">Tidak ada folder yang dipilih.</string>
+    <string name="select_valid_folder">Pilih folder yang valid.</string>
+    <string name="error_opening_dialog">Kesalahan: tidak dapat membuka jendela.</string>
+    <string name="opening_config">Membuka konfigurasi…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Gagal menulis file.</string>
+    <string name="error_source_uri_unreadable">Tidak dapat membuka file sumber.</string>
+    <string name="error_output_stream_unavailable">Tujuan tidak menyediakan aliran keluaran.</string>
+    <string name="error_media_store_finalize">Tidak dapat menyelesaikan file tujuan.</string>
+    <string name="error_downloads_dir_create">Tidak dapat membuat folder Download: %1$s</string>
+    <string name="error_project_root_not_dir">Root proyek bukan folder: %1$s</string>
+    <string name="error_git_repo_unreadable">Folder yang dipilih bukan repositori Git yang dapat dibaca.</string>
+    <string name="error_git_ref_unresolved">Tidak dapat menyelesaikan referensi Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">Ekspor Git diaktifkan tetapi tidak ada referensi yang dipilih.</string>
+    <string name="unknown_error">Kesalahan tidak diketahui</string>
+    <string name="error_storage_permission">Izin penyimpanan diperlukan. Berikan di Pengaturan > Aplikasi > One Code For AI > Izin.</string>
+    <string name="error_source_file_missing">File yang dihasilkan tidak tersedia lagi. Buat ulang konteks.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="other">Konteks siap - %1$d kesalahan baca</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Bagikan dump dengan:</string>
+    <string name="share_error">Kesalahan berbagi: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Konteks siap</string>
+    <string name="error_notification_title">Kesalahan One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Kesalahan</string>
+    <string name="notification_channel_actions">Hasil One Code</string>
+    <string name="generating_dump">Membuat dump kode…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Integrasi Git</string>
+    <string name="settings_git_global_desc">Mendeteksi repositori dan mengaktifkan semua fitur Git. Nonaktifkan untuk memaksa mode folder biasa bahkan di dalam repo. Aturan .gitignore tetap berlaku.</string>
+    <string name="settings_animations">Animasi</string>
+    <string name="settings_animations_desc">Transisi memudar dan berskala pada dialog, pohon, dan pemilih profil. Nonaktifkan pada perangkat kelas bawah.</string>
+    <string name="settings_notifications">Notifikasi pembuatan</string>
+    <string name="settings_notifications_desc">Notifikasi kemajuan, penyelesaian, dan kesalahan selama ekspor. Nonaktifkan untuk membisukan baki notifikasi.</string>
+    <string name="settings_force_english">Paksa UI bahasa Inggris</string>
+    <string name="settings_force_english_desc">Memaksa antarmuka plugin menggunakan bahasa Inggris terlepas dari bahasa IDE. Dialog dan layar yang baru dibuka menggunakan bahasa Inggris; jendela yang sudah terbuka mempertahankan bahasa saat ini hingga dibuka kembali.</string>
+    <string name="settings_total_export_limit">Batas total ukuran ekspor (KB)</string>
+    <string name="settings_total_export_limit_desc">Batas keras, dalam kilobyte, pada ukuran total satu dump. Saat tercapai, ekspor berhenti menyertakan file dan menambahkan pemberitahuan pemotongan. Paling berguna saat batas per file dinonaktifkan. Atur ke 0 untuk tanpa batas.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git dinonaktifkan secara global di pengaturan CodeAssist. Aktifkan di sana untuk menggunakan branch, tag, dan commit.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">Plugin untuk CodeAssist</string>
+    <string name="open_codeassist">Buka CodeAssist</string>
+    <string name="footer_made_with">Dibuat dengan ❤️ untuk komunitas</string>
+    <string name="creator_dev">Pengembang independen</string>
+    <string name="codeassist_not_installed">CodeAssist tidak terpasang</string>
+    <string name="codeassist_open_error">Tidak dapat membuka CodeAssist</string>
+    <string name="no_app_for_link">Tidak ada aplikasi untuk membuka tautan</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">YANG BARU</string>
+    <string name="whats_new_version">Versi %1$s</string>
+    <string name="whats_new_item_1">Menambahkan halaman Pengaturan native untuk mengaktifkan/menonaktifkan Git, animasi, dan notifikasi secara global.</string>
+    <string name="whats_new_item_2">Memperkenalkan saklar utama Git dengan pencarian pintar .gitignore di folder induk.</string>
+    <string name="whats_new_item_3">Merombak preset dengan profil Android profesional dan pengecualian pintar.</string>
+    <string name="whats_new_item_4">Menambahkan dukungan penuh pola glob (*.log, build/, **/generated/**) dan penyaringan direktori.</string>
+    <string name="whats_new_item_5">Menambahkan dialog bantuan kontekstual, logging native IDE, dan perbaikan bug refleksi.</string>
+    <string name="whats_new_item_6">Menambahkan saklar \"Paksa UI bahasa Inggris\" agar plugin dapat mengabaikan bahasa IDE saat mengikuti tutorial atau dokumentasi berbahasa Inggris.</string>
+    <string name="whats_new_item_7">Menambahkan batas total ukuran ekspor global untuk mencegah dump multi-gigabyte saat batas per file dinonaktifkan.</string>
+    <string name="whats_new_item_8">Menambahkan bantuan kontekstual untuk pengecualian biner dan pohon proyek; semua ikon bantuan sekarang menggunakan visual yang lebih kecil dengan area sentuh yang lebih besar.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Panduan instalasi</string>
+    <string name="guide_header_subtitle">Ikuti langkah-langkah ini untuk mengaktifkan One Code For AI di IDE Anda.</string>
+    <string name="guide_step1_title">Unduh APK</string>
+    <string name="guide_step1_desc">Dapatkan .apk terbaru dari repositori resmi atau saluran distribusi.</string>
+    <string name="guide_step2_title">Instal aplikasi</string>
+    <string name="guide_step2_desc">Buka APK di perangkat Anda dan terima instalasi dari sumber tidak dikenal jika diminta.</string>
+    <string name="guide_step3_title">Buka CodeAssist</string>
+    <string name="guide_step3_desc">Setelah terpasang, luncurkan aplikasi CodeAssist di perangkat Anda.</string>
+    <string name="guide_step4_title">Aktifkan plugin</string>
+    <string name="guide_step4_desc">Pergi ke Pengaturan > Plugin > Terpasang dan aktifkan One Code For AI. Ini akan dimuat secara otomatis.</string>
+    <string name="guide_step5_title">Mulai ulang IDE</string>
+    <string name="guide_step5_desc">Tutup dan buka kembali CodeAssist agar semua komponen dimuat dengan benar.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Integrasi CodeAssist</string>
+    <string name="step_1_title">Buka proyek</string>
+    <string name="step_1_desc">Ketuk pohon file proyek di CodeAssist</string>
+    <string name="step_2_title">Tekan lama folder</string>
+    <string name="step_2_desc">Menu konteks opsi akan terbuka</string>
+    <string name="step_3_title">Pilih One Code For AI</string>
+    <string name="step_3_desc">Opsi untuk membuat dump akan muncul</string>
+    <string name="step_4_title">Ekspor atau bagikan</string>
+    <string name="step_4_desc">Simpan .txt ke Download atau kirim ke AI Anda</string>
+
+    <!-- > Features -->
+    <string name="features_title">Fitur</string>
+    <string name="feature_1">Filter Glob Lanjutan: Gunakan pola seperti *.log, build/, atau **/generated/**</string>
+    <string name="feature_2">Integrasi Git: Ekspor dari branch, tag, commit, atau pratinjau diff</string>
+    <string name="feature_3">Preset Profesional: Android (Kotlin, Sumber, Sumber Daya), Web, Python, Teks</string>
+    <string name="feature_4">Bantuan Kontekstual: Dialog inline menjelaskan filter, pola, dan prioritas .gitignore</string>
+    <string name="feature_5">Saklar Utama Git: Nonaktifkan Git sepenuhnya sambil mempertahankan fallback .gitignore</string>
+    <string name="feature_6">Pengecualian Pohon Proyek: Centang/hapus centang file dan folder secara manual sebelum ekspor</string>
+    <string name="feature_7">Kemajuan Akurat per Byte: Lacak kemajuan ekspor secara real-time dengan pemrosesan latar belakang</string>
+    <string name="feature_8">Logging Native IDE: Debug dialihkan ke konsol CodeAssist dengan pemotongan otomatis</string>
+    <string name="feature_9">Halaman Pengaturan Global: Saklar native untuk Git, animasi, dan notifikasi</string>
+    <string name="feature_10">100% Offline dan Privat: Tanpa telemetri, tanpa izin internet, sepenuhnya lokal</string>
+
+    <!-- > Links -->
+    <string name="links_title">Tautan</string>
+    <string name="link_repository">Repositori GitHub</string>
+    <string name="link_report_bug">Laporkan masalah</string>
+    <string name="link_license">Lisensi MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Informasi teknis</string>
+    <string name="tech_info_version">Versi</string>
+    <string name="tech_info_package">Paket</string>
+    <string name="tech_info_min_sdk">SDK minimum</string>
+    <string name="tech_info_target_sdk">SDK target</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Bahasa</string>
+    <string name="tech_info_status">Status</string>
+    <string name="tech_info_status_stable">Stabil</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">BANTUAN DAN FAQ</string>
+    <string name="help_header_subtitle">Temukan jawaban atas masalah umum dan pelajari cara memaksimalkan plugin.</string>
+
+    <string name="help_q1">Bagaimana cara menonaktifkan fungsionalitas Git sepenuhnya?</string>
+    <string name="help_a1">Pergi ke Pengaturan CodeAssist, lalu Plugin, dan buka pengaturan One Code For AI. Di sana Anda akan menemukan saklar \"Integrasi Git\". Saat dinonaktifkan, plugin memperlakukan folder Anda sebagai file biasa.</string>
+
+    <string name="help_q2">Mengapa .gitignore masih berfungsi saat Git dinonaktifkan?</string>
+    <string name="help_a2">Jika Git dinonaktifkan, plugin secara otomatis mencari file .gitignore di folder yang dipilih dan direktori induknya (hingga 5 level). Ini memastikan aturan penyaringan Anda tetap utuh.</string>
+
+    <string name="help_q3">Apa arti aturan .gitignore berwarna kuning?</string>
+    <string name="help_a3">Aturan disorot dengan warna kuning ketika salah satu filter penyertaan atau pengecualian manual Anda secara aktif menimpanya. Penyertaan dan pengecualian selalu memiliki prioritas di atas .gitignore.</string>
+
+    <string name="help_q4">Bagaimana cara menggunakan pola glob dalam filter?</string>
+    <string name="help_a4">Gunakan sintaks glob standar: *.log (file log apa pun), build/ (folder tertentu), **/generated/** (folder generated bertingkat apa pun). Ketuk ikon \"?\" di samping bagian filter untuk panduan singkat.</string>
+
+    <string name="help_q5">Apa yang dilakukan preset Android yang baru?</string>
+    <string name="help_a5">Android (Kotlin) mengekspor semuanya. Android (source only) menghapus pengujian dan dokumentasi. Android (Resources) hanya mengekspor XML (tata letak/tema). Mereka secara otomatis mengecualikan file yang dihasilkan seperti R.java.</string>
+
+    <string name="help_q6">Di mana pengaturan untuk animasi dan notifikasi?</string>
+    <string name="help_a6">Mereka berada di pengaturan native CodeAssist untuk plugin ini. Menonaktifkan animasi membantu kinerja pada perangkat kelas bawah. Menonaktifkan notifikasi membisukan peringatan kemajuan dan penyelesaian.</string>
+
+    <string name="help_q7">Bagaimana cara mengecualikan seluruh folder dengan mudah?</string>
+    <string name="help_a7">Buka pratinjau pohon file di dialog konfigurasi. Hapus centang folder yang ingin Anda kecualikan. Ini lebih cepat dan lebih aman daripada menulis aturan pengecualian yang kompleks.</string>
+
+    <string name="help_q8">Bisakah saya membatalkan ekspor saat sedang berjalan?</string>
+    <string name="help_a8">Ya. Anda dapat mengetuk \"Batal\" di dialog, atau cukup menutup dialog. Ekspor berjalan dengan aman di latar belakang dan Anda dapat kembali untuk memeriksa kemajuannya kapan saja.</string>
+
+    <string name="help_q9">Apakah kode saya diunggah ke server?</string>
+    <string name="help_a9">Sama sekali tidak. Plugin tidak memerlukan izin internet. Semua pemindaian, penyaringan, dan pembuatan terjadi 100% secara lokal di perangkat Anda.</string>
+
+    <string name="help_q10">Di mana file yang dihasilkan disimpan?</string>
+    <string name="help_a10">File yang diekspor disimpan di penyimpanan publik perangkat Anda di bawah Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Bantuan bagian</string>
+    <string name="help_inclusions_title">Penyertaan</string>
+    <string name="help_inclusions_body">Daftar putih ekstensi dan pola glob, dievaluasi sebelum .gitignore.\n\nSintaks yang didukung (sama dengan pola .gitignore):\n- Ekstensi: kt, json, xml\n- Karakter pengganti: *.log, **/*.kt, src/*.kt\n- Direktori: build/, **/generated/**\n\nFile apa pun yang cocok dengan penyertaan akan diekspor meskipun .gitignore atau pengecualian akan melewatinya.\n\nPenyertaan memiliki prioritas di atas pengecualian dan .gitignore. Gunakan untuk memaksa penyertaan file atau ekstensi tertentu.</string>
+
+    <string name="help_exclusions_title">Pengecualian</string>
+    <string name="help_exclusions_body">Daftar hitam ekstensi dan pola glob.\n\nSintaks yang didukung (sama dengan pola .gitignore):\n- Ekstensi: log, tmp, pyc\n- Karakter pengganti: *.log, **/*.test.kt, src/*.bak\n- Direktori: build/, **/generated/**\n\nFile apa pun yang cocok dengan pengecualian akan dilewati, meskipun .gitignore akan memasukkannya. Penyertaan memiliki prioritas di atas pengecualian.\n\nUntuk mengecualikan folder tertentu tanpa menulis pola, gunakan pohon file di bawah.</string>
+
+    <string name="help_gitignore_title">Aturan .gitignore</string>
+    <string name="help_gitignore_body">Aturan yang terdeteksi di file .gitignore proyek.\n\nDaftar ini hanya-baca - edit .gitignore secara langsung untuk mengubahnya.\n\nPenyertaan dan pengecualian memiliki prioritas di atas aturan ini: menambahkan penyertaan atau pengecualian yang cocok memaksa file masuk atau keluar terlepas dari .gitignore. Aturan yang ditimpa disorot dengan warna kuning. Aturan yang dinegasikan (dimulai dengan \'!\') ditampilkan dengan latar belakang berbeda agar dapat dibedakan dari aturan positif.</string>
+
+    <string name="help_binaries_title">Pengecualian biner</string>
+    <string name="help_binaries_body">File biner dideteksi dengan daftar tetap ekstensi biner yang diketahui (gambar, video, audio, arsip, biner terkompilasi, font, basis data). File dengan ekstensi ini dilewati agar dump tetap fokus pada kode sumber yang dapat dibaca.\n\nDeteksi hanya berbasis ekstensi. Untuk melewati format biner yang tidak umum, tambahkan ekstensinya ke Pengecualian. Untuk memaksa memasukkannya, tambahkan ke Penyertaan.\n\nMenonaktifkan saklar ini menyertakan ekstensi yang terdaftar dalam ekspor, yang jarang berguna untuk konteks AI.</string>
+
+    <string name="help_tree_title">Pratinjau pohon proyek</string>
+    <string name="help_tree_body">Menampilkan pohon proyek dengan setiap entri yang cocok dengan filter saat ini. Hapus centang pada file atau folder apa pun untuk mengecualikannya dari ekspor tanpa menulis aturan pengecualian.\n\nMengecualikan folder secara otomatis mengecualikan turunannya. Menyertakan kembali satu anak di dalam folder yang dikecualikan hanya memulihkan entri itu, mencerminkan perilaku negasi .gitignore.\n\nGunakan kotak centang di header untuk menyertakan atau mengecualikan seluruh proyek dengan satu ketukan. Pohon adalah pratinjau: tidak membuat ulang file, hanya mencerminkan status penyertaan saat ini.</string>
+
+    <string name="help_max_size_title">Batas ukuran per file</string>
+    <string name="help_max_size_body">Jika diaktifkan, file yang lebih besar dari ukuran yang dipilih akan dilewati. Ini melindungi dump dari satu file besar (mis. aset yang dibundel atau SQL yang dihasilkan) yang mendominasi output.\n\nJika dinonaktifkan, setiap file teks disertakan terlepas dari ukurannya, yang dapat menghasilkan dump yang sangat besar. Gabungkan dengan batas total ukuran ekspor di Pengaturan untuk menjaga ekspor tetap terbatas.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

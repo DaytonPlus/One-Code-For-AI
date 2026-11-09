@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">बंद करें</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="accept">ठीक है</string>
+    <string name="save">सहेजें</string>
+    <string name="delete">हटाएं</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">संदर्भ जनरेटर  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">निर्यात प्रोफ़ाइल</string>
+    <string name="save_preset">प्रोफ़ाइल सहेजें</string>
+    <string name="delete_preset">प्रोफ़ाइल हटाएं</string>
+    <string name="delete_preset_message">प्रोफ़ाइल \"%1$s\" हटाएं? यह क्रिया पूर्ववत नहीं की जा सकती।</string>
+    <string name="custom_preset">कस्टम</string>
+    <string name="preset_name_hint">प्रोफ़ाइल का नाम</string>
+    <string name="preset_name_reserved">यह नाम अंतर्निहित प्रोफ़ाइल के लिए आरक्षित है।</string>
+    <string name="preset_name_duplicate">\"%1$s\" नाम की प्रोफ़ाइल पहले से मौजूद है।</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">मूल फ़िल्टर</string>
+    <string name="exclude_binaries">बाइनरी फ़ाइलें बाहर करें</string>
+    <string name="respect_gitignore">.gitignore नियमों का पालन करें</string>
+    <string name="max_size">अधिकतम आकार</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">समावेशन</string>
+    <string name="section_exclusions">बहिष्करण</string>
+    <string name="section_gitignore_rules">.gitignore में पाए गए नियम</string>
+    <string name="no_inclusions">कोई अतिरिक्त एक्सटेंशन नहीं</string>
+    <string name="no_exclusions">कोई कस्टम बहिष्करण नहीं</string>
+    <string name="no_gitignore_rules">.gitignore में कोई नियम नहीं मिला</string>
+    <string name="add_inclusion_title">समावेशन जोड़ें</string>
+    <string name="add_exclusion_title">बहिष्करण जोड़ें</string>
+    <string name="edit_extension">एक्सटेंशन संपादित करें</string>
+    <string name="delete_rule">नियम हटाएं</string>
+    <string name="extension_hint">उदा.: kt, json, *.test.kt</string>
+    <string name="action_add">+ जोड़ें</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">संस्करण नियंत्रण</string>
+    <string name="git_info">ब्रांच: %1$s  |  कमिट: %2$s</string>
+    <string name="no_branch">कोई ब्रांच नहीं</string>
+    <string name="no_commit">कोई कमिट नहीं</string>
+    <string name="read_from_git">Git संदर्भ से पढ़ें</string>
+    <string name="git_refresh">Git जानकारी ताज़ा करें</string>
+    <string name="git_uncommitted_changes">चेतावनी: %1$d अपुष्ट परिवर्तन</string>
+    <string name="git_ref_hint">उदा.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">संदर्भ ब्राउज़ करें</string>
+    <string name="git_preview_diff">कार्य ट्री के साथ diff देखें</string>
+    <string name="git_resolving">समाधान हो रहा है…</string>
+    <string name="git_resolved_as">समाधानित: %1$s</string>
+    <string name="git_ref_invalid">अमान्य Git संदर्भ</string>
+    <string name="git_ref_empty">Git संदर्भ दर्ज करें या चुनें</string>
+    <string name="git_not_repo">यह फ़ोल्डर Git रिपॉज़िटरी नहीं है</string>
+    <string name="git_open_parent_root">प्रोजेक्ट रूट पर जाएं: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Git संदर्भ चुनें</string>
+    <string name="git_tab_branches">ब्रांच</string>
+    <string name="git_tab_tags">टैग</string>
+    <string name="git_tab_commits">कमिट</string>
+    <string name="git_local_branches">स्थानीय ब्रांच</string>
+    <string name="git_remote_branches">रिमोट ब्रांच</string>
+    <string name="git_no_branches">कोई ब्रांच नहीं मिली</string>
+    <string name="git_no_tags">कोई टैग नहीं मिला</string>
+    <string name="git_no_commits">कोई कमिट नहीं मिला</string>
+    <string name="git_current_marker">वर्तमान</string>
+    <string name="git_remote_marker">रिमोट</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s बनाम कार्य ट्री</string>
+    <string name="git_diff_stats">%1$d फ़ाइलें  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">कोई परिवर्तन नहीं पाया गया</string>
+    <string name="git_diff_content">Diff सामग्री</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">फ़ाइल ट्री</string>
+    <string name="show_tree">फ़ाइल ट्री दिखाएं</string>
+    <string name="action_expand">विस्तृत करें</string>
+    <string name="action_collapse">संक्षिप्त करें</string>
+    <string name="action_reload">पुनः लोड करें</string>
+    <string name="analyzing">विश्लेषण हो रहा है…</string>
+    <string name="analyzing_files">विश्लेषण… %1$d फ़ाइलें</string>
+    <string name="canceled_retry">रद्द किया गया। पुनः प्रयास के लिए फ़िल्टर टैप करें।</string>
+    <string name="tree_scan_error">प्रोजेक्ट ट्री स्कैन नहीं हो सका: %1$s</string>
+    <string name="no_tree_matches">कोई फ़ाइल फ़िल्टर से मेल नहीं खाती</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">संदर्भ उत्पन्न करें</string>
+    <string name="generate_description">एक .txt फ़ाइल उत्पन्न होगी और Download में सहेजी जाएगी।</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">संदर्भ उत्पन्न हो रहा है…</string>
+    <string name="preparing_export">तैयारी हो रही है…</string>
+    <string name="processing_progress">प्रसंस्करण: %1$d/%2$d फ़ाइलें</string>
+    <string name="generation_complete">उत्पादन पूर्ण</string>
+    <string name="generation_failed">उत्पादन विफल</string>
+    <string name="generation_minimize_hint">आप इस संवाद को छोटा कर सकते हैं। उत्पादन पृष्ठभूमि में जारी रहेगा।</string>
+    <string name="saved_to_downloads">Download/OneCodeForAI में सहेजा गया: %1$s</string>
+    <string name="export_already_running">एक निर्यात पहले से चल रहा है।</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">सहेजें</string>
+    <string name="action_share">साझा करें</string>
+    <string name="action_regenerate">पुनः उत्पन्न करें</string>
+    <string name="action_edit_settings">सेटिंग्स संपादित करें</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d फ़ाइल</item>
+        <item quantity="other">%1$d फ़ाइलें</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s टोकन</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">संदर्भ TXT उत्पन्न करें (साझा/निर्यात)</string>
+    <string name="dialog_already_open">कॉन्फ़िगरेशन विंडो पहले से खुली है।</string>
+    <string name="no_folder_selected">कोई फ़ोल्डर चयनित नहीं।</string>
+    <string name="select_valid_folder">मान्य फ़ोल्डर चुनें।</string>
+    <string name="error_opening_dialog">त्रुटि: विंडो नहीं खुल सकी।</string>
+    <string name="opening_config">कॉन्फ़िगरेशन खुल रहा है…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">फ़ाइल लिखने में विफल।</string>
+    <string name="error_source_uri_unreadable">स्रोत फ़ाइल नहीं खुल सकी।</string>
+    <string name="error_output_stream_unavailable">गंतव्य ने आउटपुट स्ट्रीम प्रदान नहीं की।</string>
+    <string name="error_media_store_finalize">गंतव्य फ़ाइल अंतिम रूप में नहीं आ सकी।</string>
+    <string name="error_downloads_dir_create">Download फ़ोल्डर नहीं बन सका: %1$s</string>
+    <string name="error_project_root_not_dir">प्रोजेक्ट रूट फ़ोल्डर नहीं है: %1$s</string>
+    <string name="error_git_repo_unreadable">चयनित फ़ोल्डर पठनीय Git रिपॉज़िटरी नहीं है।</string>
+    <string name="error_git_ref_unresolved">Git संदर्भ \"%1$s\" का समाधान नहीं हो सका।</string>
+    <string name="error_git_export_no_ref">Git निर्यात सक्रिय है लेकिन कोई संदर्भ चयनित नहीं।</string>
+    <string name="unknown_error">अज्ञात त्रुटि</string>
+    <string name="error_storage_permission">संग्रहण अनुमति आवश्यक है। इसे सेटिंग्स > ऐप्स > One Code For AI > अनुमतियाँ में दें।</string>
+    <string name="error_source_file_missing">उत्पन्न फ़ाइल अब उपलब्ध नहीं है। संदर्भ पुनः उत्पन्न करें।</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">संदर्भ तैयार - %1$d पठन त्रुटि</item>
+        <item quantity="other">संदर्भ तैयार - %1$d पठन त्रुटियाँ</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">डंप साझा करें:</string>
+    <string name="share_error">साझा करने में त्रुटि: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">संदर्भ तैयार</string>
+    <string name="error_notification_title">One Code त्रुटि</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code त्रुटि</string>
+    <string name="notification_channel_actions">One Code परिणाम</string>
+    <string name="generating_dump">कोड डंप उत्पन्न हो रहा है…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Git एकीकरण</string>
+    <string name="settings_git_global_desc">रिपॉज़िटरी का पता लगाता है और सभी Git सुविधाएँ सक्रिय करता है। रिपॉज़िटरी के अंदर भी सादा फ़ोल्डर मोड बाध्य करने के लिए अक्षम करें। .gitignore नियम अभी भी लागू होते हैं।</string>
+    <string name="settings_animations">एनिमेशन</string>
+    <string name="settings_animations_desc">संवाद, ट्री और प्रोफ़ाइल चयनकर्ता में फ़ेड और स्केल संक्रमण। निम्न-स्तरीय डिवाइस पर अक्षम करें।</string>
+    <string name="settings_notifications">उत्पादन सूचनाएँ</string>
+    <string name="settings_notifications_desc">निर्यात के दौरान प्रगति, पूर्णता और त्रुटि सूचनाएँ। सूचना ट्रे को शांत करने के लिए अक्षम करें।</string>
+    <string name="settings_force_english">अंग्रेज़ी UI बाध्य करें</string>
+    <string name="settings_force_english_desc">IDE भाषा की परवाह किए बिना प्लगइन UI को अंग्रेज़ी का उपयोग करने के लिए बाध्य करता है। नए खुले संवाद और स्क्रीन अंग्रेज़ी का उपयोग करते हैं; पहले से खुली विंडो फिर से खोलने तक वर्तमान भाषा बनाए रखती हैं।</string>
+    <string name="settings_total_export_limit">कुल निर्यात आकार सीमा (KB)</string>
+    <string name="settings_total_export_limit_desc">एकल डंप के कुल आकार पर किलोबाइट में कठोर सीमा। पहुँचने पर, निर्यात फ़ाइलें शामिल करना बंद कर देता है और काट-छाँट सूचना जोड़ता है। जब प्रति-फ़ाइल आकार सीमा अक्षम हो तो सबसे उपयोगी। कोई सीमा नहीं के लिए 0 पर सेट करें।</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git CodeAssist सेटिंग्स में वैश्विक रूप से अक्षम है। ब्रांच, टैग और कमिट का उपयोग करने के लिए इसे वहाँ सक्षम करें।</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">जानकारी</string>
+    <string name="info_subtitle">CodeAssist के लिए प्लगइन</string>
+    <string name="open_codeassist">CodeAssist खोलें</string>
+    <string name="footer_made_with">समुदाय के लिए ❤️ के साथ बनाया गया</string>
+    <string name="creator_dev">स्वतंत्र डेवलपर</string>
+    <string name="codeassist_not_installed">CodeAssist स्थापित नहीं है</string>
+    <string name="codeassist_open_error">CodeAssist नहीं खुल सका</string>
+    <string name="no_app_for_link">लिंक खोलने के लिए कोई ऐप नहीं</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">नया क्या है</string>
+    <string name="whats_new_version">संस्करण %1$s</string>
+    <string name="whats_new_item_1">Git, एनिमेशन और सूचनाओं को वैश्विक रूप से टॉगल करने के लिए मूल सेटिंग्स पृष्ठ जोड़ा गया।</string>
+    <string name="whats_new_item_2">मूल फ़ोल्डरों में स्मार्ट .gitignore खोज के साथ Git किल स्विच पेश किया गया।</string>
+    <string name="whats_new_item_3">पेशेवर Android प्रोफ़ाइल और स्मार्ट बहिष्करण के साथ प्रीसेट का पुनर्निर्माण किया गया।</string>
+    <string name="whats_new_item_4">पूर्ण glob पैटर्न समर्थन (*.log, build/, **/generated/**) और निर्देशिका फ़िल्टरिंग जोड़ी गई।</string>
+    <string name="whats_new_item_5">संदर्भीय सहायता संवाद, मूल IDE लॉगिंग और प्रतिबिंब बग सुधार जोड़े गए।</string>
+    <string name="whats_new_item_6">\"अंग्रेज़ी UI बाध्य करें\" टॉगल जोड़ा गया ताकि प्लगइन अंग्रेज़ी ट्यूटोरियल या दस्तावेज़ों का पालन करते समय IDE भाषा को अनदेखा कर सके।</string>
+    <string name="whats_new_item_7">जब प्रति-फ़ाइल सीमा अक्षम हो तो कई-GB डंप रोकने के लिए वैश्विक कुल निर्यात आकार सीमा जोड़ी गई।</string>
+    <string name="whats_new_item_8">बाइनरी बहिष्करण और प्रोजेक्ट ट्री के लिए संदर्भीय सहायता जोड़ी गई; सभी सहायता आइकन अब बड़े टच क्षेत्र के साथ छोटे दृश्य आकार का उपयोग करते हैं।</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">स्थापना मार्गदर्शिका</string>
+    <string name="guide_header_subtitle">अपने IDE में One Code For AI सक्षम करने के लिए इन चरणों का पालन करें।</string>
+    <string name="guide_step1_title">APK डाउनलोड करें</string>
+    <string name="guide_step1_desc">आधिकारिक रिपॉज़िटरी या वितरण चैनल से नवीनतम .apk प्राप्त करें।</string>
+    <string name="guide_step2_title">ऐप इंस्टॉल करें</string>
+    <string name="guide_step2_desc">अपने डिवाइस पर APK खोलें और संकेत मिलने पर अज्ञात स्रोतों से इंस्टॉल स्वीकार करें।</string>
+    <string name="guide_step3_title">CodeAssist खोलें</string>
+    <string name="guide_step3_desc">इंस्टॉल होने के बाद, अपने डिवाइस पर CodeAssist ऐप लॉन्च करें।</string>
+    <string name="guide_step4_title">प्लगइन सक्षम करें</string>
+    <string name="guide_step4_desc">सेटिंग्स > प्लगइन > इंस्टॉल किए गए पर जाएं और One Code For AI सक्षम करें। यह स्वचालित रूप से लोड होगा।</string>
+    <string name="guide_step5_title">IDE पुनः आरंभ करें</string>
+    <string name="guide_step5_desc">सभी घटकों को सही ढंग से लोड करने के लिए CodeAssist को बंद करके पुनः खोलें।</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">CodeAssist एकीकरण</string>
+    <string name="step_1_title">प्रोजेक्ट खोलें</string>
+    <string name="step_1_desc">CodeAssist में प्रोजेक्ट फ़ाइल ट्री टैप करें</string>
+    <string name="step_2_title">फ़ोल्डर को देर तक दबाएं</string>
+    <string name="step_2_desc">विकल्प संदर्भ मेनू खुलेगा</string>
+    <string name="step_3_title">One Code For AI चुनें</string>
+    <string name="step_3_desc">डंप उत्पन्न करने का विकल्प दिखाई देगा</string>
+    <string name="step_4_title">निर्यात या साझा करें</string>
+    <string name="step_4_desc">.txt को Download में सहेजें या अपने AI को भेजें</string>
+
+    <!-- > Features -->
+    <string name="features_title">विशेषताएँ</string>
+    <string name="feature_1">उन्नत Glob फ़िल्टर: *.log, build/ या **/generated/** जैसे पैटर्न का उपयोग करें</string>
+    <string name="feature_2">Git एकीकरण: ब्रांच, टैग, कमिट से निर्यात करें या diff देखें</string>
+    <string name="feature_3">पेशेवर प्रीसेट: Android (Kotlin, स्रोत, संसाधन), Web, Python, टेक्स्ट</string>
+    <string name="feature_4">संदर्भीय सहायता: इनलाइन संवाद फ़िल्टर, पैटर्न और .gitignore प्राथमिकता समझाते हैं</string>
+    <string name="feature_5">वैश्विक Git किल स्विच: .gitignore फ़ॉलबैक बनाए रखते हुए Git को पूरी तरह अक्षम करें</string>
+    <string name="feature_6">प्रोजेक्ट ट्री बहिष्करण: निर्यात से पहले फ़ाइलों और फ़ोल्डरों को मैन्युअल रूप से चुनें/हटाएं</string>
+    <string name="feature_7">बाइट-सटीक प्रगति: पृष्ठभूमि प्रसंस्करण के साथ निर्यात प्रगति को वास्तविक समय में ट्रैक करें</string>
+    <string name="feature_8">मूल IDE लॉगिंग: डिबग स्वचालित चंकिंग के साथ CodeAssist कंसोल पर रूट होता है</string>
+    <string name="feature_9">वैश्विक सेटिंग्स पृष्ठ: Git, एनिमेशन और सूचनाओं के लिए मूल टॉगल</string>
+    <string name="feature_10">100% ऑफ़लाइन और निजी: कोई टेलीमेट्री नहीं, कोई इंटरनेट अनुमति नहीं, पूरी तरह स्थानीय</string>
+
+    <!-- > Links -->
+    <string name="links_title">लिंक</string>
+    <string name="link_repository">GitHub रिपॉज़िटरी</string>
+    <string name="link_report_bug">समस्या रिपोर्ट करें</string>
+    <string name="link_license">MIT लाइसेंस</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">तकनीकी जानकारी</string>
+    <string name="tech_info_version">संस्करण</string>
+    <string name="tech_info_package">पैकेज</string>
+    <string name="tech_info_min_sdk">न्यूनतम SDK</string>
+    <string name="tech_info_target_sdk">लक्ष्य SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">भाषा</string>
+    <string name="tech_info_status">स्थिति</string>
+    <string name="tech_info_status_stable">स्थिर</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">सहायता और FAQ</string>
+    <string name="help_header_subtitle">सामान्य समस्याओं के उत्तर खोजें और जानें कि प्लगइन से अधिकतम लाभ कैसे उठाएं।</string>
+
+    <string name="help_q1">Git कार्यक्षमता को पूरी तरह से कैसे अक्षम करूं?</string>
+    <string name="help_a1">CodeAssist सेटिंग्स पर जाएं, फिर प्लगइन, और One Code For AI सेटिंग्स खोलें। वहां आपको \"Git एकीकरण\" टॉगल मिलेगा। अक्षम होने पर, प्लगइन आपके फ़ोल्डर को सादी फ़ाइलों के रूप में मानता है।</string>
+
+    <string name="help_q2">Git अक्षम होने पर भी .gitignore क्यों काम करता है?</string>
+    <string name="help_a2">यदि Git अक्षम है, तो प्लगइन स्वचालित रूप से चयनित फ़ोल्डर और उसके मूल फ़ोल्डरों (5 स्तरों तक) में .gitignore फ़ाइल खोजता है। यह सुनिश्चित करता है कि आपके फ़िल्टरिंग नियम बरकरार रहें।</string>
+
+    <string name="help_q3">एम्बर .gitignore नियमों का क्या अर्थ है?</string>
+    <string name="help_a3">एक नियम एम्बर रंग में हाइलाइट किया जाता है जब आपके मैन्युअल समावेशन या बहिष्करण फ़िल्टर में से कोई सक्रिय रूप से इसे ओवरराइड कर रहा हो। समावेशन और बहिष्करण हमेशा .gitignore पर प्राथमिकता रखते हैं।</string>
+
+    <string name="help_q4">फ़िल्टर में glob पैटर्न का उपयोग कैसे करूं?</string>
+    <string name="help_a4">मानक glob सिंटैक्स का उपयोग करें: *.log (कोई भी लॉग फ़ाइल), build/ (विशिष्ट फ़ोल्डर), **/generated/** (कोई भी नेस्टेड जनरेट किया गया फ़ोल्डर)। त्वरित मार्गदर्शिका के लिए फ़िल्टर अनुभागों के बगल में \"?\" आइकन टैप करें।</string>
+
+    <string name="help_q5">नए Android प्रीसेट क्या करते हैं?</string>
+    <string name="help_a5">Android (Kotlin) सब कुछ निर्यात करता है। Android (source only) परीक्षण और दस्तावेज़ हटाता है। Android (Resources) केवल XML (लेआउट/थीम) निर्यात करता है। वे स्वचालित रूप से R.java जैसी जनरेट की गई फ़ाइलों को बाहर करते हैं।</string>
+
+    <string name="help_q6">एनिमेशन और सूचनाओं की सेटिंग्स कहाँ हैं?</string>
+    <string name="help_a6">वे इस प्लगइन के लिए मूल CodeAssist सेटिंग्स में हैं। एनिमेशन अक्षम करने से निम्न-स्तरीय डिवाइस पर प्रदर्शन बेहतर होता है। सूचनाएँ अक्षम करने से प्रगति और पूर्णता अलर्ट शांत हो जाते हैं।</string>
+
+    <string name="help_q7">पूरे फ़ोल्डर को आसानी से कैसे बाहर करूं?</string>
+    <string name="help_a7">कॉन्फ़िगरेशन संवाद में फ़ाइल ट्री पूर्वावलोकन खोलें। जिस फ़ोल्डर को बाहर करना है उसका चेकबॉक्स हटाएं। यह जटिल बहिष्करण नियम लिखने से तेज़ और अधिक सुरक्षित है।</string>
+
+    <string name="help_q8">क्या मैं चल रहे निर्यात को रद्द कर सकता हूँ?</string>
+    <string name="help_a8">हाँ। आप संवाद में \"रद्द करें\" टैप कर सकते हैं, या बस संवाद बंद कर सकते हैं। निर्यात पृष्ठभूमि में सुरक्षित रूप से चलता है और आप किसी भी समय इसकी प्रगति देखने के लिए वापस आ सकते हैं।</string>
+
+    <string name="help_q9">क्या मेरा कोड सर्वर पर अपलोड होता है?</string>
+    <string name="help_a9">बिल्कुल नहीं। प्लगइन को इंटरनेट अनुमति की आवश्यकता नहीं है। सभी स्कैनिंग, फ़िल्टरिंग और उत्पादन आपके डिवाइस पर 100% स्थानीय रूप से होता है।</string>
+
+    <string name="help_q10">उत्पन्न फ़ाइलें कहाँ सहेजी जाती हैं?</string>
+    <string name="help_a10">निर्यात की गई फ़ाइलें आपके डिवाइस के सार्वजनिक संग्रहण में Download/OneCodeForAI के अंतर्गत सहेजी जाती हैं।</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">अनुभाग सहायता</string>
+    <string name="help_inclusions_title">समावेशन</string>
+    <string name="help_inclusions_body">.gitignore से पहले मूल्यांकित एक्सटेंशन और glob पैटर्न की श्वेतसूची।\n\nसमर्थित सिंटैक्स (.gitignore पैटर्न के समान):\n- एक्सटेंशन: kt, json, xml\n- वाइल्डकार्ड: *.log, **/*.kt, src/*.kt\n- निर्देशिकाएँ: build/, **/generated/**\n\nकिसी भी समावेशन से मेल खाने वाली फ़ाइल निर्यात की जाएगी, भले ही .gitignore या बहिष्करण इसे छोड़ दें।\n\nसमावेशन बहिष्करण और .gitignore पर प्राथमिकता रखते हैं। इसका उपयोग विशिष्ट फ़ाइलों या एक्सटेंशन को बाध्य करने के लिए करें।</string>
+
+    <string name="help_exclusions_title">बहिष्करण</string>
+    <string name="help_exclusions_body">एक्सटेंशन और glob पैटर्न की कालीसूची।\n\nसमर्थित सिंटैक्स (.gitignore पैटर्न के समान):\n- एक्सटेंशन: log, tmp, pyc\n- वाइल्डकार्ड: *.log, **/*.test.kt, src/*.bak\n- निर्देशिकाएँ: build/, **/generated/**\n\nकिसी भी बहिष्करण से मेल खाने वाली फ़ाइल छोड़ दी जाएगी, भले ही .gitignore इसे शामिल करे। समावेशन बहिष्करण पर प्राथमिकता रखते हैं।\n\nपैटर्न लिखे बिना किसी विशिष्ट फ़ोल्डर को बाहर करने के लिए, नीचे फ़ाइल ट्री का उपयोग करें।</string>
+
+    <string name="help_gitignore_title">.gitignore नियम</string>
+    <string name="help_gitignore_body">प्रोजेक्ट की .gitignore फ़ाइल में पाए गए नियम।\n\nयह सूची केवल पढ़ने के लिए है - इसे बदलने के लिए सीधे .gitignore संपादित करें।\n\nसमावेशन और बहिष्करण इन नियमों पर प्राथमिकता रखते हैं: मेल खाते समावेशन या बहिष्करण जोड़ने से .gitignore के बावजूद फ़ाइल बाध्य रूप से शामिल या बाहर हो जाती है। ओवरराइड किए गए नियम एम्बर रंग में हाइलाइट किए जाते हैं। निषेध नियम (\'!\' से शुरू) सकारात्मक नियमों से अलग पहचाने जाने के लिए एक अलग पृष्ठभूमि के साथ दिखाए जाते हैं।</string>
+
+    <string name="help_binaries_title">बाइनरी बहिष्करण</string>
+    <string name="help_binaries_body">बाइनरी फ़ाइलें ज्ञात बाइनरी एक्सटेंशन की एक निश्चित सूची (छवियां, वीडियो, ऑडियो, अभिलेखागार, संकलित बाइनरी, फ़ॉन्ट, डेटाबेस) से पहचानी जाती हैं। इन एक्सटेंशन वाली फ़ाइलें छोड़ दी जाती हैं ताकि डंप पठनीय स्रोत कोड पर केंद्रित रहे।\n\nपहचान केवल एक्सटेंशन-आधारित है। असामान्य बाइनरी प्रारूप को छोड़ने के लिए, इसका एक्सटेंशन बहिष्करण में जोड़ें। बाध्य रूप से शामिल करने के लिए, इसे समावेशन में जोड़ें।\n\nइस टॉगल को अक्षम करने से सूचीबद्ध एक्सटेंशन निर्यात में शामिल हो जाते हैं, जो AI संदर्भ के लिए शायद ही कभी उपयोगी होता है।</string>
+
+    <string name="help_tree_title">प्रोजेक्ट ट्री पूर्वावलोकन</string>
+    <string name="help_tree_body">वर्तमान फ़िल्टर से मेल खाने वाली प्रत्येक प्रविष्टि के साथ प्रोजेक्ट ट्री दिखाता है। बहिष्करण नियम लिखे बिना निर्यात से बाहर करने के लिए किसी भी फ़ाइल या फ़ोल्डर का चेकबॉक्स हटाएं।\n\nकिसी फ़ोल्डर को बाहर करने से उसके चाइल्ड स्वचालित रूप से बाहर हो जाते हैं। बाहर किए गए फ़ोल्डर के अंदर एकल चाइल्ड को फिर से शामिल करने से केवल वह प्रविष्टि बहाल होती है, जो .gitignore निषेध के व्यवहार को दर्शाती है।\n\nएक टैप में पूरे प्रोजेक्ट को शामिल या बाहर करने के लिए हेडर चेकबॉक्स का उपयोग करें। ट्री एक पूर्वावलोकन है: यह फ़ाइलें पुनः उत्पन्न नहीं करता, केवल वर्तमान समावेशन स्थिति को दर्शाता है।</string>
+
+    <string name="help_max_size_title">प्रति-फ़ाइल आकार सीमा</string>
+    <string name="help_max_size_body">सक्षम होने पर, चयनित आकार से बड़ी फ़ाइलें छोड़ दी जाती हैं। यह डंप को एक विशाल फ़ाइल (जैसे बंडल किया गया एसेट या जनरेट किया गया SQL) द्वारा आउटपुट पर हावी होने से बचाता है।\n\nअक्षम होने पर, आकार की परवाह किए बिना प्रत्येक टेक्स्ट फ़ाइल शामिल की जाती है, जो बहुत बड़े डंप उत्पन्न कर सकता है। निर्यात को सीमित रखने के लिए इसे सेटिंग्स में कुल निर्यात आकार सीमा के साथ संयोजित करें।</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

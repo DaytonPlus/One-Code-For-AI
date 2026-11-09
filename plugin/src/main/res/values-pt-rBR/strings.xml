@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">Fechar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="accept">OK</string>
+    <string name="save">Salvar</string>
+    <string name="delete">Excluir</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">GERADOR DE CONTEXTO  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Perfil de exportação</string>
+    <string name="save_preset">Salvar perfil</string>
+    <string name="delete_preset">Excluir perfil</string>
+    <string name="delete_preset_message">Excluir o perfil \"%1$s\"? Esta ação não pode ser desfeita.</string>
+    <string name="custom_preset">Personalizado</string>
+    <string name="preset_name_hint">Nome do perfil</string>
+    <string name="preset_name_reserved">Esse nome pertence a um perfil integrado.</string>
+    <string name="preset_name_duplicate">Já existe um perfil com o nome \"%1$s\".</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Filtros base</string>
+    <string name="exclude_binaries">Excluir arquivos binários</string>
+    <string name="respect_gitignore">Respeitar regras do .gitignore</string>
+    <string name="max_size">Tamanho máximo</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Inclusões</string>
+    <string name="section_exclusions">Exclusões</string>
+    <string name="section_gitignore_rules">Regras detectadas no .gitignore</string>
+    <string name="no_inclusions">Sem extensões adicionais</string>
+    <string name="no_exclusions">Sem exclusões personalizadas</string>
+    <string name="no_gitignore_rules">Nenhuma regra encontrada no .gitignore</string>
+    <string name="add_inclusion_title">Adicionar inclusão</string>
+    <string name="add_exclusion_title">Adicionar exclusão</string>
+    <string name="edit_extension">Editar extensão</string>
+    <string name="delete_rule">Excluir regra</string>
+    <string name="extension_hint">Ex.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Adicionar</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Controle de versão</string>
+    <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">sem branch</string>
+    <string name="no_commit">sem commit</string>
+    <string name="read_from_git">Ler de uma referência Git</string>
+    <string name="git_refresh">Atualizar info do Git</string>
+    <string name="git_uncommitted_changes">Aviso: %1$d alterações não commitadas</string>
+    <string name="git_ref_hint">Ex.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Explorar referências</string>
+    <string name="git_preview_diff">Visualizar diff vs árvore de trabalho</string>
+    <string name="git_resolving">Resolvendo…</string>
+    <string name="git_resolved_as">Resolvido: %1$s</string>
+    <string name="git_ref_invalid">Referência Git inválida</string>
+    <string name="git_ref_empty">Digite ou selecione uma referência Git</string>
+    <string name="git_not_repo">Esta pasta não é um repositório Git</string>
+    <string name="git_open_parent_root">Ir para a raiz do projeto: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Selecionar uma referência Git</string>
+    <string name="git_tab_branches">Branches</string>
+    <string name="git_tab_tags">Tags</string>
+    <string name="git_tab_commits">Commits</string>
+    <string name="git_local_branches">Branches locais</string>
+    <string name="git_remote_branches">Branches remotas</string>
+    <string name="git_no_branches">Nenhuma branch encontrada</string>
+    <string name="git_no_tags">Nenhuma tag encontrada</string>
+    <string name="git_no_commits">Nenhum commit encontrado</string>
+    <string name="git_current_marker">atual</string>
+    <string name="git_remote_marker">remota</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s vs árvore de trabalho</string>
+    <string name="git_diff_stats">%1$d arquivos  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Nenhuma alteração detectada</string>
+    <string name="git_diff_content">Conteúdo do diff</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Árvore de arquivos</string>
+    <string name="show_tree">Mostrar árvore de arquivos</string>
+    <string name="action_expand">Expandir</string>
+    <string name="action_collapse">Recolher</string>
+    <string name="action_reload">Recarregar</string>
+    <string name="analyzing">Analisando…</string>
+    <string name="analyzing_files">Analisando… %1$d arquivos</string>
+    <string name="canceled_retry">Cancelado. Toque em um filtro para tentar novamente.</string>
+    <string name="tree_scan_error">Não foi possível analisar a árvore: %1$s</string>
+    <string name="no_tree_matches">Nenhum arquivo corresponde aos filtros</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Gerar contexto</string>
+    <string name="generate_description">Um único arquivo .txt será gerado e salvo em Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Gerando contexto…</string>
+    <string name="preparing_export">Preparando…</string>
+    <string name="processing_progress">Processando: %1$d/%2$d arquivos</string>
+    <string name="generation_complete">Geração concluída</string>
+    <string name="generation_failed">Falha na geração</string>
+    <string name="generation_minimize_hint">Você pode minimizar este diálogo. A geração continua em segundo plano.</string>
+    <string name="saved_to_downloads">Salvo em Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Já existe uma exportação em andamento.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Salvar</string>
+    <string name="action_share">Compartilhar</string>
+    <string name="action_regenerate">Regenerar</string>
+    <string name="action_edit_settings">Editar configurações</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d arquivo</item>
+        <item quantity="other">%1$d arquivos</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s tokens</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT                                              -->
+    <!-- ============================================================== -->
+    <string name="action_label">Gerar Contexto TXT (Compartilhar/Exportar)</string>
+    <string name="dialog_already_open">A janela de configuração já está aberta.</string>
+    <string name="no_folder_selected">Nenhuma pasta selecionada.</string>
+    <string name="select_valid_folder">Selecione uma pasta válida.</string>
+    <string name="error_opening_dialog">Erro: não foi possível abrir a janela.</string>
+    <string name="opening_config">Abrindo configuração…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Falha ao escrever o arquivo.</string>
+    <string name="error_source_uri_unreadable">Não foi possível abrir o arquivo de origem.</string>
+    <string name="error_output_stream_unavailable">O destino não forneceu um fluxo de saída.</string>
+    <string name="error_media_store_finalize">Não foi possível finalizar o arquivo de destino.</string>
+    <string name="error_downloads_dir_create">Não foi possível criar a pasta Download: %1$s</string>
+    <string name="error_project_root_not_dir">A raiz do projeto não é uma pasta: %1$s</string>
+    <string name="error_git_repo_unreadable">A pasta selecionada não é um repositório Git legível.</string>
+    <string name="error_git_ref_unresolved">Não foi possível resolver a referência Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">A exportação Git está ativada, mas nenhuma referência foi selecionada.</string>
+    <string name="unknown_error">Erro desconhecido</string>
+    <string name="error_storage_permission">Permissão de armazenamento necessária. Conceda em Configurações > Aplicativos > One Code For AI > Permissões.</string>
+    <string name="error_source_file_missing">O arquivo gerado não está mais disponível. Gere o contexto novamente para recriá-lo.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Contexto pronto - %1$d erro de leitura</item>
+        <item quantity="other">Contexto pronto - %1$d erros de leitura</item>
+    </plurals>
+    
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Compartilhar dump com:</string>
+    <string name="share_error">Erro ao compartilhar: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Contexto pronto</string>
+    <string name="error_notification_title">Erro no One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Err</string>
+    <string name="notification_channel_actions">Resultados do One Code</string>
+    <string name="generating_dump">Gerando dump de código…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Integração com Git</string>
+    <string name="settings_git_global_desc">Detecta repositórios e ativa todos os recursos do Git. Desative para forçar o modo pasta mesmo dentro de um repositório. As regras do .gitignore continuam sendo aplicadas.</string>
+    <string name="settings_animations">Animações</string>
+    <string name="settings_animations_desc">Transições de fade e escala no diálogo, árvore e seletor de perfis. Desative em dispositivos de baixo desempenho.</string>
+    <string name="settings_notifications">Notificações de geração</string>
+    <string name="settings_notifications_desc">Notificações de progresso, conclusão e erro durante a exportação. Desative para silenciar a bandeja.</string>
+    <string name="settings_force_english">Forçar interface em inglês</string>
+    <string name="settings_force_english_desc">Força a interface do plugin a usar inglês, independentemente do idioma do IDE. Diálogos e telas recém-abertos usam inglês; janelas já abertas mantêm seu idioma atual até serem reabertas.</string>
+    <string name="settings_total_export_limit">Limite total de exportação (KB)</string>
+    <string name="settings_total_export_limit_desc">Limite máximo, em kilobytes, do tamanho total de um único dump. Ao ser atingido, a exportação deixa de incluir arquivos e acrescenta um aviso de truncamento. Útil principalmente quando o limite por arquivo está desativado. Defina 0 para não ter limite.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">O Git está desativado globalmente nas configurações do CodeAssist. Ative-o lá para usar branches, tags e commits.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">Plugin para CodeAssist</string>
+    <string name="open_codeassist">Abrir CodeAssist</string>
+    <string name="footer_made_with">Feito com carinho para a comunidade</string>
+    <string name="creator_dev">Desenvolvedor independente</string>
+    <string name="codeassist_not_installed">CodeAssist não está instalado</string>
+    <string name="codeassist_open_error">Não foi possível abrir o CodeAssist</string>
+    <string name="no_app_for_link">Nenhum aplicativo disponível para abrir links</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+
+    <!--
+        NOTE: whats_new_*, help_*, guide_*, step_*, feature_* are intentionally
+        left out at first. They change every release and are not part of the
+        primary user flow. Android will fall back to the English values/ for
+        any string missing here, so the UI remains functional.
+    -->
+</resources>

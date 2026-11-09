@@ -10,6 +10,17 @@ import org.json.JSONObject
  *
  * The JSON property names and preference keys intentionally remain stable so
  * installations upgraded from earlier versions keep their saved profiles.
+ *
+ * ### Last-state fallback
+ * The "last preset" is stored as the *localized* display string of the
+ * spinner's current selection (see [com.devdayton.onecodeforai.ui.ConfigurationDialog]).
+ * If no last state has ever been saved, this class returns an empty string
+ * rather than a hardcoded "Personalizado" / "Custom" literal. The caller is
+ * expected to map an empty string to "custom" via the localized
+ * `R.string.custom_preset` value, which keeps the fallback correct regardless
+ * of the IDE language. The two legacy literals are still recognized for
+ * backward compatibility with profiles written by earlier plugin versions;
+ * they are normalized to the English built-in name before being returned.
  */
 class PresetManager(context: Context) {
     private val preferences = context.applicationContext
@@ -23,6 +34,14 @@ class PresetManager(context: Context) {
 
         private const val LEGACY_TEXT_PRESET = "Solo Texto Plano"
         private const val TEXT_PRESET = "Plain Text"
+
+        /**
+         * The two literal custom labels that were hardcoded in previous
+         * versions. Kept only for migration: when loading the last-state
+         * preset, any of these is normalized to an empty string so the caller
+         * can substitute the localized label.
+         */
+        private val LEGACY_CUSTOM_LABELS = setOf("Personalizado", "Custom", "")
     }
 
     /**
@@ -235,11 +254,18 @@ class PresetManager(context: Context) {
             .apply()
     }
 
+    /**
+     * Returns the last saved config and preset name, or `null` when nothing
+     * has been saved yet.
+     *
+     * The preset name is returned as stored (possibly one of the two legacy
+     * custom labels, or an empty string). The caller is expected to resolve
+     * the localized custom label via `R.string.custom_preset`; the empty
+     * string and the two legacy literals are treated as "custom" there.
+     */
     fun loadLastState(): Pair<FilterConfig, String>? {
         val serializedConfig = preferences.getString(LAST_CONFIG_KEY, null) ?: return null
-        val savedPreset = normalizePresetName(
-            preferences.getString(LAST_PRESET_KEY, "Personalizado") ?: "Personalizado"
-        )
+        val savedPreset = preferences.getString(LAST_PRESET_KEY, "").orEmpty()
         return runCatching {
             jsonToConfig(JSONObject(serializedConfig)) to savedPreset
         }.getOrNull()

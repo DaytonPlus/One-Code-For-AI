@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">閉じる</string>
+    <string name="cancel">キャンセル</string>
+    <string name="accept">OK</string>
+    <string name="save">保存</string>
+    <string name="delete">削除</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">コンテキストジェネレーター  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">エクスポートプロファイル</string>
+    <string name="save_preset">プロファイルを保存</string>
+    <string name="delete_preset">プロファイルを削除</string>
+    <string name="delete_preset_message">プロファイル "%1$s" を削除しますか？この操作は元に戻せません。</string>
+    <string name="custom_preset">カスタム</string>
+    <string name="preset_name_hint">プロファイル名</string>
+    <string name="preset_name_reserved">この名前は組み込みプロファイル用に予約されています。</string>
+    <string name="preset_name_duplicate">"%1$s" という名前のプロファイルは既に存在します。</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">基本フィルター</string>
+    <string name="exclude_binaries">バイナリファイルを除外</string>
+    <string name="respect_gitignore">.gitignore ルールを尊重</string>
+    <string name="max_size">最大サイズ</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">インクルード</string>
+    <string name="section_exclusions">エクスクルード</string>
+    <string name="section_gitignore_rules">.gitignore で検出されたルール</string>
+    <string name="no_inclusions">追加の拡張子はありません</string>
+    <string name="no_exclusions">カスタムの除外はありません</string>
+    <string name="no_gitignore_rules">.gitignore にルールが見つかりません</string>
+    <string name="add_inclusion_title">インクルードを追加</string>
+    <string name="add_exclusion_title">エクスクルードを追加</string>
+    <string name="edit_extension">拡張子を編集</string>
+    <string name="delete_rule">ルールを削除</string>
+    <string name="extension_hint">例：kt、json、*.test.kt</string>
+    <string name="action_add">+ 追加</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">バージョン管理</string>
+    <string name="git_info">ブランチ：%1$s  |  コミット：%2$s</string>
+    <string name="no_branch">ブランチなし</string>
+    <string name="no_commit">コミットなし</string>
+    <string name="read_from_git">Git 参照から読み込む</string>
+    <string name="git_refresh">Git 情報を更新</string>
+    <string name="git_uncommitted_changes">警告：%1$d 件の未コミット変更</string>
+    <string name="git_ref_hint">例：main、v1.0.0、abc1234</string>
+    <string name="git_browse_ref">参照を参照</string>
+    <string name="git_preview_diff">作業ツリーとの差分をプレビュー</string>
+    <string name="git_resolving">解決中…</string>
+    <string name="git_resolved_as">解決済み：%1$s</string>
+    <string name="git_ref_invalid">無効な Git 参照</string>
+    <string name="git_ref_empty">Git 参照を入力または選択</string>
+    <string name="git_not_repo">このフォルダは Git リポジトリではありません</string>
+    <string name="git_open_parent_root">プロジェクトルートへ移動：%1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Git 参照を選択</string>
+    <string name="git_tab_branches">ブランチ</string>
+    <string name="git_tab_tags">タグ</string>
+    <string name="git_tab_commits">コミット</string>
+    <string name="git_local_branches">ローカルブランチ</string>
+    <string name="git_remote_branches">リモートブランチ</string>
+    <string name="git_no_branches">ブランチが見つかりません</string>
+    <string name="git_no_tags">タグが見つかりません</string>
+    <string name="git_no_commits">コミットが見つかりません</string>
+    <string name="git_current_marker">現在</string>
+    <string name="git_remote_marker">リモート</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">差分：%1$s と作業ツリー</string>
+    <string name="git_diff_stats">%1$d ファイル  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">変更は検出されませんでした</string>
+    <string name="git_diff_content">差分の内容</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">ファイルツリー</string>
+    <string name="show_tree">ファイルツリーを表示</string>
+    <string name="action_expand">展開</string>
+    <string name="action_collapse">折りたたむ</string>
+    <string name="action_reload">再読み込み</string>
+    <string name="analyzing">分析中…</string>
+    <string name="analyzing_files">分析中… %1$d ファイル</string>
+    <string name="canceled_retry">キャンセルしました。フィルターをタップして再試行してください。</string>
+    <string name="tree_scan_error">プロジェクトツリーをスキャンできません：%1$s</string>
+    <string name="no_tree_matches">フィルターに一致するファイルはありません</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">コンテキストを生成</string>
+    <string name="generate_description">単一の .txt ファイルが生成され、Download に保存されます。</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">コンテキストを生成中…</string>
+    <string name="preparing_export">準備中…</string>
+    <string name="processing_progress">処理中：%1$d/%2$d ファイル</string>
+    <string name="generation_complete">生成完了</string>
+    <string name="generation_failed">生成に失敗しました</string>
+    <string name="generation_minimize_hint">このダイアログを最小化できます。生成はバックグラウンドで続行されます。</string>
+    <string name="saved_to_downloads">Download/OneCodeForAI に保存しました：%1$s</string>
+    <string name="export_already_running">エクスポートは既に実行中です。</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">保存</string>
+    <string name="action_share">共有</string>
+    <string name="action_regenerate">再生成</string>
+    <string name="action_edit_settings">設定を編集</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="other">%1$d ファイル</item>
+    </plurals>
+    <string name="stats_tokens">約 %1$s トークン</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">コンテキスト TXT を生成（共有/エクスポート）</string>
+    <string name="dialog_already_open">設定ウィンドウは既に開いています。</string>
+    <string name="no_folder_selected">フォルダが選択されていません。</string>
+    <string name="select_valid_folder">有効なフォルダを選択してください。</string>
+    <string name="error_opening_dialog">エラー：ウィンドウを開けませんでした。</string>
+    <string name="opening_config">設定を開いています…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">ファイルの書き込みに失敗しました。</string>
+    <string name="error_source_uri_unreadable">ソースファイルを開けませんでした。</string>
+    <string name="error_output_stream_unavailable">保存先が出力ストリームを提供しませんでした。</string>
+    <string name="error_media_store_finalize">保存先ファイルを完了できませんでした。</string>
+    <string name="error_downloads_dir_create">Download ディレクトリを作成できません：%1$s</string>
+    <string name="error_project_root_not_dir">プロジェクトルートがフォルダではありません：%1$s</string>
+    <string name="error_git_repo_unreadable">選択したフォルダは読み取り可能な Git リポジトリではありません。</string>
+    <string name="error_git_ref_unresolved">Git 参照 "%1$s" を解決できませんでした。</string>
+    <string name="error_git_export_no_ref">Git エクスポートが有効ですが、参照が選択されていません。</string>
+    <string name="unknown_error">不明なエラー</string>
+    <string name="error_storage_permission">ストレージ権限が必要です。設定 > アプリ > One Code For AI > 権限 で許可してください。</string>
+    <string name="error_source_file_missing">生成されたファイルはもう利用できません。コンテキストを再生成してください。</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="other">コンテキスト準備完了 - %1$d 件の読み取りエラー</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">ダンプの共有先：</string>
+    <string name="share_error">共有エラー：%1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">コンテキスト準備完了</string>
+    <string name="error_notification_title">One Code エラー</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code エラー</string>
+    <string name="notification_channel_actions">One Code の結果</string>
+    <string name="generating_dump">コードダンプを生成中…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Git 統合</string>
+    <string name="settings_git_global_desc">リポジトリを検出し、すべての Git 機能を有効にします。無効にするとリポジトリ内でも通常のフォルダモードになります。.gitignore ルールは引き続き適用されます。</string>
+    <string name="settings_animations">アニメーション</string>
+    <string name="settings_animations_desc">ダイアログ、ツリー、プロファイルセレクターのフェードとスケールのトランジション。低性能デバイスでは無効にしてください。</string>
+    <string name="settings_notifications">生成通知</string>
+    <string name="settings_notifications_desc">エクスポート中の進行状況、完了、エラー通知。無効にすると通知トレイが静かになります。</string>
+    <string name="settings_force_english">英語 UI を強制</string>
+    <string name="settings_force_english_desc">IDE の言語に関係なく、プラグインの UI を英語に強制します。新しく開いたダイアログと画面は英語を使用します。既に開いているウィンドウは、再度開くまで現在の言語を保持します。</string>
+    <string name="settings_total_export_limit">エクスポート総サイズ制限（KB）</string>
+    <string name="settings_total_export_limit_desc">1 回のダンプの総サイズに対するハードキャップ（キロバイト単位）。上限に達すると、エクスポートはファイルの追加を停止し、切り詰めの通知を追加します。ファイルごとのサイズ制限が無効な場合に最も役立ちます。0 に設定すると無制限になります。</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git は CodeAssist 設定でグローバルに無効になっています。ブランチ、タグ、コミットを使用するには、そこで有効にしてください。</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">情報</string>
+    <string name="info_subtitle">CodeAssist 用プラグイン</string>
+    <string name="open_codeassist">CodeAssist を開く</string>
+    <string name="footer_made_with">コミュニティのために ❤️ を込めて作りました</string>
+    <string name="creator_dev">独立系開発者</string>
+    <string name="codeassist_not_installed">CodeAssist がインストールされていません</string>
+    <string name="codeassist_open_error">CodeAssist を開けませんでした</string>
+    <string name="no_app_for_link">リンクを開くアプリがありません</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">新機能</string>
+    <string name="whats_new_version">バージョン %1$s</string>
+    <string name="whats_new_item_1">Git、アニメーション、通知をグローバルに切り替えるネイティブ設定ページを追加しました。</string>
+    <string name="whats_new_item_2">スマートな .gitignore 祖先フォールバックを備えた Git キルスイッチを導入しました。</string>
+    <string name="whats_new_item_3">Android 向けのプロフェッショナルなプロファイルとスマートな除外を備えたプリセットを刷新しました。</string>
+    <string name="whats_new_item_4">完全な glob パターン対応（*.log、build/、**/generated/**）とディレクトリフィルタリングを追加しました。</string>
+    <string name="whats_new_item_5">コンテキストヘルプダイアログ、IDE ネイティブログ、リフレクションのバグ修正を追加しました。</string>
+    <string name="whats_new_item_6">英語のチュートリアルやドキュメントに従う際に IDE の言語を無視できる「英語 UI を強制」トグルを追加しました。</string>
+    <string name="whats_new_item_7">ファイルごとの制限が無効な場合に数 GB のダンプを防ぐため、グローバルなエクスポート総サイズ制限を追加しました。</string>
+    <string name="whats_new_item_8">バイナリ除外とプロジェクトツリーのコンテキストヘルプを追加しました。すべてのヘルプアイコンは、より大きなタップ領域を持つ小さな視覚サイズになりました。</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">インストールガイド</string>
+    <string name="guide_header_subtitle">以下の手順に従って、IDE で One Code For AI を有効にしてください。</string>
+    <string name="guide_step1_title">APK をダウンロード</string>
+    <string name="guide_step1_desc">公式リポジトリまたは配布チャネルから最新の .apk を入手してください。</string>
+    <string name="guide_step2_title">アプリをインストール</string>
+    <string name="guide_step2_desc">デバイスで APK を開き、プロンプトが表示されたら不明なソースからのインストールを許可してください。</string>
+    <string name="guide_step3_title">CodeAssist を開く</string>
+    <string name="guide_step3_desc">インストールしたら、デバイスで CodeAssist アプリを起動します。</string>
+    <string name="guide_step4_title">プラグインを有効化</string>
+    <string name="guide_step4_desc">設定 > プラグイン > インストール済み に移動し、One Code For AI を有効にします。自動的に読み込まれます。</string>
+    <string name="guide_step5_title">IDE を再起動</string>
+    <string name="guide_step5_desc">CodeAssist を閉じて再度開き、すべてのコンポーネントが正しく読み込まれるようにします。</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">CodeAssist 統合</string>
+    <string name="step_1_title">プロジェクトを開く</string>
+    <string name="step_1_desc">CodeAssist でプロジェクトファイルツリーをタップ</string>
+    <string name="step_2_title">フォルダを長押し</string>
+    <string name="step_2_desc">オプションのコンテキストメニューが開きます</string>
+    <string name="step_3_title">One Code For AI を選択</string>
+    <string name="step_3_desc">ダンプを生成するオプションが表示されます</string>
+    <string name="step_4_title">エクスポートまたは共有</string>
+    <string name="step_4_desc">.txt を Download に保存するか、AI に送信します</string>
+
+    <!-- > Features -->
+    <string name="features_title">機能</string>
+    <string name="feature_1">高度な Glob フィルター：*.log、build/、**/generated/** などのパターンを使用</string>
+    <string name="feature_2">Git 統合：ブランチ、タグ、コミットからのエクスポート、または差分プレビュー</string>
+    <string name="feature_3">プロフェッショナルなプリセット：Android（Kotlin、ソース、リソース）、Web、Python、テキスト</string>
+    <string name="feature_4">コンテキストヘルプ：インラインダイアログでフィルター、パターン、.gitignore の優先順位を説明</string>
+    <string name="feature_5">Git グローバルキルスイッチ：.gitignore フォールバックを維持しながら Git を完全に無効化</string>
+    <string name="feature_6">プロジェクトツリーの除外：エクスポート前にファイルとフォルダを手動で選択/解除</string>
+    <string name="feature_7">バイト単位の正確な進行状況：バックグラウンド処理でエクスポートの進行状況をリアルタイムで追跡</string>
+    <string name="feature_8">IDE ネイティブログ：デバッグは自動的にチャンクされ CodeAssist コンソールにルーティング</string>
+    <string name="feature_9">グローバル設定ページ：Git、アニメーション、通知のネイティブトグル</string>
+    <string name="feature_10">100% オフライン &amp; プライベート：テレメトリなし、インターネット権限不要、完全ローカル</string>
+
+    <!-- > Links -->
+    <string name="links_title">リンク</string>
+    <string name="link_repository">GitHub リポジトリ</string>
+    <string name="link_report_bug">問題を報告</string>
+    <string name="link_license">MIT ライセンス</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">技術情報</string>
+    <string name="tech_info_version">バージョン</string>
+    <string name="tech_info_package">パッケージ</string>
+    <string name="tech_info_min_sdk">最小 SDK</string>
+    <string name="tech_info_target_sdk">ターゲット SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">言語</string>
+    <string name="tech_info_status">ステータス</string>
+    <string name="tech_info_status_stable">安定版</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">ヘルプと FAQ</string>
+    <string name="help_header_subtitle">よくある問題の回答を見つけ、プラグインを最大限に活用する方法を学びましょう。</string>
+
+    <string name="help_q1">Git 機能を完全に無効にするには？</string>
+    <string name="help_a1">CodeAssist の設定を開き、プラグインを選択し、One Code For AI の設定を開きます。「Git 統合」トグルがあります。無効にすると、プラグインはフォルダを通常のファイルとして扱います。</string>
+
+    <string name="help_q2">Git が無効なのに .gitignore がまだ機能するのはなぜですか？</string>
+    <string name="help_a2">Git が無効な場合、プラグインは選択したフォルダとその親ディレクトリ（最大 5 レベル）で .gitignore ファイルを自動的に検索します。これにより、フィルタリングルールが確実に維持されます。</string>
+
+    <string name="help_q3">琥珀色の .gitignore ルールは何を意味しますか？</string>
+    <string name="help_a3">手動のインクルードまたはエクスクルードフィルターがそのルールを積極的に上書きしている場合、ルールは琥珀色で強調表示されます。インクルードとエクスクルードは常に .gitignore より優先されます。</string>
+
+    <string name="help_q4">フィルターで glob パターンを使用するには？</string>
+    <string name="help_a4">標準の glob 構文を使用します：*.log（すべてのログファイル）、build/（特定のフォルダ）、**/generated/**（すべてのネストされた生成フォルダ）。フィルターセクションの横にある「?」アイコンをタップすると簡単なガイドが表示されます。</string>
+
+    <string name="help_q5">新しい Android プリセットは何をしますか？</string>
+    <string name="help_a5">Android (Kotlin) はすべてをエクスポートします。Android (source only) はテストとドキュメントを削除します。Android (Resources) は XML（レイアウト/テーマ）のみをエクスポートします。R.java などの生成ファイルは自動的に除外されます。</string>
+
+    <string name="help_q6">アニメーションと通知の設定はどこにありますか？</string>
+    <string name="help_a6">このプラグイン用の CodeAssist ネイティブ設定にあります。アニメーションを無効にすると、低性能デバイスのパフォーマンスが向上します。通知を無効にすると、進行状況と完了のアラートが静かになります。</string>
+
+    <string name="help_q7">フォルダ全体を簡単に除外するには？</string>
+    <string name="help_a7">設定ダイアログでファイルツリープレビューを開きます。除外するフォルダのチェックを外します。これは、複雑な除外ルールを書くよりも速くて安全です。</string>
+
+    <string name="help_q8">実行中にエクスポートをキャンセルできますか？</string>
+    <string name="help_a8">はい。ダイアログの「キャンセル」をタップするか、ダイアログを閉じるだけです。エクスポートは安全にバックグラウンドで実行され、いつでも戻って進行状況を確認できます。</string>
+
+    <string name="help_q9">私のコードはサーバーにアップロードされますか？</string>
+    <string name="help_a9">絶対に違います。プラグインはインターネット権限を必要としません。すべてのスキャン、フィルタリング、生成はデバイス上で 100% ローカルで行われます。</string>
+
+    <string name="help_q10">生成されたファイルはどこに保存されますか？</string>
+    <string name="help_a10">エクスポートされたファイルは、デバイスのパブリックストレージの Download/OneCodeForAI に保存されます。</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">セクションのヘルプ</string>
+    <string name="help_inclusions_title">インクルード</string>
+    <string name="help_inclusions_body">拡張子と glob パターンのホワイトリスト。.gitignore より先に評価されます。\n\nサポートされる構文（.gitignore パターンと同じ）：\n- 拡張子：kt、json、xml\n- ワイルドカード：*.log、**/*.kt、src/*.kt\n- ディレクトリ：build/、**/generated/**\n\nインクルードに一致するファイルは、.gitignore やエクスクルードがスキップする場合でもエクスポートされます。\n\nインクルードはエクスクルードおよび .gitignore より優先されます。特定のファイルや拡張子を強制的に含めるために使用します。</string>
+
+    <string name="help_exclusions_title">エクスクルード</string>
+    <string name="help_exclusions_body">拡張子と glob パターンのブラックリスト。\n\nサポートされる構文（.gitignore パターンと同じ）：\n- 拡張子：log、tmp、pyc\n- ワイルドカード：*.log、**/*.test.kt、src/*.bak\n- ディレクトリ：build/、**/generated/**\n\nエクスクルードに一致するファイルは、.gitignore が含める場合でもスキップされます。インクルードはエクスクルードより優先されます。\n\nパターンを書かずに特定のフォルダを除外するには、下のファイルツリーを使用してください。</string>
+
+    <string name="help_gitignore_title">.gitignore ルール</string>
+    <string name="help_gitignore_body">プロジェクトの .gitignore ファイルで検出されたルール。\n\nこのリストは読み取り専用です - 変更するには .gitignore を直接編集してください。\n\nインクルードとエクスクルードはこれらのルールより優先されます：一致するインクルードまたはエクスクルードを追加すると、.gitignore に関係なくファイルが強制的に含められるか除外されます。上書きされたルールは琥珀色で強調表示されます。否定ルール（\'!\' で始まる）は、通常のルールと区別できるよう異なる背景で表示されます。</string>
+
+    <string name="help_binaries_title">バイナリの除外</string>
+    <string name="help_binaries_body">バイナリファイルは、既知のバイナリ拡張子の固定リスト（画像、ビデオ、オーディオ、アーカイブ、コンパイル済みバイナリ、フォント、データベース）で検出されます。これらの拡張子を持つファイルは、ダンプを読み取り可能なソースコードに集中させるためにスキップされます。\n\n検出は拡張子ベースのみです。珍しいバイナリ形式をスキップするには、その拡張子をエクスクルードに追加します。強制的に含めるには、インクルードに追加します。\n\nこのトグルを無効にすると、リストされた拡張子がエクスポートに含まれますが、AI コンテキストにはほとんど役立ちません。</string>
+
+    <string name="help_tree_title">プロジェクトツリープレビュー</string>
+    <string name="help_tree_body">現在のフィルターに一致するすべてのエントリを含むプロジェクトツリーを表示します。除外ルールを書かずに、任意のファイルまたはフォルダのチェックを外してエクスポートから除外できます。\n\nフォルダを除外すると、その子は自動的に除外されます。除外されたフォルダ内の単一の子を再度含めると、そのエントリのみが復元されます（.gitignore の否定の動作を反映）。\n\nヘッダーのチェックボックスを使用すると、1 回のタップでプロジェクト全体を含めるか除外できます。ツリーはプレビューです：ファイルを再生成するのではなく、現在のインクルード状態を反映するだけです。</string>
+
+    <string name="help_max_size_title">ファイルごとのサイズ制限</string>
+    <string name="help_max_size_body">有効にすると、選択したサイズより大きいファイルはスキップされます。これにより、単一の巨大なファイル（バンドルされたアセットや生成された SQL など）が出力を支配するのを防ぎます。\n\n無効にすると、サイズに関係なくすべてのテキストファイルが含まれ、非常に大きなダンプが生成される可能性があります。設定のエクスポート総サイズ制限と組み合わせて、エクスポートを制限された状態に保ちます。</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

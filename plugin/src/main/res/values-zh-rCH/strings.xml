@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">关闭</string>
+    <string name="cancel">取消</string>
+    <string name="accept">确定</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">上下文生成器  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">导出配置文件</string>
+    <string name="save_preset">保存配置文件</string>
+    <string name="delete_preset">删除配置文件</string>
+    <string name="delete_preset_message">删除配置文件 "%1$s"？此操作无法撤销。</string>
+    <string name="custom_preset">自定义</string>
+    <string name="preset_name_hint">配置文件名称</string>
+    <string name="preset_name_reserved">该名称为内置配置文件保留。</string>
+    <string name="preset_name_duplicate">名为 "%1$s" 的配置文件已存在。</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">基础筛选器</string>
+    <string name="exclude_binaries">排除二进制文件</string>
+    <string name="respect_gitignore">遵循 .gitignore 规则</string>
+    <string name="max_size">最大大小</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">包含项</string>
+    <string name="section_exclusions">排除项</string>
+    <string name="section_gitignore_rules">.gitignore 中检测到的规则</string>
+    <string name="no_inclusions">无附加扩展名</string>
+    <string name="no_exclusions">无自定义排除项</string>
+    <string name="no_gitignore_rules">.gitignore 中未找到规则</string>
+    <string name="add_inclusion_title">添加包含项</string>
+    <string name="add_exclusion_title">添加排除项</string>
+    <string name="edit_extension">编辑扩展名</string>
+    <string name="delete_rule">删除规则</string>
+    <string name="extension_hint">例如：kt、json、*.test.kt</string>
+    <string name="action_add">+ 添加</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">版本控制</string>
+    <string name="git_info">分支：%1$s  |  提交：%2$s</string>
+    <string name="no_branch">无分支</string>
+    <string name="no_commit">无提交</string>
+    <string name="read_from_git">从 Git 引用读取</string>
+    <string name="git_refresh">刷新 Git 信息</string>
+    <string name="git_uncommitted_changes">警告：%1$d 个未提交的更改</string>
+    <string name="git_ref_hint">例如：main、v1.0.0、abc1234</string>
+    <string name="git_browse_ref">浏览引用</string>
+    <string name="git_preview_diff">预览与工作树的差异</string>
+    <string name="git_resolving">正在解析…</string>
+    <string name="git_resolved_as">已解析：%1$s</string>
+    <string name="git_ref_invalid">无效的 Git 引用</string>
+    <string name="git_ref_empty">请输入或选择 Git 引用</string>
+    <string name="git_not_repo">此文件夹不是 Git 仓库</string>
+    <string name="git_open_parent_root">前往项目根目录：%1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">选择 Git 引用</string>
+    <string name="git_tab_branches">分支</string>
+    <string name="git_tab_tags">标签</string>
+    <string name="git_tab_commits">提交</string>
+    <string name="git_local_branches">本地分支</string>
+    <string name="git_remote_branches">远程分支</string>
+    <string name="git_no_branches">未找到分支</string>
+    <string name="git_no_tags">未找到标签</string>
+    <string name="git_no_commits">未找到提交</string>
+    <string name="git_current_marker">当前</string>
+    <string name="git_remote_marker">远程</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">差异：%1$s 与工作树</string>
+    <string name="git_diff_stats">%1$d 个文件  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">未检测到更改</string>
+    <string name="git_diff_content">差异内容</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">文件树</string>
+    <string name="show_tree">显示文件树</string>
+    <string name="action_expand">展开</string>
+    <string name="action_collapse">折叠</string>
+    <string name="action_reload">重新加载</string>
+    <string name="analyzing">正在分析…</string>
+    <string name="analyzing_files">正在分析… %1$d 个文件</string>
+    <string name="canceled_retry">已取消。点击筛选器重试。</string>
+    <string name="tree_scan_error">无法扫描项目树：%1$s</string>
+    <string name="no_tree_matches">没有文件匹配筛选器</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">生成上下文</string>
+    <string name="generate_description">将生成单个 .txt 文件并保存到 Download。</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">正在生成上下文…</string>
+    <string name="preparing_export">正在准备…</string>
+    <string name="processing_progress">正在处理：%1$d/%2$d 个文件</string>
+    <string name="generation_complete">生成完成</string>
+    <string name="generation_failed">生成失败</string>
+    <string name="generation_minimize_hint">您可以最小化此对话框。生成将继续在后台进行。</string>
+    <string name="saved_to_downloads">已保存到 Download/OneCodeForAI：%1$s</string>
+    <string name="export_already_running">已有导出正在进行。</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">保存</string>
+    <string name="action_share">分享</string>
+    <string name="action_regenerate">重新生成</string>
+    <string name="action_edit_settings">编辑设置</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="other">%1$d 个文件</item>
+    </plurals>
+    <string name="stats_tokens">约 %1$s 个 tokens</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">生成上下文 TXT（分享/导出）</string>
+    <string name="dialog_already_open">配置窗口已打开。</string>
+    <string name="no_folder_selected">未选择文件夹。</string>
+    <string name="select_valid_folder">请选择有效的文件夹。</string>
+    <string name="error_opening_dialog">错误：无法打开窗口。</string>
+    <string name="opening_config">正在打开配置…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">文件写入失败。</string>
+    <string name="error_source_uri_unreadable">无法打开源文件。</string>
+    <string name="error_output_stream_unavailable">目标未提供输出流。</string>
+    <string name="error_media_store_finalize">无法完成目标文件。</string>
+    <string name="error_downloads_dir_create">无法创建 Download 目录：%1$s</string>
+    <string name="error_project_root_not_dir">项目根目录不是文件夹：%1$s</string>
+    <string name="error_git_repo_unreadable">所选文件夹不是可读的 Git 仓库。</string>
+    <string name="error_git_ref_unresolved">无法解析 Git 引用 "%1$s"。</string>
+    <string name="error_git_export_no_ref">已启用 Git 导出，但未选择引用。</string>
+    <string name="unknown_error">未知错误</string>
+    <string name="error_storage_permission">需要存储权限。请在 设置 > 应用 > One Code For AI > 权限 中授予。</string>
+    <string name="error_source_file_missing">生成的文件已不存在。请重新生成上下文。</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="other">上下文已就绪 - %1$d 个读取错误</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">分享转储至：</string>
+    <string name="share_error">分享出错：%1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">上下文已就绪</string>
+    <string name="error_notification_title">One Code 错误</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code 错误</string>
+    <string name="notification_channel_actions">One Code 结果</string>
+    <string name="generating_dump">正在生成代码转储…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Git 集成</string>
+    <string name="settings_git_global_desc">检测仓库并启用所有 Git 功能。禁用后在仓库内也强制使用纯文件夹模式。.gitignore 规则仍然生效。</string>
+    <string name="settings_animations">动画</string>
+    <string name="settings_animations_desc">对话框、树和配置文件选择器中的淡入和缩放过渡。在低端设备上禁用。</string>
+    <string name="settings_notifications">生成通知</string>
+    <string name="settings_notifications_desc">导出期间的进度、完成和错误通知。禁用后静默通知栏。</string>
+    <string name="settings_force_english">强制英文界面</string>
+    <string name="settings_force_english_desc">无论 IDE 语言如何，强制插件界面使用英文。新打开的对话框和屏幕使用英文；已打开的窗口保持当前语言直到重新打开。</string>
+    <string name="settings_total_export_limit">导出总大小限制（KB）</string>
+    <string name="settings_total_export_limit_desc">单个转储总大小的硬性上限（千字节）。达到后，导出将停止包含文件并附加截断通知。在禁用单文件大小限制时最有用。设为 0 表示无限制。</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git 已在 CodeAssist 设置中全局禁用。请在那里启用它，以使用分支、标签和提交。</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">信息</string>
+    <string name="info_subtitle">CodeAssist 插件</string>
+    <string name="open_codeassist">打开 CodeAssist</string>
+    <string name="footer_made_with">用 ❤️ 为社区打造</string>
+    <string name="creator_dev">独立开发者</string>
+    <string name="codeassist_not_installed">CodeAssist 未安装</string>
+    <string name="codeassist_open_error">无法打开 CodeAssist</string>
+    <string name="no_app_for_link">没有可打开链接的应用</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">新功能</string>
+    <string name="whats_new_version">版本 %1$s</string>
+    <string name="whats_new_item_1">新增原生设置页面，可全局切换 Git、动画和通知。</string>
+    <string name="whats_new_item_2">引入 Git 总开关，并智能查找上级目录中的 .gitignore。</string>
+    <string name="whats_new_item_3">重做预设，提供专业的 Android 配置文件及智能排除项。</string>
+    <string name="whats_new_item_4">支持完整的 glob 模式（*.log、build/、**/generated/**）和目录筛选。</string>
+    <string name="whats_new_item_5">新增上下文帮助对话框、IDE 原生日志记录，并修复反射 bug。</string>
+    <string name="whats_new_item_6">新增 "强制英文界面" 开关，方便在跟随英文教程或文档时忽略 IDE 语言。</string>
+    <string name="whats_new_item_7">新增全局导出总大小限制，在禁用单文件限制时防止生成数 GB 的转储。</string>
+    <string name="whats_new_item_8">为二进制排除和项目树新增上下文帮助；所有帮助图标现使用更小的视觉尺寸和更大的可点击区域。</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">安装指南</string>
+    <string name="guide_header_subtitle">按照以下步骤在您的 IDE 中启用 One Code For AI。</string>
+    <string name="guide_step1_title">下载 APK</string>
+    <string name="guide_step1_desc">从官方仓库或分发渠道获取最新的 .apk。</string>
+    <string name="guide_step2_title">安装应用</string>
+    <string name="guide_step2_desc">在设备上打开 APK，如提示请接受从未知来源安装。</string>
+    <string name="guide_step3_title">打开 CodeAssist</string>
+    <string name="guide_step3_desc">安装完成后，在设备上启动 CodeAssist。</string>
+    <string name="guide_step4_title">启用插件</string>
+    <string name="guide_step4_desc">前往 设置 > 插件 > 已安装，启用 One Code For AI。它将自动加载。</string>
+    <string name="guide_step5_title">重启 IDE</string>
+    <string name="guide_step5_desc">关闭并重新打开 CodeAssist，以确保所有组件正确加载。</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">CodeAssist 集成</string>
+    <string name="step_1_title">打开项目</string>
+    <string name="step_1_desc">点击 CodeAssist 中的项目文件树</string>
+    <string name="step_2_title">长按文件夹</string>
+    <string name="step_2_desc">将打开选项上下文菜单</string>
+    <string name="step_3_title">选择 One Code For AI</string>
+    <string name="step_3_desc">将出现生成转储的选项</string>
+    <string name="step_4_title">导出或分享</string>
+    <string name="step_4_desc">将 .txt 保存到 Download 或发送到您的 AI</string>
+
+    <!-- > Features -->
+    <string name="features_title">功能</string>
+    <string name="feature_1">高级 Glob 筛选器：使用 *.log、build/ 或 **/generated/** 等模式</string>
+    <string name="feature_2">Git 集成：从分支、标签、提交导出，或预览差异</string>
+    <string name="feature_3">专业预设：Android（Kotlin、源码、资源）、Web、Python、文本</string>
+    <string name="feature_4">上下文帮助：内联对话框解释筛选器、模式和 .gitignore 优先级</string>
+    <string name="feature_5">Git 全局开关：完全禁用 Git 同时保留 .gitignore 回退</string>
+    <string name="feature_6">项目树排除：导出前手动勾选/取消文件和文件夹</string>
+    <string name="feature_7">精确字节进度：通过后台处理实时跟踪导出进度</string>
+    <string name="feature_8">IDE 原生日志：调试信息自动分块输出到 CodeAssist 控制台</string>
+    <string name="feature_9">全局设置页面：Git、动画和通知的原生开关</string>
+    <string name="feature_10">100% 离线与隐私：无遥测、无网络权限、完全本地</string>
+
+    <!-- > Links -->
+    <string name="links_title">链接</string>
+    <string name="link_repository">GitHub 仓库</string>
+    <string name="link_report_bug">报告问题</string>
+    <string name="link_license">MIT 许可证</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">技术信息</string>
+    <string name="tech_info_version">版本</string>
+    <string name="tech_info_package">包名</string>
+    <string name="tech_info_min_sdk">最低 SDK</string>
+    <string name="tech_info_target_sdk">目标 SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">语言</string>
+    <string name="tech_info_status">状态</string>
+    <string name="tech_info_status_stable">稳定</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">帮助与常见问题</string>
+    <string name="help_header_subtitle">查找常见问题的答案，了解如何充分利用此插件。</string>
+
+    <string name="help_q1">如何完全禁用 Git 功能？</string>
+    <string name="help_a1">前往 CodeAssist 设置，然后进入插件，打开 One Code For AI 设置。在那里您会找到 "Git 集成" 开关。禁用后，插件将您的文件夹视为普通文件。</string>
+
+    <string name="help_q2">Git 被禁用时为什么 .gitignore 仍然生效？</string>
+    <string name="help_a2">Git 被禁用时，插件会自动在您选择的文件夹及其父目录（最多 5 层）中查找 .gitignore 文件。这确保您的筛选规则保持不变。</string>
+
+    <string name="help_q3">琥珀色的 .gitignore 规则是什么意思？</string>
+    <string name="help_a3">当您的手动包含或排除筛选器正在覆盖某条规则时，该规则会以琥珀色高亮显示。包含项和排除项始终优先于 .gitignore。</string>
+
+    <string name="help_q4">如何在筛选器中使用 glob 模式？</string>
+    <string name="help_a4">使用标准 glob 语法：*.log（任意日志文件）、build/（特定文件夹）、**/generated/**（任意嵌套的生成文件夹）。点击筛选器区块旁的 "?" 图标查看快速指南。</string>
+
+    <string name="help_q5">新的 Android 预设做什么？</string>
+    <string name="help_a5">Android (Kotlin) 导出所有内容。Android (source only) 去除测试和文档。Android (Resources) 仅导出 XML（布局/主题）。它们会自动排除 R.java 等生成文件。</string>
+
+    <string name="help_q6">动画和通知的设置在哪里？</string>
+    <string name="help_a6">它们位于此插件的 CodeAssist 原生设置中。禁用动画有助于提升低端设备性能。禁用通知可静默进度和完成提醒。</string>
+
+    <string name="help_q7">如何轻松排除整个文件夹？</string>
+    <string name="help_a7">打开配置对话框中的文件树预览。取消勾选要排除的文件夹。这比编写复杂的排除规则更快、更安全。</string>
+
+    <string name="help_q8">可以在导出运行时取消吗？</string>
+    <string name="help_a8">可以。您可以点击对话框中的 "取消"，或直接关闭对话框。导出会在后台安全运行，您可以随时返回查看进度。</string>
+
+    <string name="help_q9">我的代码会上传到服务器吗？</string>
+    <string name="help_a9">绝对不会。此插件不需要网络权限。所有扫描、筛选和生成都在您的设备上 100% 本地完成。</string>
+
+    <string name="help_q10">生成的文件保存在哪里？</string>
+    <string name="help_a10">导出的文件保存在设备的公共存储中的 Download/OneCodeForAI 下。</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">区块帮助</string>
+    <string name="help_inclusions_title">包含项</string>
+    <string name="help_inclusions_body">在 .gitignore 之前评估的扩展名和 glob 模式白名单。\n\n支持的语法（与 .gitignore 模式相同）：\n- 扩展名：kt、json、xml\n- 通配符：*.log、**/*.kt、src/*.kt\n- 目录：build/、**/generated/**\n\n任何匹配包含项的文件都会被导出，即使 .gitignore 或排除项会跳过它。\n\n包含项优先于排除项和 .gitignore。用它来强制包含特定文件或扩展名。</string>
+
+    <string name="help_exclusions_title">排除项</string>
+    <string name="help_exclusions_body">扩展名和 glob 模式的黑名单。\n\n支持的语法（与 .gitignore 模式相同）：\n- 扩展名：log、tmp、pyc\n- 通配符：*.log、**/*.test.kt、src/*.bak\n- 目录：build/、**/generated/**\n\n任何匹配排除项的文件都会被跳过，即使 .gitignore 会包含它。包含项优先于排除项。\n\n若要排除特定文件夹而不编写模式，请使用下方的文件树。</string>
+
+    <string name="help_gitignore_title">Gitignore 规则</string>
+    <string name="help_gitignore_body">在项目的 .gitignore 文件中检测到的规则。\n\n此列表为只读 — 请直接编辑 .gitignore 进行更改。\n\n包含项和排除项优先于这些规则：添加匹配的包含或排除将强制文件进入或退出，无论 .gitignore 如何。被覆盖的规则以琥珀色高亮显示。否定规则（以 \'!\' 开头）以不同背景显示，以便与正向规则区分。</string>
+
+    <string name="help_binaries_title">二进制排除</string>
+    <string name="help_binaries_body">二进制文件通过一组固定的已知二进制扩展名（图像、视频、音频、压缩包、编译二进制、字体、数据库）来检测。具有这些扩展名的文件会被跳过，以便转储专注于可读的源代码。\n\n检测仅基于扩展名。若要跳过不常见的二进制格式，请将其扩展名添加到排除项。若要强制包含，请将其添加到包含项。\n\n禁用此开关会将列表中的扩展名包含在导出中，这对 AI 上下文来说很少有用。</string>
+
+    <string name="help_tree_title">项目树预览</string>
+    <string name="help_tree_body">显示与当前筛选器匹配的所有条目的项目树。取消勾选任何文件或文件夹即可将其排除在导出之外，而无需编写排除规则。\n\n排除文件夹会自动排除其子项。在已排除的文件夹中重新包含单个子项仅恢复该条目，镜像 .gitignore 否定的行为。\n\n使用标题栏复选框一键包含或排除整个项目。树是预览：它不会重新生成文件，只反映当前包含状态。</string>
+
+    <string name="help_max_size_title">单文件大小限制</string>
+    <string name="help_max_size_body">启用时，大于所选大小的文件会被跳过。这可以保护转储不被单个巨大文件（例如打包的资源或生成的 SQL）主导输出。\n\n禁用时，所有文本文件无论大小都会被包含，这可能会产生非常大的转储。将其与设置中的导出总大小限制结合使用，以保持导出受限。</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

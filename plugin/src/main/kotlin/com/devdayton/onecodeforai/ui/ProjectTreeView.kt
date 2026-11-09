@@ -69,6 +69,13 @@ import java.util.concurrent.atomic.AtomicLong
  * The walk is **iterative** (an explicit [ArrayDeque] of pending
  * directories) rather than recursive, because a deliberately deep directory
  * tree on network storage would otherwise blow the stack on some devices.
+ * The same constraint applies to every other traversal in this file
+ * (`refreshExclusionFlags`, `computeStatsFromTree`, `markAllExpanded`,
+ * `collectExpandable`, `refreshNodeVisible`): each one uses an explicit
+ * `ArrayDeque` stack instead of recursion so that a pathological tree
+ * (`node_modules` with hundreds of nested levels, generated source trees,
+ * deeply nested submodule paths) can never cause a `StackOverflowError`
+ * while the tree is being rendered or the stats recomputed.
  *
  * ### Exclusion semantics
  * Exclusions are stored as a flat list of relative paths in
@@ -535,6 +542,13 @@ class ProjectTreeView(
      * only inflated the first time it is expanded. That is what keeps
      * initial render cost proportional to the number of *visible* rows
      * rather than to the total number of nodes in the project.
+     *
+     * Recursion is bounded here by the number of *expanded* directories,
+     * which is user-controlled and cannot exceed the number of levels the
+     * user actually navigated into. Unlike [scanAsync] and the tree
+     * traversal helpers, this is not a hot path on pathological trees: a
+     * user who deliberately expands hundreds of nested levels has already
+     * paid that cost by tapping through them.
      */
     private fun renderNode(node: TreeNode, parent: LinearLayout) {
         val wrapper = LinearLayout(activity).apply {
@@ -609,16 +623,26 @@ class ProjectTreeView(
     }
 
     /**
-     * Depth-first walk that refreshes every rendered descendant of
-     * [directoryNode]. Unrendered subtrees (collapsed directories) are
-     * skipped, because their rows have not been built yet and will pick up
-     * the fresh state automatically the first time they are expanded.
+     * Refreshes every rendered descendant of [root] using an explicit stack.
+     *
+     * Iterative for the same reason as [refreshExclusionFlags]: a deeply
+     * nested expanded tree (a user who expanded thirty levels of
+     * `node_modules` to find a stray file) would otherwise recurse once per
+     * level and eventually overflow the JVM stack. The walk only follows
+     * *expanded* children, so it touches exactly the rows that are actually
+     * rendered — unrendered subtrees are skipped and will pick up the fresh
+     * state automatically the first time they are expanded.
      */
-    private fun refreshNodeVisible(directoryNode: TreeNode) {
-        directoryNode.children.forEach { child ->
-            refreshNodeRow(child)
-            if (child.isDirectory && child.expanded) {
-                refreshNodeVisible(child)
+    private fun refreshNodeVisible(root: TreeNode) {
+        val stack = ArrayDeque<TreeNode>()
+        stack.addLast(root)
+        while (stack.isNotEmpty()) {
+            val current = stack.removeLast()
+            current.children.forEach { child ->
+                refreshNodeRow(child)
+                if (child.isDirectory && child.expanded) {
+                    stack.addLast(child)
+                }
             }
         }
     }
@@ -720,8 +744,7 @@ class ProjectTreeView(
 
         // Checkbox — enabled for every node except the non-sticky root.
         // The root's "include all" affordance lives on the sticky header.
-        val showCheckbox = isSticky || !isRoot
-        if (showCheckbox) {
+        if (isSticky || !isRoot) {
             val cb = CheckBox(activity).apply {
                 val included = if (isSticky) currentConfig.excludedPaths.isEmpty()
                                else !node.selfExcluded && !node.ancestorExcluded
@@ -735,8 +758,18 @@ class ProjectTreeView(
                     marginStart = dp(2)
                     marginEnd = dp(2)
                 }
-                // Compress the platform checkbox visual without shrinking
-                // the hit target; the container still occupies 36x32dp.
+                // The platform checkbox indicator is shrunk via zero padding
+                // and the fixed 36x32dp container; the hit target is the
+                // container, not the drawn indicator, so taps near the edge
+                // register reliably. A previous version also applied
+                // `scaleX = scaleY = 0.78f` to the widget, which visually
+                // shrank the indicator but broke text alignment with the
+                // rest of the row and made the drawn size diverge from the
+                // touchable size (a tap on the visual edge hit the button,
+                // but the button looked smaller than it was). The scale
+                // factors are gone; the padding and the container are what
+                // compress the indicator now, keeping the visual and hit
+                // areas coherent.
                 minWidth = 0
                 minHeight = 0
                 setPadding(0, 0, 0, 0)
@@ -744,8 +777,6 @@ class ProjectTreeView(
                 includeFontPadding = false
                 text = ""
                 compoundDrawablePadding = 0
-                scaleX = 0.78f
-                scaleY = 0.78f
                 setOnCheckedChangeListener { _, checked ->
                     // [PERF] Ignore programmatic updates from refreshNodeRow.
                     if (isRefreshingRows) return@setOnCheckedChangeListener
@@ -974,7 +1005,7 @@ class ProjectTreeView(
         currentConfig = currentConfig.copy(excludedPaths = excluded)
         onExcludedPathsChanged(excluded)
 
-        rootNode?.let { refreshExclusionFlags(it, ancestorExcluded = false) }
+        rootNode?.let { refreshExclusionFlags(it) }
 
         // [PERF] Update only the visible rows rather than rebuilding the
         // whole tree.
@@ -986,16 +1017,31 @@ class ProjectTreeView(
      * Recomputes every node's exclusion flags based on the current
      * [FilterConfig.excludedPaths].
      *
-     * The walk is top-down: a node is excluded if its own path is in the
-     * list *or* its parent was excluded. Caching the ancestor result in
+     * ### Iterative traversal
+     * The walk uses an explicit [ArrayDeque] stack of `(node,
+     * ancestorExcluded)` pairs rather than recursion. A deeply nested tree
+     * (a user who expanded thirty levels to find a stray file, or a project
+     * whose directory depth is measured in the hundreds) would otherwise
+     * recurse once per level and eventually overflow the JVM stack. The
+     * same reasoning applies to every other traversal in this file — see
+     * the class-level *Scanning* note.
+     *
+     * ### Top-down propagation
+     * The traversal is top-down: a node is excluded if its own path is in
+     * the list *or* its parent was excluded. Caching the ancestor result in
      * [TreeNode.ancestorExcluded] is what lets [refreshNodeRow] answer
      * "should this row look included?" with a single boolean read.
      */
-    private fun refreshExclusionFlags(node: TreeNode, ancestorExcluded: Boolean) {
-        node.selfExcluded = currentConfig.excludedPaths.any { it == node.relativePath }
-        node.ancestorExcluded = ancestorExcluded
-        val next = ancestorExcluded || node.selfExcluded
-        node.children.forEach { refreshExclusionFlags(it, next) }
+    private fun refreshExclusionFlags(root: TreeNode) {
+        val stack = ArrayDeque<Pair<TreeNode, Boolean>>()
+        stack.addLast(root to false)
+        while (stack.isNotEmpty()) {
+            val (node, ancestorExcluded) = stack.removeLast()
+            node.selfExcluded = currentConfig.excludedPaths.any { it == node.relativePath }
+            node.ancestorExcluded = ancestorExcluded
+            val next = ancestorExcluded || node.selfExcluded
+            node.children.forEach { stack.addLast(it to next) }
+        }
     }
 
     /**
@@ -1020,7 +1066,7 @@ class ProjectTreeView(
         }
         currentConfig = currentConfig.copy(excludedPaths = newExcluded)
         onExcludedPathsChanged(newExcluded)
-        rootNode?.let { refreshExclusionFlags(it, ancestorExcluded = false) }
+        rootNode?.let { refreshExclusionFlags(it) }
 
         // [PERF] Same in-place refresh as setNodeIncluded, plus a pulse on
         // the sticky row to draw attention to the bulk change.
@@ -1037,6 +1083,13 @@ class ProjectTreeView(
      * Walks [root]'s rendered subtree and aggregates file count, byte size,
      * and estimated tokens.
      *
+     * ### Iterative traversal
+     * Uses an explicit [ArrayDeque] stack rather than recursion, for the
+     * same reason as [refreshExclusionFlags]: a deeply nested tree must not
+     * overflow the JVM stack while the stats are being recomputed. The walk
+     * only descends into non-excluded directories, so excluded subtrees are
+     * skipped in O(1) regardless of their depth.
+     *
      * Token estimation uses the ~4-bytes-per-token heuristic the rest of the
      * plugin already relies on, so the number shown here matches the number
      * shown in the export result panel. Files inside an excluded subtree are
@@ -1049,11 +1102,15 @@ class ProjectTreeView(
         var totalBytes = 0L
         val byExt = mutableMapOf<String, ExtensionStats>()
 
-        fun visit(node: TreeNode) {
-            if (node.ancestorExcluded || node.selfExcluded) return
+        val stack = ArrayDeque<TreeNode>()
+        stack.addLast(root)
+        while (stack.isNotEmpty()) {
+            val node = stack.removeLast()
+            if (node.ancestorExcluded || node.selfExcluded) continue
             node.children.forEach { child ->
-                if (child.isDirectory) visit(child)
-                else if (!child.ancestorExcluded && !child.selfExcluded) {
+                if (child.isDirectory) {
+                    stack.addLast(child)
+                } else if (!child.ancestorExcluded && !child.selfExcluded) {
                     val bytes = child.file.length()
                     val tokens = if (bytes <= 0L) 0L else (bytes + 3L) / 4L
                     val ext = child.file.extension.lowercase().ifEmpty { "sin-ext" }
@@ -1067,7 +1124,6 @@ class ProjectTreeView(
                 }
             }
         }
-        visit(root)
         return PreviewStats(
             totalFiles = totalFiles,
             totalTokens = totalTokens,
@@ -1109,22 +1165,38 @@ class ProjectTreeView(
         renderInternal(fireStats = false)
     }
 
-    /** Recursively sets [expanded] on [node] and every descendant. */
+    /**
+     * Sets [expanded] on [node] and every descendant using an explicit
+     * [ArrayDeque] stack instead of recursion. See [refreshExclusionFlags]
+     * for the rationale on pathological tree depth.
+     */
     private fun markAllExpanded(node: TreeNode, expanded: Boolean) {
-        node.expanded = expanded
-        node.children.forEach { markAllExpanded(it, expanded) }
+        val stack = ArrayDeque<TreeNode>()
+        stack.addLast(node)
+        while (stack.isNotEmpty()) {
+            val current = stack.removeLast()
+            current.expanded = expanded
+            current.children.forEach { stack.addLast(it) }
+        }
     }
 
     /**
      * Returns the relative paths of every directory that can be expanded
      * (i.e. every directory with at least one child), so [expandAll] can
      * populate [expandedPaths] in one pass.
+     *
+     * Iterative for the same reason as [refreshExclusionFlags].
      */
-    private fun collectExpandable(node: TreeNode): List<String> {
+    private fun collectExpandable(root: TreeNode): List<String> {
         val out = mutableListOf<String>()
-        if (node.isDirectory && node.children.isNotEmpty()) {
-            out.add(node.relativePath)
-            node.children.forEach { out.addAll(collectExpandable(it)) }
+        val stack = ArrayDeque<TreeNode>()
+        stack.addLast(root)
+        while (stack.isNotEmpty()) {
+            val current = stack.removeLast()
+            if (current.isDirectory && current.children.isNotEmpty()) {
+                out.add(current.relativePath)
+                current.children.forEach { stack.addLast(it) }
+            }
         }
         return out
     }

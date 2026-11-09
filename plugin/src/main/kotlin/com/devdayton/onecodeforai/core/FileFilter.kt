@@ -19,7 +19,10 @@ import java.util.concurrent.ConcurrentHashMap
  * `(absolutePath, lastModified)` pair, shared through [gitignoreCache].
  * Before, every `FileFilter` instance re-read and re-parsed the file, and
  * `ConfigurationDialog` + `ProjectTreeView.scanAsync` both created instances
- * (and rescanned on every filter change).
+ * (and rescanned on every filter change). The cache is bounded to
+ * [GITIGNORE_CACHE_MAX_ENTRIES] entries to prevent unbounded growth across a
+ * long IDE session with many projects; the eviction is approximate (removes
+ * the lexicographically first key, not the true LRU) but bounded and O(1).
  *
  * Cancellation
  * ------------
@@ -189,9 +192,16 @@ class FileFilter(
      */
     fun countEligibleFiles(): Int = walkIncludedFiles().count()
 
-    /** Root .gitignore rules available for display in the configuration UI. */
+    /**
+     * Root `.gitignore` rules available for display in the configuration UI.
+     *
+     * Negative rules (`!foo`) are included with their `!` prefix preserved so
+     * the UI can show them as negations. Previously they were filtered out,
+     * which hid from the user that a `!important.txt` in their `.gitignore`
+     * was actually overriding a broader exclusion.
+     */
     fun loadGitignoreRules(): List<String> =
-        readGitignoreEntry()?.rawRules ?: emptyList()
+        readGitignoreEntry()?.displayRules ?: emptyList()
 
     // ------------------------------------------------------------------
 
@@ -259,6 +269,12 @@ class FileFilter(
      * file once and stores the result. `ConcurrentHashMap` provides the
      * happens-before guarantee needed for the immutable [GitignoreCacheEntry]
      * to be safely shared between threads.
+     *
+     * The cache is bounded: when it exceeds [GITIGNORE_CACHE_MAX_ENTRIES],
+     * the lexicographically-first key is evicted before inserting the new
+     * entry. Approximate-LRU is acceptable here because the working set of
+     * simultaneously open projects in an IDE session is small (typically 1-3)
+     * and the cost of a cache miss is one file read.
      */
     private fun readGitignoreEntry(): GitignoreCacheEntry? {
         val gitignore = File(root, ".gitignore")
@@ -279,12 +295,20 @@ class FileFilter(
             .map(String::trim)
             .filter { it.isNotEmpty() && !it.startsWith('#') }
         val parsedRules = filtered.mapNotNull(IgnoreRule::parse)
+        // `rawRules` keeps the pre-`!` form (used by nothing today, but kept
+        // for backwards compatibility with code that may still read it).
         val rawRules = filtered
             .filter { !it.startsWith('!') }
             .map { it.removePrefix("/").removeSuffix("/") }
             .distinct()
+        // `displayRules` keeps the `!` prefix so the UI can render negations.
+        val displayRules = filtered.distinct()
 
-        val entry = GitignoreCacheEntry(mtime, rawRules, parsedRules)
+        val entry = GitignoreCacheEntry(mtime, rawRules, displayRules, parsedRules)
+        // Bounded insertion: evict one entry if we are over the cap.
+        if (gitignoreCache.size >= GITIGNORE_CACHE_MAX_ENTRIES) {
+            gitignoreCache.keys.firstOrNull()?.let { gitignoreCache.remove(it) }
+        }
         gitignoreCache[key] = entry
         return entry
     }
@@ -365,11 +389,19 @@ class FileFilter(
     private data class GitignoreCacheEntry(
         val mtime: Long,
         val rawRules: List<String>,
+        val displayRules: List<String>,
         val parsedRules: List<IgnoreRule>
     )
 
     companion object {
         private val gitignoreCache = ConcurrentHashMap<String, GitignoreCacheEntry>()
+
+        /**
+         * Upper bound on cached `.gitignore` entries. Chosen so a typical IDE
+         * session (1-3 open projects) never evicts, while a long-running
+         * session with dozens of projects does not grow without limit.
+         */
+        private const val GITIGNORE_CACHE_MAX_ENTRIES = 32
 
         /**
          * [PERF] Forces a reload when the `.gitignore` file was changed outside
@@ -381,25 +413,77 @@ class FileFilter(
             gitignoreCache.remove(gitignore.absolutePath)
         }
 
+        /**
+         * Fixed list of known binary extensions.
+         *
+         * `svg` was historically listed here, but it is an XML text format and
+         * an AI consumer can meaningfully reason about it (structure, naming,
+         * path data). Treating it as binary meant that an explicit
+         * `Inclusions += "svg"` had no effect, because the fallback check
+         * `extension in TEXT_EXTENSIONS` is what grants inclusion to files
+         * that are neither binary nor hidden. It is now in [TEXT_EXTENSIONS].
+         *
+         * `lock` was historically listed here too, but modern lockfiles
+         * (`Cargo.lock`, `Gemfile.lock`, `poetry.lock`, `yarn.lock`,
+         * `composer.lock`, `pubspec.lock`) are plain text. They are still
+         * excluded by default (they are not in [TEXT_EXTENSIONS] either), but
+         * a user who wants them can now add `lock` to `Inclusions` and the
+         * filter will honour it.
+         */
         private val BINARY_EXTENSIONS = setOf(
-            "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg", "tiff",
+            "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tiff",
             "mp4", "mkv", "webm", "avi", "mov", "m4v", "mp3", "wav", "ogg", "flac",
             "zip", "jar", "aar", "apk", "aab", "tar", "gz", "rar", "7z",
             "so", "dll", "dylib", "exe", "class", "dex",
-            "ttf", "otf", "woff", "woff2", "pdf", "db", "sqlite", "lock", "bin"
+            "ttf", "otf", "woff", "woff2", "pdf", "db", "sqlite", "bin"
         )
 
+        /**
+         * Extensions treated as text by default.
+         *
+         * `svg` is here because it is XML. `lock` is deliberately **not**
+         * here: lockfiles are text, but they are typically machine-generated
+         * and multi-megabyte, so they are only included when the user adds
+         * `lock` to `Inclusions` explicitly.
+         */
         private val TEXT_EXTENSIONS = setOf(
             "kt", "kts", "java", "xml", "toml", "gradle", "properties", "json",
             "yaml", "yml", "md", "txt", "pro", "cfg", "ini", "html", "css", "scss",
             "js", "ts", "tsx", "jsx", "py", "rb", "go", "rs", "c", "h", "cpp",
-            "hpp", "cs", "sh", "bat", "ps1", "sql", "proto", "graphql"
+            "hpp", "cs", "sh", "bat", "ps1", "sql", "proto", "graphql", "svg"
         )
 
         private fun globMatches(pattern: String, value: String): Boolean =
             globToRegex(pattern).matches(value)
 
-        /** Supports *, ?, and ** without allowing * to cross path separators. */
+        /**
+         * Compiles a `.gitignore`-style glob to a [Regex].
+         *
+         * Supported syntax:
+         *  - `*` matches zero or more non-slash characters.
+         *  - `?` matches exactly one non-slash character.
+         *  - `**` matches across directory separators.
+         *  - A leading double-star followed by a slash matches zero or more
+         *    leading directories, **including none**, so the pattern matches
+         *    a file at the project root as well as in any subdirectory. This
+         *    was previously compiled to an optional prefix group, which when
+         *    anchored at the start of the string did not match the root form.
+         *  - `[abc]` and `[!abc]` are passed through as character classes
+         *    (with `[!` translated to the regex `[^` form), matching the
+         *    `.gitignore` convention. `[` and `]` are no longer escaped,
+         *    which previously disabled character-class matching entirely.
+         *
+         * Deliberately **not** supported: backslash escapes. Literal `[` in
+         * a filename must be written as `[[]` (a character class containing
+         * `[`), as in `.gitignore` itself.
+         *
+         * The double-star-plus-slash form is compiled to an alternation
+         * between "start of string" and "any prefix ending in a slash",
+         * rather than an optional prefix group. An optional group would not
+         * match "nothing" at the start of the string while still allowing
+         * the pattern to match; the alternation makes the "match nothing"
+         * branch explicit.
+         */
         private fun globToRegex(pattern: String): Regex {
             val out = StringBuilder("^")
             var index = 0
@@ -411,8 +495,13 @@ class FileFilter(
                         if (doubleStar) {
                             val followedBySlash = index + 2 < pattern.length && pattern[index + 2] == '/'
                             if (followedBySlash) {
-                                // Git-style **/ also matches a file at the root of the pattern.
-                                out.append("(?:.*/)?")
+                                // Git-style `**/` also matches a file at the
+                                // pattern's root. The alternation below makes
+                                // that explicit: either we are at the start
+                                // of the string (so the pattern matches at the
+                                // root) or we consume any prefix ending in a
+                                // slash.
+                                out.append("(?:^|.*/)")
                                 index += 2
                             } else {
                                 out.append(".*")
@@ -423,7 +512,17 @@ class FileFilter(
                         }
                     }
                     '?' -> out.append("[^/]")
-                    '.', '(', ')', '+', '|', '^', '$', '\\', '{', '}', '[', ']' ->
+                    '[' -> {
+                        // Character class start. Translate gitignore's `[!...]`
+                        // negation form to regex's `[^...]` form.
+                        out.append('[')
+                        if (index + 1 < pattern.length && pattern[index + 1] == '!') {
+                            out.append('^')
+                            index++
+                        }
+                    }
+                    ']' -> out.append(']')
+                    '.', '(', ')', '+', '|', '^', '$', '\\', '{', '}' ->
                         out.append('\\').append(char)
                     else -> out.append(char)
                 }

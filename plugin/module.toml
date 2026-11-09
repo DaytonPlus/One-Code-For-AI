@@ -44,7 +44,7 @@ java = ["src/test/java", "src/test/kotlin"]
 resources = ["src/test/resources"]
 
 [dependencies]
-implementation = ["kotlin-stdlib", "org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r"]
+implementation = ["kotlin-stdlib", "org.eclipse.jgit:org.eclipse.jgit:5.13.3.202401111512-r"]
 compileOnly = ["io.github.tyron12233:plugin-api:3.1.0", "io.github.tyron12233:platform-core:3.1.0"]
 
 [android]
@@ -53,9 +53,9 @@ compileSdk = 36
 minSdk = 26
 targetSdk = 36
 manifest = "src/main/AndroidManifest.xml"
-versionCode = 84
-versionName = "1.0.84"
+versionCode = 90
+versionName = "1.0.90"
 isApplication = true
 manifestPlaceholders = []
-buildConfigFields = []
+buildConfigFields = ["MIN_SDK_VERSION = 26", "TARGET_SDK_VERSION = 36"]
 buildTypes = [{ name = "debug", debuggable = true, minifyEnabled = false, shrinkResources = false }, { name = "release", debuggable = false, minifyEnabled = false, shrinkResources = false, proguardFiles = ["proguard-android-optimize.txt", "proguard-rules.pro"], signingConfig = "dayton-dev-release" }]

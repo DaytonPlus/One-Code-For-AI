@@ -393,7 +393,13 @@ object UiFactory {
      * locale-aware and respects the current `Locale`.
      */
     fun Context.sectionTitle(text: String) = textView(
-        text.uppercase(),
+        // `Locale.getDefault()` would use the SYSTEM locale, which can diverge
+        // from the IDE locale (e.g. Turkish system + English IDE → "İNFO").
+        // `LanguageHelper.detectIdeLocale` is the same source of truth that
+        // `pluginString` uses to localize the input, so the uppercased form
+        // stays consistent with the localized content regardless of the
+        // "Force English UI" toggle.
+        text.uppercase(LanguageHelper.detectIdeLocale(this)),
         11f,
         CodeAssistTheme.TEXT_SECONDARY,
         true
@@ -583,5 +589,47 @@ object UiFactory {
             override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View =
                 row(position, convertView, true)
         }
+    }
+    
+    /**
+     * [pluginString] equivalent for plural strings.
+     *
+     * `Context.resources.getQuantityString(id, quantity, ...)` reads from
+     * the *caller's* resources, which on the host activity do not contain
+     * the plugin's plural IDs. This helper resolves the plugin's own
+     * locale-aware `Context` (same path as [pluginString]) and calls
+     * `getQuantityString` on it, so the correct CLDR rule for the current
+     * locale is used.
+     *
+     * The `quantity` parameter is passed twice by the caller because
+     * `Resources.getQuantityString` has two roles for it:
+     *  - it selects which `<item>` to use, and
+     *  - it can be referenced by `%d` in the chosen string.
+     * The overload without format args is used when `formatArgs` is empty,
+     * matching the platform API split.
+     *
+     * Falls back to the caller's own resources if the plugin context cannot
+     * be built, mirroring [pluginString]'s fallback chain.
+     */
+    fun Context.pluginQuantityString(resId: Int, quantity: Int, vararg formatArgs: Any): String {
+        val localizedCtx = getOrCreateLocalizedPluginCtx(this)
+        if (localizedCtx != null) {
+            try {
+                return if (formatArgs.isEmpty()) {
+                    localizedCtx.resources.getQuantityString(resId, quantity)
+                } else {
+                    localizedCtx.resources.getQuantityString(resId, quantity, *formatArgs)
+                }
+            } catch (_: Exception) {
+                // Fall through to the host-context fallback below.
+            }
+        }
+        return runCatching {
+            if (formatArgs.isEmpty()) {
+                resources.getQuantityString(resId, quantity)
+            } else {
+                resources.getQuantityString(resId, quantity, *formatArgs)
+            }
+        }.getOrDefault("")
     }
 }

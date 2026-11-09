@@ -20,6 +20,7 @@ import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.FileProgressListener
 import com.devdayton.onecodeforai.core.FilterConfig
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
+import com.devdayton.onecodeforai.ui.UiFactory.pluginQuantityString
 import java.io.File
 import java.io.IOException
 import java.io.OutputStreamWriter
@@ -901,31 +902,6 @@ class ExportCoordinator(
         .replace(Regex("""[\\/:*?"<>|]"""), "")
         .ifBlank { "dump" }
 
-    /** Opens the system share chooser for [uri]. Logs and toasts on failure. */
-    private fun shareFile(context: Context, uri: Uri, fileName: String) {
-        try {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = MIME_TEXT
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, fileName)
-                clipData = android.content.ClipData.newUri(context.contentResolver, fileName, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            val chooser = Intent.createChooser(intent, context.pluginString(R.string.share_with)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(chooser)
-            logger("[OK] Share chooser launched.")
-        } catch (error: Exception) {
-            logger("[ERROR] Failed to launch share chooser: ${error.message}")
-            Toast.makeText(
-                context,
-                context.pluginString(R.string.share_error, error.message ?: ""),
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
     // ------------------------------------------------------------------
     // Notifications
     //
@@ -1004,7 +980,9 @@ class ExportCoordinator(
             Notification.Builder(context, ACTIONS_CHANNEL_ID)
         } else { @Suppress("DEPRECATION") Notification.Builder(context) }
         val title = if (readErrors > 0)
-            context.pluginString(R.string.notification_ready_title_partial, readErrors)
+            context.pluginQuantityString(
+                R.plurals.notification_ready_title_partial, readErrors, readErrors
+            )
         else context.pluginString(R.string.notification_ready_title)
         manager.notify(
             COMPLETION_NOTIFICATION_ID,
@@ -1029,21 +1007,59 @@ class ExportCoordinator(
         fun isBusy(): Boolean = globalExportLock.get()
 
         /**
-         * Static share helper used by callers that already hold a valid
-         * `content://` URI (e.g. the "Share" chip in the result panel).
+         * Opens the system share chooser for a `content://` [uri].
+         *
+         * This is the **single** share entry point for the plugin. It is used
+         * both by the coordinator's own SHARE action (internally, on the
+         * worker thread's completion path) and by the "Share" chip in the
+         * result panel of the configuration dialog (externally, from the UI
+         * thread). Consolidating the logic here guarantees that both call
+         * sites produce an identical `Intent` — same MIME type, same
+         * `ClipData`, same read-permission flag — so the receiving app always
+         * has a consistent contract regardless of how the share was
+         * triggered.
+         *
+         * Failure handling is deliberately defensive rather than fatal: a
+         * missing activity to handle `ACTION_SEND`, a revoked URI grant, or
+         * an OEM chooser crash must never crash the plugin or lose the
+         * already-written file. Any [Exception] is logged and surfaced to
+         * the user as a long toast, and the caller's flow continues
+         * normally.
+         *
+         * @param context  any context; the chooser is started with
+         *                 [Intent.FLAG_ACTIVITY_NEW_TASK], so a non-Activity
+         *                 context is safe.
+         * @param uri      the `content://` URI of the generated dump. Must
+         *                 already be readable by the receiving app — the
+         *                 caller is responsible for validating it (see
+         *                 `ConfigurationDialog.isSnapshotUriReadable`) before
+         *                 invoking this method.
+         * @param fileName the display name used as the subject and as the
+         *                 `ClipData` label. Falls back to a generic subject
+         *                 only if the caller passes a blank string.
          */
         fun shareFile(context: Context, uri: Uri, fileName: String) {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = MIME_TEXT
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, fileName)
-                clipData = android.content.ClipData.newUri(context.contentResolver, fileName, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            try {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = MIME_TEXT
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, fileName)
+                    clipData = android.content.ClipData.newUri(context.contentResolver, fileName, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val chooser = Intent.createChooser(intent, context.pluginString(R.string.share_with)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(chooser)
+                PluginLogger.d("ExportCoordinator", "[OK] Share chooser launched for: $fileName")
+            } catch (error: Exception) {
+                PluginLogger.e("ExportCoordinator", "[ERROR] Failed to launch share chooser: ${error.message}", error)
+                Toast.makeText(
+                    context,
+                    context.pluginString(R.string.share_error, error.message ?: ""),
+                    Toast.LENGTH_LONG
+                ).show()
             }
-            val chooser = Intent.createChooser(intent, context.pluginString(R.string.share_with)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(chooser)
         }
 
         private const val MIME_TEXT = "text/plain"

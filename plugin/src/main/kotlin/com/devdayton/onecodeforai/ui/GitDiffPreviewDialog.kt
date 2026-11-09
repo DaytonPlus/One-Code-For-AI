@@ -13,6 +13,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.devdayton.onecodeforai.R
+import com.devdayton.onecodeforai.android.LanguageHelper
 import com.devdayton.onecodeforai.core.GitUtils
 import com.devdayton.onecodeforai.ui.UiFactory.iconButton
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
@@ -203,7 +204,10 @@ class GitDiffPreviewDialog(
             // Uppercased so it reads as chrome rather than content.
             root.addView(
                 activity.textView(
-                    activity.pluginString(R.string.git_diff_content).uppercase(),
+                    // Locale-aware uppercase so the label matches the localized content
+                    // and the force-English toggle. See UiFactory.sectionTitle.
+                    activity.pluginString(R.string.git_diff_content)
+                        .uppercase(LanguageHelper.detectIdeLocale(activity)),
                     10f, CodeAssistTheme.TEXT_MUTED, true
                 ).apply {
                     setPadding(0, CodeAssistTheme.dp(activity, 10), 0, CodeAssistTheme.dp(activity, 4))

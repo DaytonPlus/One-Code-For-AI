@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">Chiudi</string>
+    <string name="cancel">Annulla</string>
+    <string name="accept">OK</string>
+    <string name="save">Salva</string>
+    <string name="delete">Elimina</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">GENERATORE DI CONTESTO  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Profilo di esportazione</string>
+    <string name="save_preset">Salva profilo</string>
+    <string name="delete_preset">Elimina profilo</string>
+    <string name="delete_preset_message">Eliminare il profilo «%1$s»? Questa azione non può essere annullata.</string>
+    <string name="custom_preset">Personalizzato</string>
+    <string name="preset_name_hint">Nome del profilo</string>
+    <string name="preset_name_reserved">Questo nome è riservato a un profilo integrato.</string>
+    <string name="preset_name_duplicate">Esiste già un profilo chiamato «%1$s».</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Filtri di base</string>
+    <string name="exclude_binaries">Escludi file binari</string>
+    <string name="respect_gitignore">Rispetta le regole di .gitignore</string>
+    <string name="max_size">Dimensione massima</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Inclusioni</string>
+    <string name="section_exclusions">Esclusioni</string>
+    <string name="section_gitignore_rules">Regole rilevate in .gitignore</string>
+    <string name="no_inclusions">Nessuna estensione aggiuntiva</string>
+    <string name="no_exclusions">Nessuna esclusione personalizzata</string>
+    <string name="no_gitignore_rules">Nessuna regola trovata in .gitignore</string>
+    <string name="add_inclusion_title">Aggiungi inclusione</string>
+    <string name="add_exclusion_title">Aggiungi esclusione</string>
+    <string name="edit_extension">Modifica estensione</string>
+    <string name="delete_rule">Elimina regola</string>
+    <string name="extension_hint">Es.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Aggiungi</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Controllo di versione</string>
+    <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">nessun branch</string>
+    <string name="no_commit">nessun commit</string>
+    <string name="read_from_git">Leggi da un riferimento Git</string>
+    <string name="git_refresh">Aggiorna info Git</string>
+    <string name="git_uncommitted_changes">Avviso: %1$d modifiche non confermate</string>
+    <string name="git_ref_hint">Es.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Sfoglia riferimenti</string>
+    <string name="git_preview_diff">Anteprima diff con l\'albero di lavoro</string>
+    <string name="git_resolving">Risoluzione…</string>
+    <string name="git_resolved_as">Risolto: %1$s</string>
+    <string name="git_ref_invalid">Riferimento Git non valido</string>
+    <string name="git_ref_empty">Inserisci o seleziona un riferimento Git</string>
+    <string name="git_not_repo">Questa cartella non è un repository Git</string>
+    <string name="git_open_parent_root">Vai alla radice del progetto: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Seleziona un riferimento Git</string>
+    <string name="git_tab_branches">Branch</string>
+    <string name="git_tab_tags">Tag</string>
+    <string name="git_tab_commits">Commit</string>
+    <string name="git_local_branches">Branch locali</string>
+    <string name="git_remote_branches">Branch remoti</string>
+    <string name="git_no_branches">Nessun branch trovato</string>
+    <string name="git_no_tags">Nessun tag trovato</string>
+    <string name="git_no_commits">Nessun commit trovato</string>
+    <string name="git_current_marker">attuale</string>
+    <string name="git_remote_marker">remoto</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s vs albero di lavoro</string>
+    <string name="git_diff_stats">%1$d file  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Nessuna modifica rilevata</string>
+    <string name="git_diff_content">Contenuto del diff</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Albero dei file</string>
+    <string name="show_tree">Mostra albero dei file</string>
+    <string name="action_expand">Espandi</string>
+    <string name="action_collapse">Comprimi</string>
+    <string name="action_reload">Ricarica</string>
+    <string name="analyzing">Analisi in corso…</string>
+    <string name="analyzing_files">Analisi… %1$d file</string>
+    <string name="canceled_retry">Annullato. Tocca un filtro per riprovare.</string>
+    <string name="tree_scan_error">Impossibile analizzare l\'albero del progetto: %1$s</string>
+    <string name="no_tree_matches">Nessun file corrisponde ai filtri</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Genera contesto</string>
+    <string name="generate_description">Verrà generato un singolo file .txt e salvato in Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Generazione del contesto…</string>
+    <string name="preparing_export">Preparazione…</string>
+    <string name="processing_progress">Elaborazione: %1$d/%2$d file</string>
+    <string name="generation_complete">Generazione completata</string>
+    <string name="generation_failed">Generazione non riuscita</string>
+    <string name="generation_minimize_hint">Puoi ridurre a icona questa finestra di dialogo. La generazione continua in background.</string>
+    <string name="saved_to_downloads">Salvato in Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Un\'esportazione è già in corso.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Salva</string>
+    <string name="action_share">Condividi</string>
+    <string name="action_regenerate">Rigenera</string>
+    <string name="action_edit_settings">Modifica impostazioni</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d file</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s token</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Genera contesto TXT (Condividi/Esporta)</string>
+    <string name="dialog_already_open">La finestra di configurazione è già aperta.</string>
+    <string name="no_folder_selected">Nessuna cartella selezionata.</string>
+    <string name="select_valid_folder">Seleziona una cartella valida.</string>
+    <string name="error_opening_dialog">Errore: impossibile aprire la finestra.</string>
+    <string name="opening_config">Apertura della configurazione…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Scrittura del file non riuscita.</string>
+    <string name="error_source_uri_unreadable">Impossibile aprire il file di origine.</string>
+    <string name="error_output_stream_unavailable">La destinazione non ha fornito un flusso di output.</string>
+    <string name="error_media_store_finalize">Impossibile finalizzare il file di destinazione.</string>
+    <string name="error_downloads_dir_create">Impossibile creare la cartella Download: %1$s</string>
+    <string name="error_project_root_not_dir">La radice del progetto non è una cartella: %1$s</string>
+    <string name="error_git_repo_unreadable">La cartella selezionata non è un repository Git leggibile.</string>
+    <string name="error_git_ref_unresolved">Impossibile risolvere il riferimento Git «%1$s».</string>
+    <string name="error_git_export_no_ref">L\'esportazione Git è abilitata ma non è stato selezionato alcun riferimento.</string>
+    <string name="unknown_error">Errore sconosciuto</string>
+    <string name="error_storage_permission">Autorizzazione di archiviazione richiesta. Concedila in Impostazioni > App > One Code For AI > Autorizzazioni.</string>
+    <string name="error_source_file_missing">Il file generato non è più disponibile. Rigenera il contesto.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Contesto pronto - %1$d errore di lettura</item>
+        <item quantity="other">Contesto pronto - %1$d errori di lettura</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Condividi dump con:</string>
+    <string name="share_error">Errore durante la condivisione: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Contesto pronto</string>
+    <string name="error_notification_title">Errore One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Errore</string>
+    <string name="notification_channel_actions">Risultati One Code</string>
+    <string name="generating_dump">Generazione del dump del codice…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Integrazione Git</string>
+    <string name="settings_git_global_desc">Rileva i repository e abilita tutte le funzionalità Git. Disabilita per forzare la modalità cartella semplice anche all\'interno di un repository. Le regole di .gitignore si applicano comunque.</string>
+    <string name="settings_animations">Animazioni</string>
+    <string name="settings_animations_desc">Transizioni di dissolvenza e ridimensionamento nella finestra di dialogo, nell\'albero e nel selettore dei profili. Disabilita sui dispositivi di fascia bassa.</string>
+    <string name="settings_notifications">Notifiche di generazione</string>
+    <string name="settings_notifications_desc">Notifiche di avanzamento, completamento ed errore durante l\'esportazione. Disabilita per silenziare la barra delle notifiche.</string>
+    <string name="settings_force_english">Forza interfaccia in inglese</string>
+    <string name="settings_force_english_desc">Forza l\'interfaccia del plugin a usare l\'inglese indipendentemente dalla lingua dell\'IDE. Le finestre di dialogo e le schermate appena aperte usano l\'inglese; le finestre già aperte mantengono la lingua corrente fino alla riapertura.</string>
+    <string name="settings_total_export_limit">Limite totale di esportazione (KB)</string>
+    <string name="settings_total_export_limit_desc">Limite massimo, in kilobyte, sulla dimensione totale di un singolo dump. Una volta raggiunto, l\'esportazione smette di includere file e aggiunge un avviso di troncamento. Particolarmente utile quando il limite per file è disabilitato. Imposta a 0 per nessun limite.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git è disabilitato globalmente nelle impostazioni di CodeAssist. Abilitalo lì per usare branch, tag e commit.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">Plugin per CodeAssist</string>
+    <string name="open_codeassist">Apri CodeAssist</string>
+    <string name="footer_made_with">Fatto con ❤️ per la community</string>
+    <string name="creator_dev">Sviluppatore indipendente</string>
+    <string name="codeassist_not_installed">CodeAssist non è installato</string>
+    <string name="codeassist_open_error">Impossibile aprire CodeAssist</string>
+    <string name="no_app_for_link">Nessuna app disponibile per aprire i link</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">NOVITÀ</string>
+    <string name="whats_new_version">Versione %1$s</string>
+    <string name="whats_new_item_1">Aggiunta una pagina di impostazioni nativa per attivare/disattivare globalmente Git, animazioni e notifiche.</string>
+    <string name="whats_new_item_2">Introdotto un interruttore globale Git con ricerca intelligente di .gitignore nelle cartelle padre.</string>
+    <string name="whats_new_item_3">Profili ridisegnati con configurazioni professionali per Android ed esclusioni intelligenti.</string>
+    <string name="whats_new_item_4">Aggiunto il supporto completo ai pattern glob (*.log, build/, **/generated/**) e il filtraggio delle directory.</string>
+    <string name="whats_new_item_5">Aggiunte finestre di aiuto contestuale, logging nativo dell\'IDE e corretti bug di reflection.</string>
+    <string name="whats_new_item_6">Aggiunto l\'interruttore «Forza interfaccia in inglese» per ignorare la lingua dell\'IDE quando si seguono tutorial o documentazione in inglese.</string>
+    <string name="whats_new_item_7">Aggiunto un limite totale di esportazione per prevenire dump di diversi GB quando il limite per file è disabilitato.</string>
+    <string name="whats_new_item_8">Aggiunta l\'aiuto contestuale per l\'esclusione dei file binari e l\'albero del progetto; tutte le icone di aiuto ora usano una dimensione visiva più piccola con un\'area di tocco più grande.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Guida all\'installazione</string>
+    <string name="guide_header_subtitle">Segui questi passaggi per abilitare One Code For AI nel tuo IDE.</string>
+    <string name="guide_step1_title">Scarica l\'APK</string>
+    <string name="guide_step1_desc">Ottieni l\'ultimo .apk dal repository ufficiale o dal canale di distribuzione.</string>
+    <string name="guide_step2_title">Installa l\'app</string>
+    <string name="guide_step2_desc">Apri l\'APK sul tuo dispositivo e accetta l\'installazione da origini sconosciute se richiesto.</string>
+    <string name="guide_step3_title">Apri CodeAssist</string>
+    <string name="guide_step3_desc">Una volta installato, avvia l\'app CodeAssist sul tuo dispositivo.</string>
+    <string name="guide_step4_title">Abilita il plugin</string>
+    <string name="guide_step4_desc">Vai su Impostazioni > Plugin > Installati e abilita One Code For AI. Verrà caricato automaticamente.</string>
+    <string name="guide_step5_title">Riavvia l\'IDE</string>
+    <string name="guide_step5_desc">Chiudi e riapri CodeAssist per assicurarti che tutti i componenti si carichino correttamente.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Integrazione con CodeAssist</string>
+    <string name="step_1_title">Apri un progetto</string>
+    <string name="step_1_desc">Tocca l\'albero dei file del progetto in CodeAssist</string>
+    <string name="step_2_title">Tieni premuta una cartella</string>
+    <string name="step_2_desc">Si aprirà il menu contestuale delle opzioni</string>
+    <string name="step_3_title">Scegli One Code For AI</string>
+    <string name="step_3_desc">Apparirà l\'opzione per generare il dump</string>
+    <string name="step_4_title">Esporta o condividi</string>
+    <string name="step_4_desc">Salva il .txt in Download o invialo alla tua AI</string>
+
+    <!-- > Features -->
+    <string name="features_title">Funzionalità</string>
+    <string name="feature_1">Filtri glob avanzati: usa pattern come *.log, build/ o **/generated/**</string>
+    <string name="feature_2">Integrazione Git: esporta da branch, tag, commit o visualizza l\'anteprima dei diff</string>
+    <string name="feature_3">Profili professionali: Android (Kotlin, Sorgenti, Risorse), Web, Python, Testo</string>
+    <string name="feature_4">Aiuto contestuale: finestre inline spiegano filtri, pattern e priorità di .gitignore</string>
+    <string name="feature_5">Interruttore globale Git: disabilita completamente Git mantenendo il fallback di .gitignore</string>
+    <string name="feature_6">Esclusioni nell\'albero del progetto: seleziona/deseleziona manualmente file e cartelle prima dell\'esportazione</string>
+    <string name="feature_7">Avanzamento preciso in byte: monitora l\'esportazione in tempo reale con elaborazione in background</string>
+    <string name="feature_8">Logging nativo dell\'IDE: il debug viene indirizzato alla console di CodeAssist con suddivisione automatica in blocchi</string>
+    <string name="feature_9">Pagina di impostazioni globali: interruttori nativi per Git, animazioni e notifiche</string>
+    <string name="feature_10">100% offline e privato: nessuna telemetria, nessun permesso Internet, completamente locale</string>
+
+    <!-- > Links -->
+    <string name="links_title">Link</string>
+    <string name="link_repository">Repository GitHub</string>
+    <string name="link_report_bug">Segnala un problema</string>
+    <string name="link_license">Licenza MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Informazioni tecniche</string>
+    <string name="tech_info_version">Versione</string>
+    <string name="tech_info_package">Pacchetto</string>
+    <string name="tech_info_min_sdk">SDK minimo</string>
+    <string name="tech_info_target_sdk">SDK target</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Linguaggio</string>
+    <string name="tech_info_status">Stato</string>
+    <string name="tech_info_status_stable">Stabile</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">AIUTO E FAQ</string>
+    <string name="help_header_subtitle">Trova risposte ai problemi più comuni e scopri come ottenere il massimo dal plugin.</string>
+
+    <string name="help_q1">Come posso disabilitare completamente la funzionalità Git?</string>
+    <string name="help_a1">Vai nelle impostazioni di CodeAssist, poi in Plugin, e apri le impostazioni di One Code For AI. Lì troverai l\'interruttore «Integrazione Git». Se disabilitato, il plugin tratta la tua cartella come semplici file.</string>
+
+    <string name="help_q2">Perché .gitignore funziona ancora quando Git è disabilitato?</string>
+    <string name="help_a2">Se Git è disabilitato, il plugin cerca automaticamente un file .gitignore nella cartella selezionata e nelle sue cartelle padre (fino a 5 livelli). Questo garantisce che le tue regole di filtraggio rimangano intatte.</string>
+
+    <string name="help_q3">Cosa significano le regole .gitignore in ambra?</string>
+    <string name="help_a3">Una regola viene evidenziata in ambra quando uno dei tuoi filtri manuali di inclusione o esclusione la sta attivamente sovrascrivendo. Le inclusioni e le esclusioni hanno sempre priorità su .gitignore.</string>
+
+    <string name="help_q4">Come posso usare i pattern glob nei filtri?</string>
+    <string name="help_a4">Usa la sintassi glob standard: *.log (qualsiasi file di log), build/ (cartella specifica), **/generated/** (qualsiasi cartella generata annidata). Tocca l\'icona «?» accanto alle sezioni dei filtri per una guida rapida.</string>
+
+    <string name="help_q5">Cosa fanno i nuovi profili Android?</string>
+    <string name="help_a5">Android (Kotlin) esporta tutto. Android (source only) rimuove test e documentazione. Android (Resources) esporta solo XML (layout/temi). Escludono automaticamente i file generati come R.java.</string>
+
+    <string name="help_q6">Dove sono le impostazioni per animazioni e notifiche?</string>
+    <string name="help_a6">Si trovano nelle impostazioni native di CodeAssist per questo plugin. Disabilitare le animazioni migliora le prestazioni sui dispositivi di fascia bassa. Disabilitare le notifiche silenzia gli avvisi di avanzamento e completamento.</string>
+
+    <string name="help_q7">Come posso escludere facilmente un\'intera cartella?</string>
+    <string name="help_a7">Apri l\'anteprima dell\'albero dei file nella finestra di configurazione. Deseleziona la cartella che desideri escludere. Questo è più veloce e sicuro che scrivere regole di esclusione complesse.</string>
+
+    <string name="help_q8">Posso annullare un\'esportazione mentre è in esecuzione?</string>
+    <string name="help_a8">Sì. Puoi toccare «Annulla» nella finestra di dialogo, oppure chiuderla semplicemente. L\'esportazione viene eseguita in modo sicuro in background e puoi tornare a controllarne l\'avanzamento in qualsiasi momento.</string>
+
+    <string name="help_q9">Il mio codice viene caricato su un server?</string>
+    <string name="help_a9">Assolutamente no. Il plugin non richiede il permesso Internet. Tutta la scansione, il filtraggio e la generazione avvengono al 100% localmente sul tuo dispositivo.</string>
+
+    <string name="help_q10">Dove vengono salvati i file generati?</string>
+    <string name="help_a10">I file esportati vengono salvati nella memoria pubblica del tuo dispositivo in Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Aiuto della sezione</string>
+    <string name="help_inclusions_title">Inclusioni</string>
+    <string name="help_inclusions_body">Whitelist di estensioni e pattern glob, valutata prima di .gitignore.\n\nSintassi supportata (identica ai pattern di .gitignore):\n- Estensioni: kt, json, xml\n- Caratteri jolly: *.log, **/*.kt, src/*.kt\n- Directory: build/, **/generated/**\n\nQualsiasi file che corrisponde a un\'inclusione viene esportato anche se .gitignore o le esclusioni lo salterebbero.\n\nLe inclusioni hanno priorità sulle esclusioni e su .gitignore. Usale per forzare l\'inclusione di file o estensioni specifiche.</string>
+
+    <string name="help_exclusions_title">Esclusioni</string>
+    <string name="help_exclusions_body">Blacklist di estensioni e pattern glob.\n\nSintassi supportata (identica ai pattern di .gitignore):\n- Estensioni: log, tmp, pyc\n- Caratteri jolly: *.log, **/*.test.kt, src/*.bak\n- Directory: build/, **/generated/**\n\nQualsiasi file che corrisponde a un\'esclusione viene saltato, anche se .gitignore lo includerebbe. Le inclusioni hanno priorità sulle esclusioni.\n\nPer escludere una cartella specifica senza scrivere un pattern, usa l\'albero dei file qui sotto.</string>
+
+    <string name="help_gitignore_title">Regole .gitignore</string>
+    <string name="help_gitignore_body">Regole rilevate nel file .gitignore del progetto.\n\nQuesto elenco è di sola lettura - modifica direttamente .gitignore per cambiarlo.\n\nLe inclusioni e le esclusioni hanno priorità su queste regole: aggiungere un\'inclusione o un\'esclusione corrispondente forza il file dentro o fuori indipendentemente da .gitignore. Le regole sovrascritte sono evidenziate in ambra. Le regole negate (che iniziano con \'!\') sono mostrate con uno sfondo distinto per poterle distinguere dalle regole positive.</string>
+
+    <string name="help_binaries_title">Esclusione dei file binari</string>
+    <string name="help_binaries_body">I file binari vengono rilevati tramite un elenco fisso di estensioni binarie note (immagini, video, audio, archivi, binari compilati, font, database). I file con queste estensioni vengono saltati in modo che il dump rimanga concentrato sul codice sorgente leggibile.\n\nIl rilevamento è basato solo sull\'estensione. Per saltare un formato binario poco comune, aggiungi la sua estensione alle Esclusioni. Per forzarne l\'inclusione, aggiungila alle Inclusioni.\n\nDisabilitare questo interruttore include le estensioni elencate nell\'esportazione, cosa raramente utile per il contesto AI.</string>
+
+    <string name="help_tree_title">Anteprima dell\'albero del progetto</string>
+    <string name="help_tree_body">Mostra l\'albero del progetto con ogni voce che corrisponde ai filtri correnti. Deseleziona qualsiasi file o cartella per escluderlo dall\'esportazione senza scrivere una regola di esclusione.\n\nEscludere una cartella esclude automaticamente i suoi figli. Reincludere un singolo figlio all\'interno di una cartella esclusa ripristina solo quella voce, rispecchiando il comportamento della negazione di .gitignore.\n\nUsa la casella di controllo nell\'intestazione per includere o escludere l\'intero progetto con un tocco. L\'albero è un\'anteprima: non rigenera i file, riflette solo lo stato di inclusione corrente.</string>
+
+    <string name="help_max_size_title">Limite di dimensione per file</string>
+    <string name="help_max_size_body">Se abilitato, i file più grandi della dimensione selezionata vengono saltati. Questo protegge il dump da un singolo file enorme (ad es. una risorsa incorporata o un SQL generato) che dominerebbe l\'output.\n\nSe disabilitato, ogni file di testo viene incluso indipendentemente dalla dimensione, il che può produrre dump molto grandi. Combinalo con il limite totale di esportazione nelle Impostazioni per mantenere le esportazioni limitate.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

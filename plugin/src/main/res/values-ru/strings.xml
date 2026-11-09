@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">Закрыть</string>
+    <string name="cancel">Отмена</string>
+    <string name="accept">ОК</string>
+    <string name="save">Сохранить</string>
+    <string name="delete">Удалить</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">ГЕНЕРАТОР КОНТЕКСТА  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Профиль экспорта</string>
+    <string name="save_preset">Сохранить профиль</string>
+    <string name="delete_preset">Удалить профиль</string>
+    <string name="delete_preset_message">Удалить профиль "%1$s"? Это действие нельзя отменить.</string>
+    <string name="custom_preset">Пользовательский</string>
+    <string name="preset_name_hint">Имя профиля</string>
+    <string name="preset_name_reserved">Это имя зарезервировано для встроенного профиля.</string>
+    <string name="preset_name_duplicate">Профиль с именем "%1$s" уже существует.</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Базовые фильтры</string>
+    <string name="exclude_binaries">Исключать бинарные файлы</string>
+    <string name="respect_gitignore">Соблюдать правила .gitignore</string>
+    <string name="max_size">Максимальный размер</string>
+    <string name="kb_suffix"> КБ</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Включения</string>
+    <string name="section_exclusions">Исключения</string>
+    <string name="section_gitignore_rules">Правила, найденные в .gitignore</string>
+    <string name="no_inclusions">Дополнительных расширений нет</string>
+    <string name="no_exclusions">Пользовательских исключений нет</string>
+    <string name="no_gitignore_rules">В .gitignore не найдено правил</string>
+    <string name="add_inclusion_title">Добавить включение</string>
+    <string name="add_exclusion_title">Добавить исключение</string>
+    <string name="edit_extension">Изменить расширение</string>
+    <string name="delete_rule">Удалить правило</string>
+    <string name="extension_hint">Например: kt, json, *.test.kt</string>
+    <string name="action_add">+ Добавить</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Контроль версий</string>
+    <string name="git_info">Ветка: %1$s  |  Коммит: %2$s</string>
+    <string name="no_branch">нет ветки</string>
+    <string name="no_commit">нет коммита</string>
+    <string name="read_from_git">Читать из ссылки Git</string>
+    <string name="git_refresh">Обновить данные Git</string>
+    <string name="git_uncommitted_changes">Предупреждение: %1$d незакоммиченных изменений</string>
+    <string name="git_ref_hint">Например: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Обзор ссылок</string>
+    <string name="git_preview_diff">Предпросмотр diff с рабочей копией</string>
+    <string name="git_resolving">Разрешение…</string>
+    <string name="git_resolved_as">Разрешено: %1$s</string>
+    <string name="git_ref_invalid">Недопустимая ссылка Git</string>
+    <string name="git_ref_empty">Введите или выберите ссылку Git</string>
+    <string name="git_not_repo">Эта папка не является репозиторием Git</string>
+    <string name="git_open_parent_root">Перейти к корню проекта: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Выбор ссылки Git</string>
+    <string name="git_tab_branches">Ветки</string>
+    <string name="git_tab_tags">Теги</string>
+    <string name="git_tab_commits">Коммиты</string>
+    <string name="git_local_branches">Локальные ветки</string>
+    <string name="git_remote_branches">Удалённые ветки</string>
+    <string name="git_no_branches">Ветки не найдены</string>
+    <string name="git_no_tags">Теги не найдены</string>
+    <string name="git_no_commits">Коммиты не найдены</string>
+    <string name="git_current_marker">текущая</string>
+    <string name="git_remote_marker">удалённая</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s и рабочая копия</string>
+    <string name="git_diff_stats">%1$d файлов  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Изменений не обнаружено</string>
+    <string name="git_diff_content">Содержимое diff</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Дерево файлов</string>
+    <string name="show_tree">Показать дерево файлов</string>
+    <string name="action_expand">Развернуть</string>
+    <string name="action_collapse">Свернуть</string>
+    <string name="action_reload">Перезагрузить</string>
+    <string name="analyzing">Анализ…</string>
+    <string name="analyzing_files">Анализ… %1$d файлов</string>
+    <string name="canceled_retry">Отменено. Коснитесь фильтра для повтора.</string>
+    <string name="tree_scan_error">Не удалось просканировать дерево: %1$s</string>
+    <string name="no_tree_matches">Нет файлов, соответствующих фильтрам</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Сгенерировать контекст</string>
+    <string name="generate_description">Будет сгенерирован один файл .txt и сохранён в Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Генерация контекста…</string>
+    <string name="preparing_export">Подготовка…</string>
+    <string name="processing_progress">Обработка: %1$d/%2$d файлов</string>
+    <string name="generation_complete">Генерация завершена</string>
+    <string name="generation_failed">Ошибка генерации</string>
+    <string name="generation_minimize_hint">Вы можете свернуть это окно. Генерация продолжится в фоне.</string>
+    <string name="saved_to_downloads">Сохранено в Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Экспорт уже выполняется.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Сохранить</string>
+    <string name="action_share">Поделиться</string>
+    <string name="action_regenerate">Перегенерировать</string>
+    <string name="action_edit_settings">Изменить настройки</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d файл</item>
+        <item quantity="few">%1$d файла</item>
+        <item quantity="many">%1$d файлов</item>
+        <item quantity="other">%1$d файла</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s токенов</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Сгенерировать контекст TXT (Поделиться/Экспорт)</string>
+    <string name="dialog_already_open">Окно конфигурации уже открыто.</string>
+    <string name="no_folder_selected">Папка не выбрана.</string>
+    <string name="select_valid_folder">Выберите допустимую папку.</string>
+    <string name="error_opening_dialog">Ошибка: не удалось открыть окно.</string>
+    <string name="opening_config">Открытие конфигурации…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Ошибка записи файла.</string>
+    <string name="error_source_uri_unreadable">Не удалось открыть исходный файл.</string>
+    <string name="error_output_stream_unavailable">Назначение не предоставило поток вывода.</string>
+    <string name="error_media_store_finalize">Не удалось завершить целевой файл.</string>
+    <string name="error_downloads_dir_create">Не удалось создать папку Download: %1$s</string>
+    <string name="error_project_root_not_dir">Корень проекта не является папкой: %1$s</string>
+    <string name="error_git_repo_unreadable">Выбранная папка не является читаемым репозиторием Git.</string>
+    <string name="error_git_ref_unresolved">Не удалось разрешить ссылку Git "%1$s".</string>
+    <string name="error_git_export_no_ref">Экспорт Git включён, но ссылка не выбрана.</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
+    <string name="error_storage_permission">Требуется разрешение на доступ к хранилищу. Предоставьте его в Настройки > Приложения > One Code For AI > Разрешения.</string>
+    <string name="error_source_file_missing">Сгенерированный файл больше недоступен. Сгенерируйте контекст снова.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Контекст готов - %1$d ошибка чтения</item>
+        <item quantity="few">Контекст готов - %1$d ошибки чтения</item>
+        <item quantity="many">Контекст готов - %1$d ошибок чтения</item>
+        <item quantity="other">Контекст готов - %1$d ошибки чтения</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Поделиться дампом с:</string>
+    <string name="share_error">Ошибка при отправке: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Контекст готов</string>
+    <string name="error_notification_title">Ошибка One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Ошибка</string>
+    <string name="notification_channel_actions">Результаты One Code</string>
+    <string name="generating_dump">Генерация дампа кода…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Интеграция с Git</string>
+    <string name="settings_git_global_desc">Обнаруживает репозитории и включает все функции Git. Отключите, чтобы использовать режим обычной папки даже внутри репозитория. Правила .gitignore по-прежнему применяются.</string>
+    <string name="settings_animations">Анимации</string>
+    <string name="settings_animations_desc">Переходы затухания и масштабирования в диалоге, дереве и выборе профиля. Отключите на слабых устройствах.</string>
+    <string name="settings_notifications">Уведомления о генерации</string>
+    <string name="settings_notifications_desc">Уведомления о ходе, завершении и ошибках при экспорте. Отключите, чтобы не беспокоить панель уведомлений.</string>
+    <string name="settings_force_english">Принудительный английский интерфейс</string>
+    <string name="settings_force_english_desc">Принудительно использовать английский интерфейс плагина независимо от языка IDE. Вновь открытые диалоги и экраны используют английский; уже открытые окна сохраняют текущий язык до повторного открытия.</string>
+    <string name="settings_total_export_limit">Общий лимит размера экспорта (КБ)</string>
+    <string name="settings_total_export_limit_desc">Жёсткий лимит (в килобайтах) на общий размер одного дампа. При достижении экспорт перестаёт включать файлы и добавляет уведомление об усечении. Полезно, когда лимит на файл отключён. Установите 0, чтобы не ограничивать.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git отключён глобально в настройках CodeAssist. Включите его там, чтобы использовать ветки, теги и коммиты.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">ИНФО</string>
+    <string name="info_subtitle">Плагин для CodeAssist</string>
+    <string name="open_codeassist">Открыть CodeAssist</string>
+    <string name="footer_made_with">Сделано с ❤️ для сообщества</string>
+    <string name="creator_dev">Независимый разработчик</string>
+    <string name="codeassist_not_installed">CodeAssist не установлен</string>
+    <string name="codeassist_open_error">Не удалось открыть CodeAssist</string>
+    <string name="no_app_for_link">Нет приложения для открытия ссылок</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">ЧТО НОВОГО</string>
+    <string name="whats_new_version">Версия %1$s</string>
+    <string name="whats_new_item_1">Добавлена страница настроек для глобального переключения Git, анимаций и уведомлений.</string>
+    <string name="whats_new_item_2">Введён общий выключатель Git с умным поиском .gitignore в родительских папках.</string>
+    <string name="whats_new_item_3">Переработаны профили: профессиональные настройки для Android и умные исключения.</string>
+    <string name="whats_new_item_4">Добавлена полная поддержка glob-шаблонов (*.log, build/, **/generated/**) и фильтрации каталогов.</string>
+    <string name="whats_new_item_5">Добавлены контекстные справки, нативное логирование IDE и исправлены ошибки рефлексии.</string>
+    <string name="whats_new_item_6">Добавлен переключатель "Принудительный английский интерфейс" для работы с английскими руководствами.</string>
+    <string name="whats_new_item_7">Добавлен общий лимит размера экспорта, чтобы избежать многогигабайтных дампов при отключённом лимите на файл.</string>
+    <string name="whats_new_item_8">Добавлена контекстная справка по исключению бинарных файлов и дереву проекта; все значки справки теперь компактнее, но с большей областью касания.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Руководство по установке</string>
+    <string name="guide_header_subtitle">Выполните эти шаги, чтобы включить One Code For AI в вашей IDE.</string>
+    <string name="guide_step1_title">Скачайте APK</string>
+    <string name="guide_step1_desc">Получите последний .apk из официального репозитория или канала распространения.</string>
+    <string name="guide_step2_title">Установите приложение</string>
+    <string name="guide_step2_desc">Откройте APK на устройстве и примите установку из неизвестных источников, если появится запрос.</string>
+    <string name="guide_step3_title">Откройте CodeAssist</string>
+    <string name="guide_step3_desc">После установки запустите приложение CodeAssist на устройстве.</string>
+    <string name="guide_step4_title">Включите плагин</string>
+    <string name="guide_step4_desc">Перейдите в Настройки > Плагины > Установленные и включите One Code For AI. Он загрузится автоматически.</string>
+    <string name="guide_step5_title">Перезапустите IDE</string>
+    <string name="guide_step5_desc">Закройте и снова откройте CodeAssist, чтобы все компоненты загрузились правильно.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Интеграция с CodeAssist</string>
+    <string name="step_1_title">Откройте проект</string>
+    <string name="step_1_desc">Коснитесь дерева файлов проекта в CodeAssist</string>
+    <string name="step_2_title">Долгое нажатие на папку</string>
+    <string name="step_2_desc">Откроется контекстное меню</string>
+    <string name="step_3_title">Выберите One Code For AI</string>
+    <string name="step_3_desc">Появится опция генерации дампа</string>
+    <string name="step_4_title">Экспорт или отправка</string>
+    <string name="step_4_desc">Сохраните .txt в Download или отправьте в свой ИИ</string>
+
+    <!-- > Features -->
+    <string name="features_title">Возможности</string>
+    <string name="feature_1">Расширенные glob-фильтры: используйте шаблоны вроде *.log, build/ или **/generated/**</string>
+    <string name="feature_2">Интеграция с Git: экспорт из веток, тегов, коммитов или предпросмотр diff</string>
+    <string name="feature_3">Профессиональные профили: Android (Kotlin, исходники, ресурсы), Web, Python, текст</string>
+    <string name="feature_4">Контекстная справка: встроенные диалоги объясняют фильтры, шаблоны и приоритет .gitignore</string>
+    <string name="feature_5">Общий выключатель Git: полностью отключить Git, сохранив .gitignore</string>
+    <string name="feature_6">Исключения в дереве: вручную отмечайте файлы и папки перед экспортом</string>
+    <string name="feature_7">Точный прогресс в байтах: отслеживайте экспорт в реальном времени</string>
+    <string name="feature_8">Нативное логирование IDE: отладка выводится в консоль CodeAssist</string>
+    <string name="feature_9">Страница глобальных настроек: переключатели Git, анимаций и уведомлений</string>
+    <string name="feature_10">100% офлайн и приватно: без телеметрии, без разрешения интернета, полностью локально</string>
+
+    <!-- > Links -->
+    <string name="links_title">Ссылки</string>
+    <string name="link_repository">Репозиторий на GitHub</string>
+    <string name="link_report_bug">Сообщить о проблеме</string>
+    <string name="link_license">Лицензия MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Техническая информация</string>
+    <string name="tech_info_version">Версия</string>
+    <string name="tech_info_package">Пакет</string>
+    <string name="tech_info_min_sdk">Мин. SDK</string>
+    <string name="tech_info_target_sdk">Целевой SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Язык</string>
+    <string name="tech_info_status">Статус</string>
+    <string name="tech_info_status_stable">Стабильно</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">СПРАВКА И FAQ</string>
+    <string name="help_header_subtitle">Найдите ответы на частые вопросы и узнайте, как извлечь максимум из плагина.</string>
+
+    <string name="help_q1">Как полностью отключить Git?</string>
+    <string name="help_a1">Перейдите в настройки CodeAssist, затем в плагины и откройте настройки One Code For AI. Там вы найдёте переключатель "Интеграция с Git". Если он отключён, плагин работает с папкой как с обычными файлами.</string>
+
+    <string name="help_q2">Почему .gitignore всё ещё работает при отключённом Git?</string>
+    <string name="help_a2">Если Git отключён, плагин автоматически ищет .gitignore в выбранной папке и её родителях (до 5 уровней). Это гарантирует, что ваши правила фильтрации остаются в силе.</string>
+
+    <string name="help_q3">Что означают янтарные правила .gitignore?</string>
+    <string name="help_a3">Правило подсвечивается янтарным, когда ваше ручное включение или исключение активно его переопределяет. Включения и исключения всегда имеют приоритет над .gitignore.</string>
+
+    <string name="help_q4">Как использовать glob-шаблоны в фильтрах?</string>
+    <string name="help_a4">Используйте стандартный glob-синтаксис: *.log (любой лог), build/ (конкретная папка), **/generated/** (любая вложенная сгенерированная папка). Коснитесь значка "?" рядом с фильтрами для краткого руководства.</string>
+
+    <string name="help_q5">Что делают новые профили Android?</string>
+    <string name="help_a5">Android (Kotlin) экспортирует всё. Android (source only) убирает тесты и документацию. Android (Resources) экспортирует только XML (макеты/темы). Они автоматически исключают сгенерированные файлы вроде R.java.</string>
+
+    <string name="help_q6">Где настройки анимаций и уведомлений?</string>
+    <string name="help_a6">Они находятся в нативных настройках CodeAssist для этого плагина. Отключение анимаций помогает на слабых устройствах. Отключение уведомлений отключает оповещения о ходе и завершении.</string>
+
+    <string name="help_q7">Как легко исключить целую папку?</string>
+    <string name="help_a7">Откройте предпросмотр дерева в диалоге конфигурации. Снимите отметку с папки, которую хотите исключить. Это быстрее и безопаснее, чем писать сложные правила.</string>
+
+    <string name="help_q8">Можно ли отменить экспорт во время выполнения?</string>
+    <string name="help_a8">Да. Нажмите "Отмена" в диалоге или просто закройте его. Экспорт безопасно выполняется в фоне, и вы можете вернуться и проверить прогресс в любое время.</string>
+
+    <string name="help_q9">Мой код отправляется на сервер?</string>
+    <string name="help_a9">Разумеется, нет. Плагин не требует разрешения на интернет. Всё сканирование, фильтрация и генерация происходят на 100% локально на вашем устройстве.</string>
+
+    <string name="help_q10">Куда сохраняются сгенерированные файлы?</string>
+    <string name="help_a10">Экспортированные файлы сохраняются в публичное хранилище устройства в папку Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Справка по разделу</string>
+    <string name="help_inclusions_title">Включения</string>
+    <string name="help_inclusions_body">Белый список расширений и glob-шаблонов, проверяемый до .gitignore.\n\nПоддерживаемый синтаксис (как в .gitignore):\n- Расширения: kt, json, xml\n- Шаблоны: *.log, **/*.kt, src/*.kt\n- Каталоги: build/, **/generated/**\n\nЛюбой файл, соответствующий включению, экспортируется, даже если .gitignore или исключения его пропустили бы.\n\nВключения имеют приоритет над исключениями и .gitignore. Используйте их для принудительного включения конкретных файлов или расширений.</string>
+
+    <string name="help_exclusions_title">Исключения</string>
+    <string name="help_exclusions_body">Чёрный список расширений и glob-шаблонов.\n\nПоддерживаемый синтаксис (как в .gitignore):\n- Расширения: log, tmp, pyc\n- Шаблоны: *.log, **/*.test.kt, src/*.bak\n- Каталоги: build/, **/generated/**\n\nЛюбой файл, соответствующий исключению, пропускается, даже если .gitignore его включил бы. Включения имеют приоритет над исключениями.\n\nЧтобы исключить конкретную папку без написания шаблона, используйте дерево файлов ниже.</string>
+
+    <string name="help_gitignore_title">Правила .gitignore</string>
+    <string name="help_gitignore_body">Правила, найденные в файле .gitignore проекта.\n\nЭтот список только для чтения — редактируйте .gitignore напрямую, чтобы изменить его.\n\nВключения и исключения имеют приоритет над этими правилами: добавление соответствующего включения или исключения принудительно включает или исключает файл независимо от .gitignore. Переопределённые правила подсвечиваются янтарным. Отрицающие правила (начинающиеся с \'!\') отображаются с другим фоном, чтобы их можно было отличить от обычных правил.</string>
+
+    <string name="help_binaries_title">Исключение бинарных файлов</string>
+    <string name="help_binaries_body">Бинарные файлы определяются по фиксированному списку известных бинарных расширений (изображения, видео, аудио, архивы, скомпилированные бинарники, шрифты, базы данных). Файлы с этими расширениями пропускаются, чтобы дамп был сосредоточен на читаемом исходном коде.\n\nОбнаружение только по расширению. Чтобы пропустить необычный бинарный формат, добавьте его расширение в Исключения. Чтобы принудительно включить, добавьте в Включения.\n\nОтключение этого переключателя включает перечисленные расширения в экспорт, что редко бывает полезно для контекста ИИ.</string>
+
+    <string name="help_tree_title">Предпросмотр дерева проекта</string>
+    <string name="help_tree_body">Показывает дерево проекта со всеми элементами, соответствующими текущим фильтрам. Снимите отметку с любого файла или папки, чтобы исключить их из экспорта без написания правила исключения.\n\nИсключение папки автоматически исключает её содержимое. Повторное включение отдельного дочернего элемента внутри исключённой папки восстанавливает только этот элемент, отражая поведение отрицания в .gitignore.\n\nИспользуйте флажок в заголовке, чтобы включить или исключить весь проект одним касанием. Дерево — это предпросмотр: оно не перегенерирует файлы, а только отражает текущее состояние включения.</string>
+
+    <string name="help_max_size_title">Лимит размера файла</string>
+    <string name="help_max_size_body">Если включено, файлы больше выбранного размера пропускаются. Это защищает дамп от доминирования одного огромного файла (например, упакованного ресурса или сгенерированного SQL).\n\nЕсли отключено, включаются все текстовые файлы независимо от размера, что может привести к очень большим дампам. Комбинируйте с общим лимитом размера экспорта в настройках.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

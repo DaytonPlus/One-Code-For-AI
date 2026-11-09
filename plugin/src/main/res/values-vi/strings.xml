@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">Đóng</string>
+    <string name="cancel">Hủy</string>
+    <string name="accept">OK</string>
+    <string name="save">Lưu</string>
+    <string name="delete">Xóa</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">TRÌNH TẠO NGỮ CẢNH  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Hồ sơ xuất</string>
+    <string name="save_preset">Lưu hồ sơ</string>
+    <string name="delete_preset">Xóa hồ sơ</string>
+    <string name="delete_preset_message">Xóa hồ sơ \"%1$s\"? Không thể hoàn tác thao tác này.</string>
+    <string name="custom_preset">Tùy chỉnh</string>
+    <string name="preset_name_hint">Tên hồ sơ</string>
+    <string name="preset_name_reserved">Tên này được dành riêng cho hồ sơ tích hợp.</string>
+    <string name="preset_name_duplicate">Hồ sơ có tên \"%1$s\" đã tồn tại.</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Bộ lọc cơ bản</string>
+    <string name="exclude_binaries">Loại trừ tệp nhị phân</string>
+    <string name="respect_gitignore">Tuân thủ quy tắc .gitignore</string>
+    <string name="max_size">Kích thước tối đa</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Bao gồm</string>
+    <string name="section_exclusions">Loại trừ</string>
+    <string name="section_gitignore_rules">Quy tắc được phát hiện trong .gitignore</string>
+    <string name="no_inclusions">Không có tiện ích mở rộng bổ sung</string>
+    <string name="no_exclusions">Không có loại trừ tùy chỉnh</string>
+    <string name="no_gitignore_rules">Không tìm thấy quy tắc trong .gitignore</string>
+    <string name="add_inclusion_title">Thêm mục bao gồm</string>
+    <string name="add_exclusion_title">Thêm mục loại trừ</string>
+    <string name="edit_extension">Chỉnh sửa tiện ích mở rộng</string>
+    <string name="delete_rule">Xóa quy tắc</string>
+    <string name="extension_hint">Ví dụ: kt, json, *.test.kt</string>
+    <string name="action_add">+ Thêm</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Kiểm soát phiên bản</string>
+    <string name="git_info">Nhánh: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">không có nhánh</string>
+    <string name="no_commit">không có commit</string>
+    <string name="read_from_git">Đọc từ tham chiếu Git</string>
+    <string name="git_refresh">Làm mới thông tin Git</string>
+    <string name="git_uncommitted_changes">Cảnh báo: %1$d thay đổi chưa commit</string>
+    <string name="git_ref_hint">Ví dụ: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Duyệt tham chiếu</string>
+    <string name="git_preview_diff">Xem trước diff với cây làm việc</string>
+    <string name="git_resolving">Đang phân giải…</string>
+    <string name="git_resolved_as">Đã phân giải: %1$s</string>
+    <string name="git_ref_invalid">Tham chiếu Git không hợp lệ</string>
+    <string name="git_ref_empty">Nhập hoặc chọn tham chiếu Git</string>
+    <string name="git_not_repo">Thư mục này không phải là kho lưu trữ Git</string>
+    <string name="git_open_parent_root">Đi đến thư mục gốc dự án: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Chọn tham chiếu Git</string>
+    <string name="git_tab_branches">Nhánh</string>
+    <string name="git_tab_tags">Thẻ</string>
+    <string name="git_tab_commits">Commit</string>
+    <string name="git_local_branches">Nhánh cục bộ</string>
+    <string name="git_remote_branches">Nhánh từ xa</string>
+    <string name="git_no_branches">Không tìm thấy nhánh</string>
+    <string name="git_no_tags">Không tìm thấy thẻ</string>
+    <string name="git_no_commits">Không tìm thấy commit</string>
+    <string name="git_current_marker">hiện tại</string>
+    <string name="git_remote_marker">từ xa</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s so với cây làm việc</string>
+    <string name="git_diff_stats">%1$d tệp  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Không phát hiện thay đổi</string>
+    <string name="git_diff_content">Nội dung diff</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Cây tệp</string>
+    <string name="show_tree">Hiển thị cây tệp</string>
+    <string name="action_expand">Mở rộng</string>
+    <string name="action_collapse">Thu gọn</string>
+    <string name="action_reload">Tải lại</string>
+    <string name="analyzing">Đang phân tích…</string>
+    <string name="analyzing_files">Đang phân tích… %1$d tệp</string>
+    <string name="canceled_retry">Đã hủy. Chạm vào bộ lọc để thử lại.</string>
+    <string name="tree_scan_error">Không thể quét cây dự án: %1$s</string>
+    <string name="no_tree_matches">Không có tệp nào khớp với bộ lọc</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Tạo ngữ cảnh</string>
+    <string name="generate_description">Một tệp .txt duy nhất sẽ được tạo và lưu vào Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Đang tạo ngữ cảnh…</string>
+    <string name="preparing_export">Đang chuẩn bị…</string>
+    <string name="processing_progress">Đang xử lý: %1$d/%2$d tệp</string>
+    <string name="generation_complete">Tạo hoàn tất</string>
+    <string name="generation_failed">Tạo thất bại</string>
+    <string name="generation_minimize_hint">Bạn có thể thu nhỏ hộp thoại này. Quá trình tạo tiếp tục trong nền.</string>
+    <string name="saved_to_downloads">Đã lưu vào Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Đang có một quá trình xuất khác.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Lưu</string>
+    <string name="action_share">Chia sẻ</string>
+    <string name="action_regenerate">Tạo lại</string>
+    <string name="action_edit_settings">Chỉnh sửa cài đặt</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="other">%1$d tệp</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s token</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Tạo Ngữ cảnh TXT (Chia sẻ/Xuất)</string>
+    <string name="dialog_already_open">Cửa sổ cấu hình đã mở.</string>
+    <string name="no_folder_selected">Chưa chọn thư mục.</string>
+    <string name="select_valid_folder">Chọn thư mục hợp lệ.</string>
+    <string name="error_opening_dialog">Lỗi: không thể mở cửa sổ.</string>
+    <string name="opening_config">Đang mở cấu hình…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Ghi tệp thất bại.</string>
+    <string name="error_source_uri_unreadable">Không thể mở tệp nguồn.</string>
+    <string name="error_output_stream_unavailable">Đích không cung cấp luồng đầu ra.</string>
+    <string name="error_media_store_finalize">Không thể hoàn tất tệp đích.</string>
+    <string name="error_downloads_dir_create">Không thể tạo thư mục Download: %1$s</string>
+    <string name="error_project_root_not_dir">Thư mục gốc dự án không phải là thư mục: %1$s</string>
+    <string name="error_git_repo_unreadable">Thư mục đã chọn không phải là kho lưu trữ Git có thể đọc.</string>
+    <string name="error_git_ref_unresolved">Không thể phân giải tham chiếu Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">Xuất Git đã được bật nhưng chưa chọn tham chiếu nào.</string>
+    <string name="unknown_error">Lỗi không xác định</string>
+    <string name="error_storage_permission">Cần quyền truy cập bộ nhớ. Cấp quyền trong Cài đặt > Ứng dụng > One Code For AI > Quyền.</string>
+    <string name="error_source_file_missing">Tệp đã tạo không còn khả dụng. Tạo lại ngữ cảnh.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="other">Ngữ cảnh sẵn sàng - %1$d lỗi đọc</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Chia sẻ bản kết xuất với:</string>
+    <string name="share_error">Lỗi chia sẻ: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Ngữ cảnh sẵn sàng</string>
+    <string name="error_notification_title">Lỗi One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Lỗi</string>
+    <string name="notification_channel_actions">Kết quả One Code</string>
+    <string name="generating_dump">Đang tạo bản kết xuất mã…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Tích hợp Git</string>
+    <string name="settings_git_global_desc">Phát hiện kho lưu trữ và kích hoạt mọi tính năng Git. Vô hiệu hóa để buộc chế độ thư mục thuần túy ngay cả trong kho lưu trữ. Quy tắc .gitignore vẫn được áp dụng.</string>
+    <string name="settings_animations">Hoạt ảnh</string>
+    <string name="settings_animations_desc">Hiệu ứng mờ dần và thu phóng trong hộp thoại, cây và bộ chọn hồ sơ. Vô hiệu hóa trên thiết bị cấu hình thấp.</string>
+    <string name="settings_notifications">Thông báo tạo</string>
+    <string name="settings_notifications_desc">Thông báo tiến trình, hoàn tất và lỗi trong quá trình xuất. Vô hiệu hóa để tắt tiếng khay thông báo.</string>
+    <string name="settings_force_english">Buộc giao diện tiếng Anh</string>
+    <string name="settings_force_english_desc">Buộc giao diện plugin sử dụng tiếng Anh bất kể ngôn ngữ IDE. Hộp thoại và màn hình mới mở sẽ dùng tiếng Anh; cửa sổ đã mở giữ nguyên ngôn ngữ hiện tại cho đến khi mở lại.</string>
+    <string name="settings_total_export_limit">Giới hạn tổng kích thước xuất (KB)</string>
+    <string name="settings_total_export_limit_desc">Giới hạn cứng, tính bằng kilobyte, cho tổng kích thước của một bản kết xuất. Khi đạt đến, quá trình xuất ngừng đưa tệp vào và thêm thông báo cắt bớt. Hữu ích nhất khi giới hạn kích thước mỗi tệp bị vô hiệu hóa. Đặt thành 0 để không giới hạn.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git bị vô hiệu hóa toàn cục trong cài đặt CodeAssist. Kích hoạt tại đó để dùng nhánh, thẻ và commit.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">THÔNG TIN</string>
+    <string name="info_subtitle">Plugin cho CodeAssist</string>
+    <string name="open_codeassist">Mở CodeAssist</string>
+    <string name="footer_made_with">Được làm với ❤️ cho cộng đồng</string>
+    <string name="creator_dev">Nhà phát triển độc lập</string>
+    <string name="codeassist_not_installed">CodeAssist chưa được cài đặt</string>
+    <string name="codeassist_open_error">Không thể mở CodeAssist</string>
+    <string name="no_app_for_link">Không có ứng dụng để mở liên kết</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">TÍNH NĂNG MỚI</string>
+    <string name="whats_new_version">Phiên bản %1$s</string>
+    <string name="whats_new_item_1">Thêm trang Cài đặt gốc để bật/tắt Git, hoạt ảnh và thông báo trên toàn cục.</string>
+    <string name="whats_new_item_2">Giới thiệu công tắc chính Git với tìm kiếm .gitignore thông minh ở thư mục cha.</string>
+    <string name="whats_new_item_3">Thiết kế lại cài đặt sẵn với hồ sơ Android chuyên nghiệp và loại trừ thông minh.</string>
+    <string name="whats_new_item_4">Thêm hỗ trợ đầy đủ mẫu glob (*.log, build/, **/generated/**) và lọc thư mục.</string>
+    <string name="whats_new_item_5">Thêm hộp thoại trợ giúp theo ngữ cảnh, ghi nhật ký gốc IDE và sửa lỗi phản chiếu.</string>
+    <string name="whats_new_item_6">Thêm công tắc \"Buộc giao diện tiếng Anh\" để plugin có thể bỏ qua ngôn ngữ IDE khi theo dõi hướng dẫn hoặc tài liệu tiếng Anh.</string>
+    <string name="whats_new_item_7">Thêm giới hạn tổng kích thước xuất toàn cục để ngăn bản kết xuất nhiều GB khi giới hạn mỗi tệp bị vô hiệu hóa.</string>
+    <string name="whats_new_item_8">Thêm trợ giúp theo ngữ cảnh cho loại trừ nhị phân và cây dự án; tất cả biểu tượng trợ giúp giờ dùng kích thước hình ảnh nhỏ hơn với vùng chạm lớn hơn.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Hướng dẫn cài đặt</string>
+    <string name="guide_header_subtitle">Làm theo các bước sau để kích hoạt One Code For AI trong IDE của bạn.</string>
+    <string name="guide_step1_title">Tải xuống APK</string>
+    <string name="guide_step1_desc">Tải .apk mới nhất từ kho lưu trữ chính thức hoặc kênh phân phối.</string>
+    <string name="guide_step2_title">Cài đặt ứng dụng</string>
+    <string name="guide_step2_desc">Mở APK trên thiết bị của bạn và chấp nhận cài đặt từ nguồn không xác định nếu được nhắc.</string>
+    <string name="guide_step3_title">Mở CodeAssist</string>
+    <string name="guide_step3_desc">Sau khi cài đặt, khởi chạy ứng dụng CodeAssist trên thiết bị của bạn.</string>
+    <string name="guide_step4_title">Kích hoạt plugin</string>
+    <string name="guide_step4_desc">Đi tới Cài đặt > Plugin > Đã cài đặt và kích hoạt One Code For AI. Plugin sẽ tự động tải.</string>
+    <string name="guide_step5_title">Khởi động lại IDE</string>
+    <string name="guide_step5_desc">Đóng và mở lại CodeAssist để tất cả thành phần tải chính xác.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Tích hợp CodeAssist</string>
+    <string name="step_1_title">Mở dự án</string>
+    <string name="step_1_desc">Chạm vào cây tệp dự án trong CodeAssist</string>
+    <string name="step_2_title">Nhấn giữ một thư mục</string>
+    <string name="step_2_desc">Menu ngữ cảnh tùy chọn sẽ mở</string>
+    <string name="step_3_title">Chọn One Code For AI</string>
+    <string name="step_3_desc">Tùy chọn tạo bản kết xuất sẽ xuất hiện</string>
+    <string name="step_4_title">Xuất hoặc chia sẻ</string>
+    <string name="step_4_desc">Lưu .txt vào Download hoặc gửi đến AI của bạn</string>
+
+    <!-- > Features -->
+    <string name="features_title">Tính năng</string>
+    <string name="feature_1">Bộ lọc Glob nâng cao: Dùng mẫu như *.log, build/ hoặc **/generated/**</string>
+    <string name="feature_2">Tích hợp Git: Xuất từ nhánh, thẻ, commit hoặc xem trước diff</string>
+    <string name="feature_3">Cài đặt sẵn chuyên nghiệp: Android (Kotlin, Nguồn, Tài nguyên), Web, Python, Văn bản</string>
+    <string name="feature_4">Trợ giúp theo ngữ cảnh: Hộp thoại nội tuyến giải thích bộ lọc, mẫu và ưu tiên .gitignore</string>
+    <string name="feature_5">Công tắc chính Git: Vô hiệu hóa hoàn toàn Git trong khi giữ dự phòng .gitignore</string>
+    <string name="feature_6">Loại trừ cây dự án: Tự chọn/bỏ chọn tệp và thư mục trước khi xuất</string>
+    <string name="feature_7">Tiến trình chính xác đến byte: Theo dõi quá trình xuất trong thời gian thực với xử lý nền</string>
+    <string name="feature_8">Ghi nhật ký gốc IDE: Debug được định tuyến đến bảng điều khiển CodeAssist với chia đoạn tự động</string>
+    <string name="feature_9">Trang Cài đặt toàn cục: Công tắc gốc cho Git, hoạt ảnh và thông báo</string>
+    <string name="feature_10">100% Ngoại tuyến và Riêng tư: Không đo từ xa, không quyền Internet, hoàn toàn cục bộ</string>
+
+    <!-- > Links -->
+    <string name="links_title">Liên kết</string>
+    <string name="link_repository">Kho lưu trữ GitHub</string>
+    <string name="link_report_bug">Báo cáo sự cố</string>
+    <string name="link_license">Giấy phép MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Thông tin kỹ thuật</string>
+    <string name="tech_info_version">Phiên bản</string>
+    <string name="tech_info_package">Gói</string>
+    <string name="tech_info_min_sdk">SDK tối thiểu</string>
+    <string name="tech_info_target_sdk">SDK mục tiêu</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Ngôn ngữ</string>
+    <string name="tech_info_status">Trạng thái</string>
+    <string name="tech_info_status_stable">Ổn định</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">TRỢ GIÚP VÀ FAQ</string>
+    <string name="help_header_subtitle">Tìm câu trả lời cho các vấn đề phổ biến và tìm hiểu cách tận dụng tối đa plugin.</string>
+
+    <string name="help_q1">Làm thế nào để vô hiệu hóa hoàn toàn tính năng Git?</string>
+    <string name="help_a1">Đi tới Cài đặt CodeAssist, sau đó Plugin, và mở cài đặt One Code For AI. Ở đó bạn sẽ tìm thấy công tắc \"Tích hợp Git\". Khi bị vô hiệu hóa, plugin xử lý thư mục của bạn như các tệp thuần túy.</string>
+
+    <string name="help_q2">Tại sao .gitignore vẫn hoạt động khi Git bị vô hiệu hóa?</string>
+    <string name="help_a2">Nếu Git bị vô hiệu hóa, plugin tự động tìm kiếm tệp .gitignore trong thư mục đã chọn và các thư mục cha (tối đa 5 cấp). Điều này đảm bảo các quy tắc lọc của bạn vẫn nguyên vẹn.</string>
+
+    <string name="help_q3">Quy tắc .gitignore màu hổ phách có nghĩa là gì?</string>
+    <string name="help_a3">Một quy tắc được đánh dấu màu hổ phách khi một trong các bộ lọc bao gồm hoặc loại trừ thủ công của bạn đang chủ động ghi đè lên nó. Các mục bao gồm và loại trừ luôn có ưu tiên cao hơn .gitignore.</string>
+
+    <string name="help_q4">Làm thế nào để dùng mẫu glob trong bộ lọc?</string>
+    <string name="help_a4">Dùng cú pháp glob tiêu chuẩn: *.log (mọi tệp nhật ký), build/ (thư mục cụ thể), **/generated/** (mọi thư mục được tạo lồng nhau). Chạm vào biểu tượng \"?\" bên cạnh phần bộ lọc để xem hướng dẫn nhanh.</string>
+
+    <string name="help_q5">Cài đặt sẵn Android mới làm gì?</string>
+    <string name="help_a5">Android (Kotlin) xuất mọi thứ. Android (source only) loại bỏ kiểm thử và tài liệu. Android (Resources) chỉ xuất XML (bố cục/chủ đề). Chúng tự động loại trừ các tệp được tạo như R.java.</string>
+
+    <string name="help_q6">Cài đặt cho hoạt ảnh và thông báo ở đâu?</string>
+    <string name="help_a6">Chúng nằm trong cài đặt CodeAssist gốc cho plugin này. Vô hiệu hóa hoạt ảnh giúp cải thiện hiệu năng trên thiết bị cấu hình thấp. Vô hiệu hóa thông báo sẽ tắt tiếng cảnh báo tiến trình và hoàn tất.</string>
+
+    <string name="help_q7">Làm thế nào để loại trừ toàn bộ thư mục một cách dễ dàng?</string>
+    <string name="help_a7">Mở bản xem trước cây tệp trong hộp thoại cấu hình. Bỏ chọn thư mục bạn muốn loại trừ. Cách này nhanh hơn và an toàn hơn so với viết quy tắc loại trừ phức tạp.</string>
+
+    <string name="help_q8">Tôi có thể hủy quá trình xuất khi đang chạy không?</string>
+    <string name="help_a8">Có. Bạn có thể chạm vào \"Hủy\" trong hộp thoại hoặc chỉ cần đóng hộp thoại. Quá trình xuất chạy an toàn trong nền và bạn có thể quay lại kiểm tra tiến trình bất cứ lúc nào.</string>
+
+    <string name="help_q9">Mã của tôi có được tải lên máy chủ không?</string>
+    <string name="help_a9">Hoàn toàn không. Plugin không yêu cầu quyền Internet. Mọi quá trình quét, lọc và tạo đều diễn ra 100% cục bộ trên thiết bị của bạn.</string>
+
+    <string name="help_q10">Các tệp được tạo lưu ở đâu?</string>
+    <string name="help_a10">Các tệp được xuất được lưu trong bộ nhớ công khai của thiết bị tại Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Trợ giúp phần</string>
+    <string name="help_inclusions_title">Bao gồm</string>
+    <string name="help_inclusions_body">Danh sách trắng các tiện ích mở rộng và mẫu glob, được đánh giá trước .gitignore.\n\nCú pháp được hỗ trợ (giống mẫu .gitignore):\n- Tiện ích mở rộng: kt, json, xml\n- Ký tự đại diện: *.log, **/*.kt, src/*.kt\n- Thư mục: build/, **/generated/**\n\nBất kỳ tệp nào khớp với mục bao gồm sẽ được xuất ngay cả khi .gitignore hoặc các mục loại trừ sẽ bỏ qua nó.\n\nCác mục bao gồm có ưu tiên cao hơn các mục loại trừ và .gitignore. Dùng nó để buộc đưa vào các tệp hoặc tiện ích mở rộng cụ thể.</string>
+
+    <string name="help_exclusions_title">Loại trừ</string>
+    <string name="help_exclusions_body">Danh sách đen các tiện ích mở rộng và mẫu glob.\n\nCú pháp được hỗ trợ (giống mẫu .gitignore):\n- Tiện ích mở rộng: log, tmp, pyc\n- Ký tự đại diện: *.log, **/*.test.kt, src/*.bak\n- Thư mục: build/, **/generated/**\n\nBất kỳ tệp nào khớp với mục loại trừ sẽ bị bỏ qua, ngay cả khi .gitignore sẽ đưa nó vào. Các mục bao gồm có ưu tiên cao hơn các mục loại trừ.\n\nĐể loại trừ một thư mục cụ thể mà không viết mẫu, hãy dùng cây tệp bên dưới.</string>
+
+    <string name="help_gitignore_title">Quy tắc .gitignore</string>
+    <string name="help_gitignore_body">Quy tắc được phát hiện trong tệp .gitignore của dự án.\n\nDanh sách này chỉ đọc - chỉnh sửa trực tiếp .gitignore để thay đổi.\n\nCác mục bao gồm và loại trừ có ưu tiên cao hơn các quy tắc này: thêm một mục bao gồm hoặc loại trừ khớp sẽ buộc tệp vào hoặc ra bất kể .gitignore. Các quy tắc bị ghi đè được đánh dấu màu hổ phách. Các quy tắc phủ định (bắt đầu bằng \'!\') được hiển thị với nền khác biệt để có thể phân biệt với các quy tắc khẳng định.</string>
+
+    <string name="help_binaries_title">Loại trừ nhị phân</string>
+    <string name="help_binaries_body">Các tệp nhị phân được phát hiện bằng danh sách cố định các tiện ích mở rộng nhị phân đã biết (hình ảnh, video, âm thanh, kho lưu trữ, nhị phân đã biên dịch, phông chữ, cơ sở dữ liệu). Các tệp có các tiện ích mở rộng này bị bỏ qua để bản kết xuất tập trung vào mã nguồn có thể đọc.\n\nPhát hiện chỉ dựa trên tiện ích mở rộng. Để bỏ qua một định dạng nhị phân ít phổ biến, hãy thêm tiện ích mở rộng của nó vào Loại trừ. Để buộc đưa vào, hãy thêm vào Bao gồm.\n\nVô hiệu hóa công tắc này sẽ đưa các tiện ích mở rộng được liệt kê vào quá trình xuất, điều này hiếm khi hữu ích cho ngữ cảnh AI.</string>
+
+    <string name="help_tree_title">Xem trước cây dự án</string>
+    <string name="help_tree_body">Hiển thị cây dự án với mọi mục khớp với bộ lọc hiện tại. Bỏ chọn bất kỳ tệp hoặc thư mục nào để loại trừ nó khỏi quá trình xuất mà không cần viết quy tắc loại trừ.\n\nLoại trừ một thư mục sẽ tự động loại trừ các mục con của nó. Đưa lại một mục con cụ thể vào bên trong thư mục bị loại trừ chỉ khôi phục mục đó, phản ánh hành vi phủ định của .gitignore.\n\nDùng hộp kiểm ở tiêu đề để đưa vào hoặc loại trừ toàn bộ dự án chỉ với một lần chạm. Cây là bản xem trước: nó không tạo lại tệp, chỉ phản ánh trạng thái đưa vào hiện tại.</string>
+
+    <string name="help_max_size_title">Giới hạn kích thước mỗi tệp</string>
+    <string name="help_max_size_body">Khi được bật, các tệp lớn hơn kích thước đã chọn sẽ bị bỏ qua. Điều này bảo vệ bản kết xuất khỏi việc bị chi phối bởi một tệp khổng lồ duy nhất (ví dụ: tài sản được đóng gói hoặc SQL được tạo).\n\nKhi bị vô hiệu hóa, mọi tệp văn bản đều được đưa vào bất kể kích thước, có thể tạo ra các bản kết xuất rất lớn. Kết hợp với giới hạn tổng kích thước xuất trong Cài đặt để giữ các bản xuất trong giới hạn.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

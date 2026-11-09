@@ -1,18 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ===== App identity ===== -->
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
     <string name="app_name">CodeAssist OCFAI</string>
 
-    <!-- ===== Common ===== -->
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
     <string name="close">Close</string>
     <string name="cancel">Cancel</string>
     <string name="accept">OK</string>
     <string name="save">Save</string>
     <string name="delete">Delete</string>
 
-    <!-- ===== Config dialog ===== -->
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
     <!-- > Header -->
-    <string name="dialog_subtitle">CONTEXT GENERATOR  •  %1$s</string>
+    <string name="dialog_subtitle">CONTEXT GENERATOR  |  %1$s</string>
 
     <!-- > Profiles -->
     <string name="section_presets">Export profile</string>
@@ -43,16 +51,16 @@
     <string name="edit_extension">Edit extension</string>
     <string name="delete_rule">Delete rule</string>
     <string name="extension_hint">e.g.: kt, json, *.test.kt</string>
-    <string name="action_add">＋ Add</string>
+    <string name="action_add">+ Add</string>
 
     <!-- > Version control (config dialog) -->
     <string name="section_version_control">Version control</string>
-    <string name="git_info">Branch: %1$s  ·  Commit: %2$s</string>
+    <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
     <string name="no_branch">no branch</string>
     <string name="no_commit">no commit</string>
     <string name="read_from_git">Read from a Git reference</string>
     <string name="git_refresh">Refresh Git info</string>
-    <string name="git_uncommitted_changes">⚠ %1$d uncommitted changes</string>
+    <string name="git_uncommitted_changes">Warning: %1$d uncommitted changes</string>
     <string name="git_ref_hint">e.g.: main, v1.0.0, abc1234</string>
     <string name="git_browse_ref">Browse refs</string>
     <string name="git_preview_diff">Preview diff vs working tree</string>
@@ -77,8 +85,8 @@
     <string name="git_remote_marker">remote</string>
 
     <!-- > Git diff preview -->
-    <string name="git_diff_title">Diff: %1$s → working tree</string>
-    <string name="git_diff_stats">%1$d files · +%2$d −%3$d</string>
+    <string name="git_diff_title">Diff: %1$s vs working tree</string>
+    <string name="git_diff_stats">%1$d files  |  +%2$d  -%3$d</string>
     <string name="git_diff_no_changes">No changes detected</string>
     <string name="git_diff_content">Diff content</string>
 
@@ -94,18 +102,20 @@
     <string name="tree_scan_error">Unable to scan the project tree: %1$s</string>
     <string name="no_tree_matches">No files match the filters</string>
 
-    <!-- > Generate -->
+    <!-- > Generate button -->
     <string name="action_generate">Generate context</string>
-    <string name="generate_description">A single .txt file will be generated and saved to Downloads.</string>
+    <string name="generate_description">A single .txt file will be generated and saved to Download.</string>
 
-    <!-- ===== Inline progress / result ===== -->
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
     <string name="generating_context">Generating context…</string>
     <string name="preparing_export">Preparing…</string>
     <string name="processing_progress">Processing: %1$d/%2$d files</string>
-    <string name="generation_complete">Generation complete!</string>
+    <string name="generation_complete">Generation complete</string>
     <string name="generation_failed">Generation failed</string>
     <string name="generation_minimize_hint">You can minimize this dialog. Generation continues in the background.</string>
-    <string name="saved_to_downloads">Saved to Downloads/OneCodeForAI: %1$s</string>
+    <string name="saved_to_downloads">Saved to Download/OneCodeForAI: %1$s</string>
     <string name="export_already_running">An export is already in progress.</string>
 
     <!-- > Result actions -->
@@ -115,39 +125,51 @@
     <string name="action_edit_settings">Edit settings</string>
 
     <!-- > Result statistics -->
-    <string name="stats_files_one">%1$d file</string>
-    <string name="stats_files_many">%1$d files</string>
+    <plurals name="stats_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
     <string name="stats_tokens">~%1$s tokens</string>
 
-    <!-- ===== Plugin entry point (context menu) ===== -->
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
     <string name="action_label">Generate Context TXT (Share/Export)</string>
-    <string name="dialog_already_open">⏳ The configuration window is already open.</string>
-    <string name="no_folder_selected">❌ No folder selected.</string>
-    <string name="select_valid_folder">❌ Select a valid folder.</string>
-    <string name="error_opening_dialog">❌ Error: could not open the window.</string>
-    <string name="opening_config">⚙️ Opening configuration…</string>
+    <string name="dialog_already_open">The configuration window is already open.</string>
+    <string name="no_folder_selected">No folder selected.</string>
+    <string name="select_valid_folder">Select a valid folder.</string>
+    <string name="error_opening_dialog">Error: could not open the window.</string>
+    <string name="opening_config">Opening configuration…</string>
 
-    <!-- ===== Export errors ===== -->
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
     <string name="error_file_write_failed">File write failed.</string>
     <string name="error_source_uri_unreadable">Could not open the source file.</string>
     <string name="error_output_stream_unavailable">The destination did not provide an output stream.</string>
     <string name="error_media_store_finalize">Could not finalize the destination file.</string>
-    <string name="error_downloads_dir_create">Unable to create the Downloads directory: %1$s</string>
+    <string name="error_downloads_dir_create">Unable to create the Download directory: %1$s</string>
     <string name="error_project_root_not_dir">Project root is not a directory: %1$s</string>
     <string name="error_git_repo_unreadable">The selected folder is not a readable Git repository.</string>
     <string name="error_git_ref_unresolved">Git reference \"%1$s\" could not be resolved.</string>
     <string name="error_git_export_no_ref">Git export is enabled but no reference was selected.</string>
     <string name="unknown_error">Unknown error</string>
+    <string name="error_storage_permission">Storage permission required. Grant it in Settings > Apps > One Code For AI > Permissions.</string>
+    <string name="error_source_file_missing">The generated file is no longer available. Generate the context again to recreate it.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Context ready - %1$d read error</item>
+        <item quantity="other">Context ready - %1$d read errors</item>
+    </plurals>
     
-    <string name="error_storage_permission">Storage permission required. Grant it in Settings → Apps → One Code For AI → Permissions.</string>
-    <string name="notification_ready_title_partial">Context ready · %1$d read errors</string>
-    <string name="error_source_file_missing">The generated file is no longer available. It may have been deleted or moved. Generate the context again to recreate it.</string>
-
-    <!-- ===== Sharing ===== -->
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
     <string name="share_with">Share dump with:</string>
-    <string name="share_error">❌ Error sharing: %1$s</string>
+    <string name="share_error">Error sharing: %1$s</string>
 
-    <!-- ===== Notifications ===== -->
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
     <string name="notification_progress_title">One Code For AI</string>
     <string name="notification_ready_title">Context ready</string>
     <string name="error_notification_title">One Code error</string>
@@ -156,21 +178,27 @@
     <string name="notification_channel_actions">One Code results</string>
     <string name="generating_dump">Generating code dump…</string>
 
-    <!-- ===== Settings page ===== -->
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
     <string name="settings_git_global">Git integration</string>
     <string name="settings_git_global_desc">Detects repositories and enables every Git feature. Disable to force plain-folder mode even inside a repo. .gitignore rules still apply.</string>
     <string name="settings_animations">Animations</string>
     <string name="settings_animations_desc">Fade and scale transitions in the dialog, tree and preset spinner. Disable on low-end devices.</string>
     <string name="settings_notifications">Generation notifications</string>
     <string name="settings_notifications_desc">Progress, completion, and error notifications while exporting. Disable to silence the notification tray.</string>
-    <string name="settings_force_english">Force English UI</string>
-    <string name="settings_force_english_desc">Force the plugin interface to use English regardless of the IDE language. Newly opened dialogs and screens use English; already-open windows keep their current language until reopened.</string>
     <string name="settings_total_export_limit">Total export size limit (KB)</string>
     <string name="settings_total_export_limit_desc">Hard cap, in kilobytes, on the total size of a single dump. When reached, the export stops including files and appends a truncation notice. Most useful when the per-file size limit is disabled. Set to 0 for no limit.</string>
+    <string name="settings_ui_language">Interface language</string>
+    <string name="settings_ui_language_desc">Language used by the plugin UI. \"Auto\" follows the IDE language. Only newly opened dialogs and screens pick up the change; already-open windows keep their current language until reopened.</string>
     
+    <!-- > Misc config messages -->
     <string name="git_disabled_globally">Git is disabled globally in CodeAssist settings. Enable it there to use branches, tags, and commits.</string>
-    
-    <!-- ===== Info activity ===== -->
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
     <!-- > Header -->
     <string name="info_title">INFO</string>
     <string name="info_subtitle">Plugin for CodeAssist</string>
@@ -184,14 +212,16 @@
     <!-- > What's New -->
     <string name="whats_new_title">WHAT\'S NEW</string>
     <string name="whats_new_version">Version %1$s</string>
-    <string name="whats_new_item_1">Added a native Settings Page to toggle Git, Animations, and Notifications globally.</string>
-    <string name="whats_new_item_2">Introduced a Git Kill Switch with a smart .gitignore ancestor fallback.</string>
-    <string name="whats_new_item_3">Overhauled presets with professional Android-focused profiles and smart exclusions.</string>
-    <string name="whats_new_item_4">Added full glob pattern support (*.log, build/, **/generated/**) and directory filtering.</string>
-    <string name="whats_new_item_5">Added contextual help dialogs, IDE native logging, and fixed reflection bugs.</string>
-    <string name="whats_new_item_6">Added a \"Force English UI\" toggle so the plugin can ignore the IDE language when following English tutorials or documentation.</string>
-    <string name="whats_new_item_7">Added a global total export size limit to prevent multi-gigabyte dumps when the per-file limit is disabled.</string>
-    <string name="whats_new_item_8">Added contextual help for binary exclusion and the project tree; all help icons now use a smaller visual with a larger touch area.</string>
+    <string name="whats_new_item_1">Added a full language selector with 18 built-in translations, replacing the single \"Force English UI\" toggle.</string>
+    <string name="whats_new_item_2">Automatic migration: users who had \"Force English UI\" enabled keep their English UI through the new selector, no action required.</string>
+    <string name="whats_new_item_3">Critical fix for Android 8–12 crashes caused by JGit 7.x depending on InputStream.readAllBytes() (API 33+); now on JGit 5.13.3.</string>
+    <string name="whats_new_item_4">.gitignore fixes: patterns like **/generated/** now match files at the project root, and [abc] / [!abc] character classes are honored.</string>
+    <string name="whats_new_item_5">svg is no longer classified as binary, and lockfiles can be force-included via Inclusions.</string>
+    <string name="whats_new_item_6">Five recursive tree walks converted to iterative ones, preventing StackOverflowError on pathological directory trees.</string>
+    <string name="whats_new_item_7">Git reference validation moved off the UI thread; the Generate button no longer freezes on large repositories.</string>
+    <string name="whats_new_item_8">The context-menu label now refreshes when the UI language changes, matching the rest of the plugin.</string>
+    <string name="whats_new_item_9">Unified the share helper so the SHARE action and the result-panel chip behave identically.</string>
+    <string name="whats_new_item_10">Removed dead code, fixed the Download/Downloads path mismatch in strings, and various minor reliability improvements.</string>
     
     <!-- > Installation guide -->
     <string name="guide_header_title">Installation guide</string>
@@ -203,7 +233,7 @@
     <string name="guide_step3_title">Open CodeAssist</string>
     <string name="guide_step3_desc">Once installed, launch the CodeAssist app on your device.</string>
     <string name="guide_step4_title">Enable the plugin</string>
-    <string name="guide_step4_desc">Go to Settings → Plugins → Installed and enable One Code For AI. It will load automatically.</string>
+    <string name="guide_step4_desc">Go to Settings > Plugins > Installed and enable One Code For AI. It will load automatically.</string>
     <string name="guide_step5_title">Restart the IDE</string>
     <string name="guide_step5_desc">Close and reopen CodeAssist so all components load correctly.</string>
 
@@ -216,7 +246,7 @@
     <string name="step_3_title">Choose One Code For AI</string>
     <string name="step_3_desc">The option to generate the dump will appear</string>
     <string name="step_4_title">Export or share</string>
-    <string name="step_4_desc">Save the .txt to Downloads or send it to your AI</string>
+    <string name="step_4_desc">Save the .txt to Download or send it to your AI</string>
 
     <!-- > Features -->
     <string name="features_title">Features</string>
@@ -229,7 +259,7 @@
     <string name="feature_7">Byte-accurate Progress: Track export progress in real-time with background processing</string>
     <string name="feature_8">IDE Native Logging: Debugs route to the CodeAssist console with automatic chunking</string>
     <string name="feature_9">Global Settings Page: Native toggles for Git, Animations, and Notifications</string>
-    <string name="feature_10">100% Offline &amp; Private: No telemetry, no internet permission, totally local</string>
+    <string name="feature_10">100% Offline and Private: No telemetry, no internet permission, totally local</string>
 
     <!-- > Links -->
     <string name="links_title">Links</string>
@@ -246,59 +276,67 @@
     <string name="tech_info_apk">APK</string>
     <string name="tech_info_language">Language</string>
     <string name="tech_info_status">Status</string>
-    <string name="tech_info_status_stable">● Stable</string>
+    <string name="tech_info_status_stable">Stable</string>
 
     <!-- > Help & FAQ -->
-    <string name="help_title">HELP &amp; FAQ</string>
+    <string name="help_title">HELP AND FAQ</string>
     <string name="help_header_subtitle">Find answers to common issues and learn how to get the most out of the plugin.</string>
-    
+
     <string name="help_q1">How do I disable Git functionality entirely?</string>
     <string name="help_a1">Go to CodeAssist Settings, then Plugins, and open the One Code For AI settings. There you will find the \"Git integration\" toggle. When disabled, the plugin treats your folder as plain files.</string>
-    
+
     <string name="help_q2">Why does .gitignore still work when Git is disabled?</string>
     <string name="help_a2">If Git is disabled, the plugin automatically searches your selected folder and its parent directories (up to 5 levels) for a .gitignore file. This ensures your filtering rules remain intact.</string>
-    
+
     <string name="help_q3">What do the amber .gitignore rules mean?</string>
     <string name="help_a3">A rule is highlighted in amber when one of your manual inclusion or exclusion filters is actively overriding it. Inclusions and exclusions always take priority over .gitignore.</string>
-    
+
     <string name="help_q4">How do I use glob patterns in filters?</string>
     <string name="help_a4">Use standard glob syntax: *.log (any log file), build/ (specific folder), **/generated/** (any nested generated folder). Tap the \"?\" icon next to the filter sections for a quick guide.</string>
-    
+
     <string name="help_q5">What do the new Android presets do?</string>
     <string name="help_a5">Android (Kotlin) exports everything. Android (source only) strips tests and docs. Android (Resources) exports only XMLs (layouts/themes). They automatically exclude generated files like R.java.</string>
-    
+
     <string name="help_q6">Where are the settings for animations and notifications?</string>
     <string name="help_a6">They are in the native CodeAssist settings for this plugin. Disabling animations helps performance on low-end devices. Disabling notifications silences progress and completion alerts.</string>
-    
+
     <string name="help_q7">How do I exclude an entire folder easily?</string>
     <string name="help_a7">Open the file tree preview in the configuration dialog. Uncheck the folder you want to exclude. This is faster and safer than writing complex exclusion rules.</string>
-    
+
     <string name="help_q8">Can I cancel an export while it is running?</string>
     <string name="help_a8">Yes. You can tap \"Cancel\" in the dialog, or simply dismiss the dialog. The export runs safely in the background and you can return to check its progress at any time.</string>
-    
+
     <string name="help_q9">Is my code uploaded to a server?</string>
     <string name="help_a9">Absolutely not. The plugin does not require internet permission. All scanning, filtering, and generation happens 100% locally on your device.</string>
-    
+
     <string name="help_q10">Where are the generated files saved?</string>
-    <string name="help_a10">Exported files are saved to your device\'s public storage under Downloads/OneCodeForAI.</string>
-    
-    <!-- > Contextual Help -->
+    <string name="help_a10">Exported files are saved to your device\'s public storage under Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
     <string name="help_icon_description">Section help</string>
     <string name="help_inclusions_title">Inclusions</string>
-    <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n\u2022 Extensions: kt, json, xml\n\u2022 Wildcards: *.log, **/*.kt, src/*.kt\n\u2022 Directories: build/, **/generated/**\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.</string>
-    
+    <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: kt, json, xml\n- Wildcards: *.log, **/*.kt, src/*.kt\n- Directories: build/, **/generated/**\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.</string>
+
     <string name="help_exclusions_title">Exclusions</string>
-    <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n\u2022 Extensions: log, tmp, pyc\n\u2022 Wildcards: *.log, **/*.test.kt, src/*.bak\n\u2022 Directories: build/, **/generated/**\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.</string>
-    
+    <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: log, tmp, pyc\n- Wildcards: *.log, **/*.test.kt, src/*.bak\n- Directories: build/, **/generated/**\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.</string>
+
     <string name="help_gitignore_title">Gitignore rules</string>
-    <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only \u2014 edit .gitignore directly to change it.\n\nInclusions and exclusions take priority over these rules: adding a matching inclusion or exclusion forces the file in or out regardless of .gitignore. Overridden rules are highlighted in amber.</string>
-    
+    <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only - edit .gitignore directly to change it.\n\nInclusions and exclusions take priority over these rules: adding a matching inclusion or exclusion forces the file in or out regardless of .gitignore. Overridden rules are highlighted in amber. Negated rules (starting with \'!\') are shown with a distinct background so they can be told apart from positive rules.</string>
+
     <string name="help_binaries_title">Binary exclusion</string>
-    <string name="help_binaries_body">Binary files are detected by a fixed list of ~40 known binary extensions (images, video, audio, archives, compiled binaries, fonts, databases). Files with these extensions are skipped so the dump stays focused on readable source code.\n\nDetection is extension-based only. To skip an uncommon binary format, add its extension to Exclusions. To force-include one, add it to Inclusions.\n\nDisabling this toggle includes the listed extensions in the export, which is rarely useful for AI context.</string>
+    <string name="help_binaries_body">Binary files are detected by a fixed list of known binary extensions (images, video, audio, archives, compiled binaries, fonts, databases). Files with these extensions are skipped so the dump stays focused on readable source code.\n\nDetection is extension-based only. To skip an uncommon binary format, add its extension to Exclusions. To force-include one, add it to Inclusions.\n\nDisabling this toggle includes the listed extensions in the export, which is rarely useful for AI context.</string>
 
     <string name="help_tree_title">Project tree preview</string>
     <string name="help_tree_body">Shows the project tree with every entry that matches the current filters. Uncheck any file or folder to exclude it from the export without writing an exclusion rule.\n\nExcluding a folder automatically excludes its children. Re-including a single child inside an excluded folder restores only that entry, mirroring the behavior of .gitignore negation.\n\nUse the header checkbox to include or exclude the entire project in one tap. The tree is a preview: it does not regenerate files, it only reflects the current inclusion state.</string>
 
     <string name="help_max_size_title">Per-file size limit</string>
     <string name="help_max_size_body">When enabled, files larger than the selected size are skipped. This protects the dump from a single huge file (e.g. a bundled asset or generated SQL) dominating the output.\n\nWhen disabled, every text file is included regardless of size, which can produce very large dumps. Combine it with the total export size limit in Settings to keep exports bounded.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
 </resources>

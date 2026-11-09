@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<paths>
-    <!-- Temp dumps used for sharing before the user decides to save. -->
-    <cache-path name="shared_files" path="share/" />
-</paths>

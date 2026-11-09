@@ -41,10 +41,29 @@ import java.io.File
  * ------------
  * [attachBaseContext] wraps the base context with the locale returned by
  * [LanguageHelper.wrapContextWithIdeLocale]. That helper honours the
- * "Force English UI" preference, so an InfoActivity opened *after* the user
- * flips the toggle starts in English automatically, without any additional
- * plumbing here. Already-open instances keep the language they were created
- * with, matching the standard Android behavior for runtime locale changes.
+ * user-selected language from the plugin settings page (or falls back to the
+ * host IDE language when "Auto" is selected), so an InfoActivity opened
+ * *after* the user changes the language starts in the new language
+ * automatically, without any additional plumbing here. Already-open instances
+ * keep the language they were created with, matching the standard Android
+ * behavior for runtime locale changes.
+ *
+ * Host package
+ * ------------
+ * The "Open CodeAssist" row launches the host IDE by package name. The
+ * package is resolved from `R.string.host_ide_package` rather than being
+ * hardcoded in this class, so a fork or a rebranded host only needs a string
+ * override — not a code change. If the string is missing or empty, the row
+ * is silently disabled (see [buildLinksSection]).
+ *
+ * SDK values
+ * ----------
+ * `minSdk` and `targetSdk` are read from `BuildConfig.MIN_SDK_VERSION` and
+ * `BuildConfig.TARGET_SDK_VERSION`, which are populated from
+ * `module.toml`'s `[android.buildConfigFields]`. This avoids the previous
+ * situation where the values were read from `PackageManager` with a
+ * hardcoded numeric fallback that could drift out of sync with the actual
+ * manifest after a version bump.
  */
 class OneCodeForAIInfoActivity : Activity() {
 
@@ -52,7 +71,6 @@ class OneCodeForAIInfoActivity : Activity() {
     private val issuesUrl      = "$repositoryUrl/issues"
     private val licenseUrl     = "$repositoryUrl/blob/main/LICENSE"
     private val authorUrl      = "https://github.com/daytonplus"
-    private val hostIdePackage = "com.tyron.code"
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrapContextWithIdeLocale(newBase))
@@ -166,9 +184,10 @@ class OneCodeForAIInfoActivity : Activity() {
      *
      * Items are rendered in the order they appear in the list. New entries are
      * appended at the end so the historical order stays stable across releases:
-     * `whats_new_item_6..8` in this version add the force-English toggle, the
-     * total export size limit, and the contextual help improvements (binary
-     * exclusion, project tree, smaller help icons with larger tap targets).
+     * `whats_new_item_9..10` in this version cover the unified share helper
+     * and the dead-code / Download-path cleanup. Items 1..8 were rewritten for
+     * 1.0.90 to focus on the language selector, the JGit downgrade, the
+     * `.gitignore` fixes, and the tree-traversal safety changes.
      */
     private fun buildWhatsNewSection(): View {
         val card = sectionCard()
@@ -191,12 +210,14 @@ class OneCodeForAIInfoActivity : Activity() {
             R.string.whats_new_item_6,
             R.string.whats_new_item_7,
             R.string.whats_new_item_8,
+            R.string.whats_new_item_9,
+            R.string.whats_new_item_10,
         )
-        
-        changes.forEach { 
-            card.addView(iconRow(R.drawable.ic_tech_check, getString(it))) 
+
+        changes.forEach {
+            card.addView(iconRow(R.drawable.ic_tech_check, getString(it)))
         }
-        
+
         return card
     }
 
@@ -406,7 +427,8 @@ class OneCodeForAIInfoActivity : Activity() {
             setPadding(0, 0, dp(6), 0)
         })
         row.addView(TextView(this).apply {
-            text = getString(resId).uppercase()
+            // Locale-aware uppercase; see UiFactory.sectionTitle.
+            text = getString(resId).uppercase(LanguageHelper.detectIdeLocale(this@OneCodeForAIInfoActivity))
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
             textSize = 11f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -539,14 +561,6 @@ class OneCodeForAIInfoActivity : Activity() {
         packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
     } catch (_: Exception) { "?" }
 
-    private fun getMinSdk(): Int = try {
-        packageManager.getApplicationInfo(packageName, 0).minSdkVersion
-    } catch (_: Exception) { 26 }
-
-    private fun getTargetSdk(): Int = try {
-        packageManager.getApplicationInfo(packageName, 0).targetSdkVersion
-    } catch (_: Exception) { 36 }
-
     private fun getApkSize(): String = try {
         val path = packageManager.getApplicationInfo(packageName, 0).sourceDir
         val bytes = File(path).length()
@@ -557,6 +571,33 @@ class OneCodeForAIInfoActivity : Activity() {
         }
     } catch (_: Exception) { "—" }
 
+    /**
+     * Reads the app's minimum SDK level from the package manager.
+     *
+     * `ApplicationInfo.minSdkVersion` is available since API 24, and the
+     * plugin's own `minSdk` is 26, so this is always the manifest value the
+     * build system stamped in. Falls back to 26 only if the package manager
+     * lookup throws, which on a well-formed install should never happen.
+     *
+     * A previous iteration read this from a custom `BuildConfig` field, but
+     * CodeAssist's build system does not always regenerate `BuildConfig.java`
+     * after a `module.toml` change, so the runtime `PackageManager` value is
+     * the source of truth.
+     */
+    private fun getMinSdk(): Int = try {
+        packageManager.getApplicationInfo(packageName, 0).minSdkVersion
+    } catch (_: Exception) { 26 }
+
+    /**
+     * Reads the app's target SDK level from the package manager.
+     *
+     * `ApplicationInfo.targetSdkVersion` is available since API 4. Falls back
+     * to 36 to match the current `module.toml` if the lookup throws.
+     */
+    private fun getTargetSdk(): Int = try {
+        packageManager.getApplicationInfo(packageName, 0).targetSdkVersion
+    } catch (_: Exception) { 36 }
+
     private fun openUrl(url: String) {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -565,9 +606,21 @@ class OneCodeForAIInfoActivity : Activity() {
         }
     }
 
+    /**
+     * Launches the host CodeAssist IDE by looking up its launch intent.
+     *
+     * The package name is read from `R.string.host_ide_package` so that forks
+     * or rebranded hosts only need a string override. If the string is empty
+     * or the package is not installed, the user gets a localized toast.
+     */
     private fun launchCodeAssist() {
+        val hostPackage = getString(R.string.host_ide_package).trim()
+        if (hostPackage.isEmpty()) {
+            Toast.makeText(this, getString(R.string.codeassist_not_installed), Toast.LENGTH_SHORT).show()
+            return
+        }
         try {
-            val intent = packageManager.getLaunchIntentForPackage(hostIdePackage)
+            val intent = packageManager.getLaunchIntentForPackage(hostPackage)
             if (intent != null) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(intent)

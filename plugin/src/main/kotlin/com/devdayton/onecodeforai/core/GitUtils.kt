@@ -15,6 +15,9 @@ import org.eclipse.jgit.util.io.DisabledOutputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.Writer
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Encapsulates all JGit access for the plugin.
@@ -167,11 +170,27 @@ object GitUtils {
             command.call().map(::toCommitInfo)
         } ?: emptyList()
 
+    /**
+     * Formats a commit's author timestamp with a locale-independent pattern.
+     *
+     * `SimpleDateFormat` is chosen over `java.time` formatters because it is
+     * available since API 1 and needs no desugaring; the plugin's `minSdk` is
+     * 26, but keeping this dependency-free avoids a hidden coupling between
+     * `core/` and the Android build configuration. Instances are created per
+     * call (they are cheap and `SimpleDateFormat` is not thread-safe).
+     */
     private fun toCommitInfo(commit: RevCommit): CommitInfo = CommitInfo(
         hash = commit.name,
         shortHash = commit.name.take(7),
         author = commit.authorIdent.name,
-        date = commit.authorIdent.whenAsInstant.toString(),
+        // `PersonIdent.getWhenAsInstant()` was added in JGit 6.x. This plugin
+        // targets JGit 5.13 (the last series that runs on Android without
+        // requiring `readAllBytes` from API 33), where only `getWhen()` is
+        // available. `getWhen()` returns a `Date`, which we format with the
+        // same pattern that JGit's `getWhenAsInstant().toString()` would
+        // produce, so the UI output is unchanged.
+        date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+            .format(commit.authorIdent.`when`),
         message = commit.shortMessage
     )
 

@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- Shared labels used across multiple dialogs and screens.         -->
+    <!-- ============================================================== -->
+    <string name="close">Zavřít</string>
+    <string name="cancel">Zrušit</string>
+    <string name="accept">OK</string>
+    <string name="save">Uložit</string>
+    <string name="delete">Smazat</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">GENERÁTOR KONTEXTU  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Profil exportu</string>
+    <string name="save_preset">Uložit profil</string>
+    <string name="delete_preset">Smazat profil</string>
+    <string name="delete_preset_message">Smazat profil \"%1$s\"? Tuto akci nelze vrátit zpět.</string>
+    <string name="custom_preset">Vlastní</string>
+    <string name="preset_name_hint">Název profilu</string>
+    <string name="preset_name_reserved">Tento název je vyhrazen pro vestavěný profil.</string>
+    <string name="preset_name_duplicate">Profil s názvem \"%1$s\" již existuje.</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Základní filtry</string>
+    <string name="exclude_binaries">Vyloučit binární soubory</string>
+    <string name="respect_gitignore">Dodržovat pravidla .gitignore</string>
+    <string name="max_size">Maximální velikost</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Zahrnutí</string>
+    <string name="section_exclusions">Vyloučení</string>
+    <string name="section_gitignore_rules">Pravidla nalezená v .gitignore</string>
+    <string name="no_inclusions">Žádná další rozšíření</string>
+    <string name="no_exclusions">Žádná vlastní vyloučení</string>
+    <string name="no_gitignore_rules">V .gitignore nebyla nalezena žádná pravidla</string>
+    <string name="add_inclusion_title">Přidat zahrnutí</string>
+    <string name="add_exclusion_title">Přidat vyloučení</string>
+    <string name="edit_extension">Upravit rozšíření</string>
+    <string name="delete_rule">Smazat pravidlo</string>
+    <string name="extension_hint">Např.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Přidat</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Správa verzí</string>
+    <string name="git_info">Větev: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">žádná větev</string>
+    <string name="no_commit">žádný commit</string>
+    <string name="read_from_git">Číst z reference Git</string>
+    <string name="git_refresh">Obnovit informace o Git</string>
+    <string name="git_uncommitted_changes">Upozornění: %1$d nepotvrzených změn</string>
+    <string name="git_ref_hint">Např.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Procházet reference</string>
+    <string name="git_preview_diff">Náhled diff vůči pracovnímu stromu</string>
+    <string name="git_resolving">Řešení…</string>
+    <string name="git_resolved_as">Vyřešeno: %1$s</string>
+    <string name="git_ref_invalid">Neplatná reference Git</string>
+    <string name="git_ref_empty">Zadejte nebo vyberte referenci Git</string>
+    <string name="git_not_repo">Tato složka není repozitář Git</string>
+    <string name="git_open_parent_root">Přejít do kořene projektu: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Vybrat referenci Git</string>
+    <string name="git_tab_branches">Větve</string>
+    <string name="git_tab_tags">Značky</string>
+    <string name="git_tab_commits">Commity</string>
+    <string name="git_local_branches">Lokální větve</string>
+    <string name="git_remote_branches">Vzdálené větve</string>
+    <string name="git_no_branches">Nebyly nalezeny žádné větve</string>
+    <string name="git_no_tags">Nebyly nalezeny žádné značky</string>
+    <string name="git_no_commits">Nebyly nalezeny žádné commity</string>
+    <string name="git_current_marker">aktuální</string>
+    <string name="git_remote_marker">vzdálená</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s vs. pracovní strom</string>
+    <string name="git_diff_stats">%1$d souborů  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Nebyly zjištěny žádné změny</string>
+    <string name="git_diff_content">Obsah diff</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Strom souborů</string>
+    <string name="show_tree">Zobrazit strom souborů</string>
+    <string name="action_expand">Rozbalit</string>
+    <string name="action_collapse">Sbalit</string>
+    <string name="action_reload">Znovu načíst</string>
+    <string name="analyzing">Analýza…</string>
+    <string name="analyzing_files">Analýza… %1$d souborů</string>
+    <string name="canceled_retry">Zrušeno. Klepněte na filtr pro opakování.</string>
+    <string name="tree_scan_error">Nelze prohledat strom projektu: %1$s</string>
+    <string name="no_tree_matches">Žádné soubory neodpovídají filtrům</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Vygenerovat kontext</string>
+    <string name="generate_description">Bude vygenerován jeden soubor .txt a uložen do Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Generování kontextu…</string>
+    <string name="preparing_export">Příprava…</string>
+    <string name="processing_progress">Zpracování: %1$d/%2$d souborů</string>
+    <string name="generation_complete">Generování dokončeno</string>
+    <string name="generation_failed">Generování se nezdařilo</string>
+    <string name="generation_minimize_hint">Tento dialog můžete minimalizovat. Generování bude pokračovat na pozadí.</string>
+    <string name="saved_to_downloads">Uloženo do Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Export již probíhá.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Uložit</string>
+    <string name="action_share">Sdílet</string>
+    <string name="action_regenerate">Znovu vygenerovat</string>
+    <string name="action_edit_settings">Upravit nastavení</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d soubor</item>
+        <item quantity="few">%1$d soubory</item>
+        <item quantity="many">%1$d souboru</item>
+        <item quantity="other">%1$d souborů</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s tokenů</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Vygenerovat kontext TXT (Sdílet/Exportovat)</string>
+    <string name="dialog_already_open">Okno konfigurace je již otevřeno.</string>
+    <string name="no_folder_selected">Není vybrána žádná složka.</string>
+    <string name="select_valid_folder">Vyberte platnou složku.</string>
+    <string name="error_opening_dialog">Chyba: nelze otevřít okno.</string>
+    <string name="opening_config">Otevírání konfigurace…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Zápis souboru se nezdařil.</string>
+    <string name="error_source_uri_unreadable">Nelze otevřít zdrojový soubor.</string>
+    <string name="error_output_stream_unavailable">Cíl neposkytl výstupní proud.</string>
+    <string name="error_media_store_finalize">Nelze dokončit cílový soubor.</string>
+    <string name="error_downloads_dir_create">Nelze vytvořit složku Download: %1$s</string>
+    <string name="error_project_root_not_dir">Kořen projektu není složka: %1$s</string>
+    <string name="error_git_repo_unreadable">Vybraná složka není čitelný repozitář Git.</string>
+    <string name="error_git_ref_unresolved">Nelze vyřešit referenci Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">Export Git je povolen, ale nebyla vybrána žádná reference.</string>
+    <string name="unknown_error">Neznámá chyba</string>
+    <string name="error_storage_permission">Je vyžadováno oprávnění k úložišti. Udělte jej v Nastavení > Aplikace > One Code For AI > Oprávnění.</string>
+    <string name="error_source_file_missing">Vygenerovaný soubor již není k dispozici. Vygenerujte kontext znovu.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Kontext připraven - %1$d chyba čtení</item>
+        <item quantity="few">Kontext připraven - %1$d chyby čtení</item>
+        <item quantity="many">Kontext připraven - %1$d chyby čtení</item>
+        <item quantity="other">Kontext připraven - %1$d chyb čtení</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Sdílet výpis s:</string>
+    <string name="share_error">Chyba sdílení: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Kontext připraven</string>
+    <string name="error_notification_title">Chyba One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Chyba</string>
+    <string name="notification_channel_actions">Výsledky One Code</string>
+    <string name="generating_dump">Generování výpisu kódu…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Integrace s Git</string>
+    <string name="settings_git_global_desc">Detekuje repozitáře a povoluje všechny funkce Git. Vypněte pro vynucení režimu prosté složky i uvnitř repozitáře. Pravidla .gitignore stále platí.</string>
+    <string name="settings_animations">Animace</string>
+    <string name="settings_animations_desc">Přechody prolínání a změny měřítka v dialogu, stromu a výběru profilu. Vypněte na zařízeních nižší třídy.</string>
+    <string name="settings_notifications">Oznámení o generování</string>
+    <string name="settings_notifications_desc">Oznámení o průběhu, dokončení a chybách během exportu. Vypněte pro ztišení oznamovací lišty.</string>
+    <string name="settings_force_english">Vynutit anglické rozhraní</string>
+    <string name="settings_force_english_desc">Vynutí anglické rozhraní pluginu bez ohledu na jazyk IDE. Nově otevřené dialogy a obrazovky používají angličtinu; již otevřená okna si zachovají aktuální jazyk až do znovuotevření.</string>
+    <string name="settings_total_export_limit">Celkový limit velikosti exportu (KB)</string>
+    <string name="settings_total_export_limit_desc">Pevný limit v kilobajtech pro celkovou velikost jednoho výpisu. Po dosažení export přestane zahrnovat soubory a přidá oznámení o zkrácení. Nejužitečnější, když je limit velikosti souboru vypnutý. Nastavte na 0 pro žádný limit.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git je globálně vypnut v nastavení CodeAssist. Povolte jej tam pro použití větví, značek a commitů.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">Plugin pro CodeAssist</string>
+    <string name="open_codeassist">Otevřít CodeAssist</string>
+    <string name="footer_made_with">Vytvořeno s ❤️ pro komunitu</string>
+    <string name="creator_dev">Nezávislý vývojář</string>
+    <string name="codeassist_not_installed">CodeAssist není nainstalován</string>
+    <string name="codeassist_open_error">Nelze otevřít CodeAssist</string>
+    <string name="no_app_for_link">Žádná aplikace pro otevírání odkazů</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">CO JE NOVÉHO</string>
+    <string name="whats_new_version">Verze %1$s</string>
+    <string name="whats_new_item_1">Přidána nativní stránka nastavení pro globální přepínání Git, animací a oznámení.</string>
+    <string name="whats_new_item_2">Zaveden globální vypínač Git s inteligentním vyhledáváním .gitignore v nadřazených složkách.</string>
+    <string name="whats_new_item_3">Přepracované předvolby s profesionálními profily pro Android a inteligentními vyloučeními.</string>
+    <string name="whats_new_item_4">Přidána plná podpora vzorů glob (*.log, build/, **/generated/**) a filtrování adresářů.</string>
+    <string name="whats_new_item_5">Přidány kontextové dialogy nápovědy, nativní protokolování IDE a opravy chyb reflexe.</string>
+    <string name="whats_new_item_6">Přidán přepínač \"Vynutit anglické rozhraní\", aby plugin mohl ignorovat jazyk IDE při sledování anglických tutoriálů nebo dokumentace.</string>
+    <string name="whats_new_item_7">Přidán globální limit celkové velikosti exportu pro prevenci několika-GB výpisů, když je limit na soubor vypnutý.</string>
+    <string name="whats_new_item_8">Přidána kontextová nápověda pro vyloučení binárních souborů a strom projektu; všechny ikony nápovědy nyní používají menší vizuální velikost s větší dotykovou oblastí.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Průvodce instalací</string>
+    <string name="guide_header_subtitle">Podle těchto kroků povolte One Code For AI ve svém IDE.</string>
+    <string name="guide_step1_title">Stáhněte APK</string>
+    <string name="guide_step1_desc">Získejte nejnovější .apk z oficiálního repozitáře nebo distribučního kanálu.</string>
+    <string name="guide_step2_title">Nainstalujte aplikaci</string>
+    <string name="guide_step2_desc">Otevřete APK na svém zařízení a přijměte instalaci z neznámých zdrojů, pokud budete vyzváni.</string>
+    <string name="guide_step3_title">Otevřete CodeAssist</string>
+    <string name="guide_step3_desc">Po instalaci spusťte aplikaci CodeAssist na svém zařízení.</string>
+    <string name="guide_step4_title">Povolte plugin</string>
+    <string name="guide_step4_desc">Přejděte do Nastavení > Pluginy > Nainstalované a povolte One Code For AI. Načte se automaticky.</string>
+    <string name="guide_step5_title">Restartujte IDE</string>
+    <string name="guide_step5_desc">Zavřete a znovu otevřete CodeAssist, aby se všechny součásti správně načetly.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Integrace s CodeAssist</string>
+    <string name="step_1_title">Otevřete projekt</string>
+    <string name="step_1_desc">Klepněte na strom souborů projektu v CodeAssist</string>
+    <string name="step_2_title">Dlouze stiskněte složku</string>
+    <string name="step_2_desc">Otevře se kontextová nabídka možností</string>
+    <string name="step_3_title">Vyberte One Code For AI</string>
+    <string name="step_3_desc">Zobrazí se možnost vygenerovat výpis</string>
+    <string name="step_4_title">Exportujte nebo sdílejte</string>
+    <string name="step_4_desc">Uložte .txt do Download nebo jej odešlete svému AI</string>
+
+    <!-- > Features -->
+    <string name="features_title">Funkce</string>
+    <string name="feature_1">Pokročilé glob filtry: používejte vzory jako *.log, build/ nebo **/generated/**</string>
+    <string name="feature_2">Integrace s Git: exportujte z větví, značek, commitů nebo zobrazte náhled diff</string>
+    <string name="feature_3">Profesionální předvolby: Android (Kotlin, Zdroj, Zdroje), Web, Python, Text</string>
+    <string name="feature_4">Kontextová nápověda: vložené dialogy vysvětlují filtry, vzory a prioritu .gitignore</string>
+    <string name="feature_5">Globální vypínač Git: úplně vypněte Git při zachování záložního .gitignore</string>
+    <string name="feature_6">Vyloučení ve stromu projektu: ručně zaškrtávejte/odškrtávejte soubory a složky před exportem</string>
+    <string name="feature_7">Přesný průběh v bajtech: sledujte průběh exportu v reálném čase se zpracováním na pozadí</string>
+    <string name="feature_8">Nativní protokolování IDE: ladění je směrováno do konzole CodeAssist s automatickým rozdělením</string>
+    <string name="feature_9">Stránka globálního nastavení: nativní přepínače pro Git, animace a oznámení</string>
+    <string name="feature_10">100% offline a soukromé: žádná telemetrie, žádné oprávnění k internetu, zcela lokální</string>
+
+    <!-- > Links -->
+    <string name="links_title">Odkazy</string>
+    <string name="link_repository">Repozitář GitHub</string>
+    <string name="link_report_bug">Nahlásit problém</string>
+    <string name="link_license">Licence MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Technické informace</string>
+    <string name="tech_info_version">Verze</string>
+    <string name="tech_info_package">Balíček</string>
+    <string name="tech_info_min_sdk">Min. SDK</string>
+    <string name="tech_info_target_sdk">Cílové SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Jazyk</string>
+    <string name="tech_info_status">Stav</string>
+    <string name="tech_info_status_stable">Stabilní</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">NÁPOVĚDA A FAQ</string>
+    <string name="help_header_subtitle">Najděte odpovědi na běžné problémy a naučte se, jak z pluginu vytěžit maximum.</string>
+
+    <string name="help_q1">Jak úplně vypnu funkci Git?</string>
+    <string name="help_a1">Přejděte do nastavení CodeAssist, poté do Pluginů a otevřete nastavení One Code For AI. Najdete tam přepínač \"Integrace s Git\". Po vypnutí plugin zachází s vaší složkou jako s obyčejnými soubory.</string>
+
+    <string name="help_q2">Proč .gitignore stále funguje, když je Git vypnutý?</string>
+    <string name="help_a2">Pokud je Git vypnutý, plugin automaticky hledá soubor .gitignore ve vybrané složce a jejích nadřazených adresářích (až 5 úrovní). Tím zajistí, že vaše pravidla filtrování zůstanou nedotčena.</string>
+
+    <string name="help_q3">Co znamenají jantarová pravidla .gitignore?</string>
+    <string name="help_a3">Pravidlo je zvýrazněno jantarově, když jej váš ruční filtr zahrnutí nebo vyloučení aktivně přepisuje. Zahrnutí a vyloučení mají vždy přednost před .gitignore.</string>
+
+    <string name="help_q4">Jak používám vzory glob ve filtrech?</string>
+    <string name="help_a4">Používejte standardní syntaxi glob: *.log (libovolný logovací soubor), build/ (konkrétní složka), **/generated/** (libovolná vnořená generovaná složka). Klepnutím na ikonu \"?\" vedle sekcí filtrů zobrazíte stručného průvodce.</string>
+
+    <string name="help_q5">Co dělají nové předvolby pro Android?</string>
+    <string name="help_a5">Android (Kotlin) exportuje vše. Android (source only) odstraňuje testy a dokumentaci. Android (Resources) exportuje pouze XML (rozvržení/témata). Automaticky vylučují generované soubory, jako je R.java.</string>
+
+    <string name="help_q6">Kde jsou nastavení animací a oznámení?</string>
+    <string name="help_a6">Jsou v nativním nastavení CodeAssist pro tento plugin. Vypnutí animací pomáhá na zařízeních nižší třídy. Vypnutí oznámení ztiší upozornění na průběh a dokončení.</string>
+
+    <string name="help_q7">Jak snadno vyloučím celou složku?</string>
+    <string name="help_a7">Otevřete náhled stromu souborů v dialogu konfigurace. Odškrtněte složku, kterou chcete vyloučit. Je to rychlejší a bezpečnější než psaní složitých pravidel vyloučení.</string>
+
+    <string name="help_q8">Mohu zrušit export, který právě běží?</string>
+    <string name="help_a8">Ano. Můžete klepnout na \"Zrušit\" v dialogu, nebo dialog jednoduše zavřít. Export běží bezpečně na pozadí a můžete se kdykoli vrátit a zkontrolovat jeho průběh.</string>
+
+    <string name="help_q9">Je můj kód nahráván na server?</string>
+    <string name="help_a9">Rozhodně ne. Plugin nevyžaduje oprávnění k internetu. Veškeré prohledávání, filtrování a generování probíhá 100% lokálně na vašem zařízení.</string>
+
+    <string name="help_q10">Kam se ukládají vygenerované soubory?</string>
+    <string name="help_a10">Exportované soubory se ukládají do veřejného úložiště vašeho zařízení pod Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Nápověda k sekci</string>
+    <string name="help_inclusions_title">Zahrnutí</string>
+    <string name="help_inclusions_body">Bílý seznam rozšíření a vzorů glob, vyhodnocený před .gitignore.\n\nPodporovaná syntaxe (stejná jako vzory .gitignore):\n- Rozšíření: kt, json, xml\n- Zástupné znaky: *.log, **/*.kt, src/*.kt\n- Adresáře: build/, **/generated/**\n\nKaždý soubor odpovídající zahrnutí bude exportován, i když by jej .gitignore nebo vyloučení přeskočily.\n\nZahrnutí mají přednost před vyloučeními a .gitignore. Použijte je k vynucení zahrnutí konkrétních souborů nebo rozšíření.</string>
+
+    <string name="help_exclusions_title">Vyloučení</string>
+    <string name="help_exclusions_body">Černý seznam rozšíření a vzorů glob.\n\nPodporovaná syntaxe (stejná jako vzory .gitignore):\n- Rozšíření: log, tmp, pyc\n- Zástupné znaky: *.log, **/*.test.kt, src/*.bak\n- Adresáře: build/, **/generated/**\n\nKaždý soubor odpovídající vyloučení bude přeskočen, i když by jej .gitignore zahrnul. Zahrnutí mají přednost před vyloučeními.\n\nChcete-li vyloučit konkrétní složku bez psaní vzoru, použijte strom souborů níže.</string>
+
+    <string name="help_gitignore_title">Pravidla .gitignore</string>
+    <string name="help_gitignore_body">Pravidla nalezená v souboru .gitignore projektu.\n\nTento seznam je pouze pro čtení - chcete-li jej změnit, upravte přímo .gitignore.\n\nZahrnutí a vyloučení mají přednost před těmito pravidly: přidání odpovídajícího zahrnutí nebo vyloučení vynutí soubor dovnitř nebo ven bez ohledu na .gitignore. Přepsaná pravidla jsou zvýrazněna jantarově. Negovaná pravidla (začínající \'!\') jsou zobrazena s odlišným pozadím, aby je bylo možné odlišit od pozitivních pravidel.</string>
+
+    <string name="help_binaries_title">Vyloučení binárních souborů</string>
+    <string name="help_binaries_body">Binární soubory jsou detekovány pevným seznamem známých binárních rozšíření (obrázky, video, audio, archivy, zkompilované binárky, písma, databáze). Soubory s těmito rozšířeními jsou přeskočeny, aby výpis zůstal zaměřen na čitelný zdrojový kód.\n\nDetekce je založena pouze na rozšíření. Chcete-li přeskočit neobvyklý binární formát, přidejte jeho rozšíření do Vyloučení. Chcete-li jej vynutit, přidejte jej do Zahrnutí.\n\nVypnutím tohoto přepínače se uvedená rozšíření zahrnou do exportu, což je pro kontext AI zřídka užitečné.</string>
+
+    <string name="help_tree_title">Náhled stromu projektu</string>
+    <string name="help_tree_body">Zobrazuje strom projektu s každou položkou odpovídající aktuálním filtrům. Odškrtnutím libovolného souboru nebo složky je vyloučíte z exportu bez psaní pravidla vyloučení.\n\nVyloučení složky automaticky vyloučí její potomky. Opětovné zahrnutí jednoho potomka uvnitř vyloučené složky obnoví pouze tuto položku, což odráží chování negace v .gitignore.\n\nPomocí zaškrtávacího políčka v záhlaví můžete jedním klepnutím zahrnout nebo vyloučit celý projekt. Strom je náhled: negeneruje soubory znovu, pouze odráží aktuální stav zahrnutí.</string>
+
+    <string name="help_max_size_title">Limit velikosti souboru</string>
+    <string name="help_max_size_body">Pokud je povoleno, soubory větší než zvolená velikost jsou přeskočeny. To chrání výpis před dominancí jednoho obrovského souboru (např. zabaleného prostředku nebo generovaného SQL).\n\nPokud je vypnuto, každý textový soubor je zahrnut bez ohledu na velikost, což může produkovat velmi velké výpisy. Zkombinujte to s celkovým limitem velikosti exportu v Nastavení, abyste udrželi exporty v mezích.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

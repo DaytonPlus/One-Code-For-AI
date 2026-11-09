@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">إغلاق</string>
+    <string name="cancel">إلغاء</string>
+    <string name="accept">موافق</string>
+    <string name="save">حفظ</string>
+    <string name="delete">حذف</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">مولّد السياق  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">ملف تعريف التصدير</string>
+    <string name="save_preset">حفظ ملف التعريف</string>
+    <string name="delete_preset">حذف ملف التعريف</string>
+    <string name="delete_preset_message">حذف ملف التعريف \"%1$s\"؟ لا يمكن التراجع عن هذا الإجراء.</string>
+    <string name="custom_preset">مخصص</string>
+    <string name="preset_name_hint">اسم ملف التعريف</string>
+    <string name="preset_name_reserved">هذا الاسم محجوز لملف تعريف مدمج.</string>
+    <string name="preset_name_duplicate">يوجد بالفعل ملف تعريف بالاسم \"%1$s\".</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">عوامل التصفية الأساسية</string>
+    <string name="exclude_binaries">استبعاد الملفات الثنائية</string>
+    <string name="respect_gitignore">احترام قواعد .gitignore</string>
+    <string name="max_size">الحد الأقصى للحجم</string>
+    <string name="kb_suffix"> كيلوبايت</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">التضمينات</string>
+    <string name="section_exclusions">الاستثناءات</string>
+    <string name="section_gitignore_rules">القواعد المكتشفة في .gitignore</string>
+    <string name="no_inclusions">لا توجد امتدادات إضافية</string>
+    <string name="no_exclusions">لا توجد استثناءات مخصصة</string>
+    <string name="no_gitignore_rules">لم يتم العثور على قواعد في .gitignore</string>
+    <string name="add_inclusion_title">إضافة تضمين</string>
+    <string name="add_exclusion_title">إضافة استثناء</string>
+    <string name="edit_extension">تعديل الامتداد</string>
+    <string name="delete_rule">حذف القاعدة</string>
+    <string name="extension_hint">مثال: kt، json، *.test.kt</string>
+    <string name="action_add">+ إضافة</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">التحكم في الإصدارات</string>
+    <string name="git_info">الفرع: %1$s  |  الالتزام: %2$s</string>
+    <string name="no_branch">لا يوجد فرع</string>
+    <string name="no_commit">لا يوجد التزام</string>
+    <string name="read_from_git">القراءة من مرجع Git</string>
+    <string name="git_refresh">تحديث معلومات Git</string>
+    <string name="git_uncommitted_changes">تحذير: %1$d تغييرات غير ملتزم بها</string>
+    <string name="git_ref_hint">مثال: main، v1.0.0، abc1234</string>
+    <string name="git_browse_ref">تصفح المراجع</string>
+    <string name="git_preview_diff">معاينة الفرق مع شجرة العمل</string>
+    <string name="git_resolving">جارٍ الحل…</string>
+    <string name="git_resolved_as">تم الحل: %1$s</string>
+    <string name="git_ref_invalid">مرجع Git غير صالح</string>
+    <string name="git_ref_empty">أدخل أو اختر مرجع Git</string>
+    <string name="git_not_repo">هذا المجلد ليس مستودع Git</string>
+    <string name="git_open_parent_root">الانتقال إلى جذر المشروع: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">اختر مرجع Git</string>
+    <string name="git_tab_branches">الفروع</string>
+    <string name="git_tab_tags">العلامات</string>
+    <string name="git_tab_commits">الالتزامات</string>
+    <string name="git_local_branches">الفروع المحلية</string>
+    <string name="git_remote_branches">الفروع البعيدة</string>
+    <string name="git_no_branches">لم يتم العثور على فروع</string>
+    <string name="git_no_tags">لم يتم العثور على علامات</string>
+    <string name="git_no_commits">لم يتم العثور على التزامات</string>
+    <string name="git_current_marker">الحالي</string>
+    <string name="git_remote_marker">بعيد</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">الفرق: %1$s مقابل شجرة العمل</string>
+    <string name="git_diff_stats">%1$d ملفات  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">لم يتم اكتشاف تغييرات</string>
+    <string name="git_diff_content">محتوى الفرق</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">شجرة الملفات</string>
+    <string name="show_tree">إظهار شجرة الملفات</string>
+    <string name="action_expand">توسيع</string>
+    <string name="action_collapse">طي</string>
+    <string name="action_reload">إعادة التحميل</string>
+    <string name="analyzing">جارٍ التحليل…</string>
+    <string name="analyzing_files">جارٍ التحليل… %1$d ملفات</string>
+    <string name="canceled_retry">تم الإلغاء. اضغط على عامل تصفية لإعادة المحاولة.</string>
+    <string name="tree_scan_error">تعذر فحص شجرة المشروع: %1$s</string>
+    <string name="no_tree_matches">لا توجد ملفات تطابق عوامل التصفية</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">توليد السياق</string>
+    <string name="generate_description">سيتم إنشاء ملف .txt واحد وحفظه في Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">جارٍ توليد السياق…</string>
+    <string name="preparing_export">جارٍ التحضير…</string>
+    <string name="processing_progress">جارٍ المعالجة: %1$d/%2$d ملفات</string>
+    <string name="generation_complete">اكتمل التوليد</string>
+    <string name="generation_failed">فشل التوليد</string>
+    <string name="generation_minimize_hint">يمكنك تصغير هذا الحوار. يستمر التوليد في الخلفية.</string>
+    <string name="saved_to_downloads">تم الحفظ في Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">يوجد تصدير قيد التنفيذ بالفعل.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">حفظ</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_regenerate">إعادة التوليد</string>
+    <string name="action_edit_settings">تعديل الإعدادات</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="zero">لا ملفات</item>
+        <item quantity="one">%1$d ملف</item>
+        <item quantity="two">ملفان</item>
+        <item quantity="few">%1$d ملفات</item>
+        <item quantity="many">%1$d ملفًا</item>
+        <item quantity="other">%1$d ملف</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s رمز</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">توليد سياق TXT (مشاركة/تصدير)</string>
+    <string name="dialog_already_open">نافذة التكوين مفتوحة بالفعل.</string>
+    <string name="no_folder_selected">لم يتم اختيار مجلد.</string>
+    <string name="select_valid_folder">اختر مجلدًا صالحًا.</string>
+    <string name="error_opening_dialog">خطأ: تعذر فتح النافذة.</string>
+    <string name="opening_config">جارٍ فتح التكوين…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">فشل كتابة الملف.</string>
+    <string name="error_source_uri_unreadable">تعذر فتح الملف المصدر.</string>
+    <string name="error_output_stream_unavailable">لم يوفر الوجهة دفق إخراج.</string>
+    <string name="error_media_store_finalize">تعذر إنهاء الملف الوجهة.</string>
+    <string name="error_downloads_dir_create">تعذر إنشاء مجلد Download: %1$s</string>
+    <string name="error_project_root_not_dir">جذر المشروع ليس مجلدًا: %1$s</string>
+    <string name="error_git_repo_unreadable">المجلد المحدد ليس مستودع Git قابلًا للقراءة.</string>
+    <string name="error_git_ref_unresolved">تعذر حل مرجع Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">تصدير Git مفعّل ولكن لم يتم اختيار مرجع.</string>
+    <string name="unknown_error">خطأ غير معروف</string>
+    <string name="error_storage_permission">مطلوب إذن التخزين. امنحه في الإعدادات > التطبيقات > One Code For AI > الأذونات.</string>
+    <string name="error_source_file_missing">الملف المُنشأ لم يعد متاحًا. أعد توليد السياق.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="zero">السياق جاهز - لا أخطاء قراءة</item>
+        <item quantity="one">السياق جاهز - %1$d خطأ قراءة</item>
+        <item quantity="two">السياق جاهز - خطآن في القراءة</item>
+        <item quantity="few">السياق جاهز - %1$d أخطاء قراءة</item>
+        <item quantity="many">السياق جاهز - %1$d خطأ قراءة</item>
+        <item quantity="other">السياق جاهز - %1$d خطأ قراءة</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">مشاركة التفريغ مع:</string>
+    <string name="share_error">خطأ في المشاركة: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">السياق جاهز</string>
+    <string name="error_notification_title">خطأ One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code خطأ</string>
+    <string name="notification_channel_actions">نتائج One Code</string>
+    <string name="generating_dump">جارٍ توليد تفريغ الكود…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">تكامل Git</string>
+    <string name="settings_git_global_desc">يكتشف المستودعات ويُمكّن جميع ميزات Git. عطّله لفرض وضع المجلد العادي حتى داخل مستودع. تظل قواعد .gitignore سارية.</string>
+    <string name="settings_animations">الرسوم المتحركة</string>
+    <string name="settings_animations_desc">انتقالات التلاشي والتحجيم في الحوار والشجرة ومحدد ملفات التعريف. عطّلها على الأجهزة منخفضة الفئة.</string>
+    <string name="settings_notifications">إشعارات التوليد</string>
+    <string name="settings_notifications_desc">إشعارات التقدم والإكمال والأخطاء أثناء التصدير. عطّلها لكتم درج الإشعارات.</string>
+    <string name="settings_force_english">فرض واجهة إنجليزية</string>
+    <string name="settings_force_english_desc">يفرض على واجهة الإضافة استخدام اللغة الإنجليزية بغض النظر عن لغة IDE. تستخدم الحوارات والشاشات المفتوحة حديثًا الإنجليزية؛ تحتفظ النوافذ المفتوحة مسبقًا بلغتها الحالية حتى إعادة فتحها.</string>
+    <string name="settings_total_export_limit">الحد الإجمالي لحجم التصدير (كيلوبايت)</string>
+    <string name="settings_total_export_limit_desc">حد أقصى صارم بالكيلوبايت على الحجم الإجمالي لتفريغ واحد. عند الوصول إليه، يتوقف التصدير عن تضمين الملفات ويضيف إشعار اقتطاع. الأكثر فائدة عند تعطيل حد الحجم لكل ملف. اضبطه على 0 لعدم وجود حد.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git معطّل عالميًا في إعدادات CodeAssist. مكّنه هناك لاستخدام الفروع والعلامات والالتزامات.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">معلومات</string>
+    <string name="info_subtitle">إضافة لـ CodeAssist</string>
+    <string name="open_codeassist">فتح CodeAssist</string>
+    <string name="footer_made_with">صُنع بـ ❤️ من أجل المجتمع</string>
+    <string name="creator_dev">مطور مستقل</string>
+    <string name="codeassist_not_installed">CodeAssist غير مثبت</string>
+    <string name="codeassist_open_error">تعذر فتح CodeAssist</string>
+    <string name="no_app_for_link">لا يوجد تطبيق متاح لفتح الروابط</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">الجديد</string>
+    <string name="whats_new_version">الإصدار %1$s</string>
+    <string name="whats_new_item_1">أُضيفت صفحة إعدادات أصلية لتبديل Git والرسوم المتحركة والإشعارات عالميًا.</string>
+    <string name="whats_new_item_2">تم تقديم مفتاح إيقاف Git مع بحث ذكي عن .gitignore في المجلدات الأصلية.</string>
+    <string name="whats_new_item_3">أُعيد تصميم الإعدادات المسبقة بملفات تعريف احترافية لـ Android واستثناءات ذكية.</string>
+    <string name="whats_new_item_4">أُضيف دعم كامل لنمط glob (*.log، build/، **/generated/**) وتصفية الدلائل.</string>
+    <string name="whats_new_item_5">أُضيفت حوارات مساعدة سياقية وتسجيل IDE أصلي وإصلاحات أخطاء الانعكاس.</string>
+    <string name="whats_new_item_6">أُضيف مفتاح \"فرض واجهة إنجليزية\" حتى تتمكن الإضافة من تجاهل لغة IDE عند اتباع دروس أو وثائق باللغة الإنجليزية.</string>
+    <string name="whats_new_item_7">أُضيف حد عالمي لحجم التصدير الإجمالي لمنع تفريغات بحجم عدة غيغابايت عند تعطيل حد كل ملف.</string>
+    <string name="whats_new_item_8">أُضيفت مساعدة سياقية لاستبعاد الملفات الثنائية وشجرة المشروع؛ تستخدم جميع أيقونات المساعدة الآن حجمًا مرئيًا أصغر مع مساحة لمس أكبر.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">دليل التثبيت</string>
+    <string name="guide_header_subtitle">اتبع هذه الخطوات لتمكين One Code For AI في IDE الخاص بك.</string>
+    <string name="guide_step1_title">تنزيل APK</string>
+    <string name="guide_step1_desc">احصل على أحدث .apk من المستودع الرسمي أو قناة التوزيع.</string>
+    <string name="guide_step2_title">تثبيت التطبيق</string>
+    <string name="guide_step2_desc">افتح APK على جهازك واقبل التثبيت من مصادر غير معروفة إذا طُلب منك ذلك.</string>
+    <string name="guide_step3_title">فتح CodeAssist</string>
+    <string name="guide_step3_desc">بعد التثبيت، شغّل تطبيق CodeAssist على جهازك.</string>
+    <string name="guide_step4_title">تمكين الإضافة</string>
+    <string name="guide_step4_desc">انتقل إلى الإعدادات > الإضافات > المثبتة ومكّن One Code For AI. سيتم تحميله تلقائيًا.</string>
+    <string name="guide_step5_title">إعادة تشغيل IDE</string>
+    <string name="guide_step5_desc">أغلق CodeAssist وأعد فتحه لتحميل جميع المكونات بشكل صحيح.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">تكامل CodeAssist</string>
+    <string name="step_1_title">افتح مشروعًا</string>
+    <string name="step_1_desc">اضغط على شجرة ملفات المشروع في CodeAssist</string>
+    <string name="step_2_title">اضغط مطولًا على مجلد</string>
+    <string name="step_2_desc">ستُفتح قائمة الخيارات السياقية</string>
+    <string name="step_3_title">اختر One Code For AI</string>
+    <string name="step_3_desc">سيظهر خيار توليد التفريغ</string>
+    <string name="step_4_title">تصدير أو مشاركة</string>
+    <string name="step_4_desc">احفظ .txt في Download أو أرسله إلى الذكاء الاصطناعي</string>
+
+    <!-- > Features -->
+    <string name="features_title">الميزات</string>
+    <string name="feature_1">عوامل تصفية Glob متقدمة: استخدم أنماطًا مثل *.log أو build/ أو **/generated/**</string>
+    <string name="feature_2">تكامل Git: صدّر من الفروع أو العلامات أو الالتزامات أو اعرض الفرق</string>
+    <string name="feature_3">إعدادات مسبقة احترافية: Android (Kotlin، المصدر، الموارد)، Web، Python، نص</string>
+    <string name="feature_4">مساعدة سياقية: تشرح الحوارات المضمنة عوامل التصفية والأنماط وأولوية .gitignore</string>
+    <string name="feature_5">مفتاح إيقاف Git العام: عطّل Git تمامًا مع الحفاظ على احتياطي .gitignore</string>
+    <string name="feature_6">استثناءات شجرة المشروع: ضع علامة/أزل علامة يدويًا على الملفات والمجلدات قبل التصدير</string>
+    <string name="feature_7">تقدم دقيق بالبايت: تتبع تقدم التصدير في الوقت الفعلي مع المعالجة في الخلفية</string>
+    <string name="feature_8">تسجيل IDE أصلي: تتم إعادة توجيه التصحيح إلى وحدة تحكم CodeAssist مع التقسيم التلقائي</string>
+    <string name="feature_9">صفحة الإعدادات العالمية: مفاتيح أصلية لـ Git والرسوم المتحركة والإشعارات</string>
+    <string name="feature_10">100% دون اتصال وخاص: لا قياس عن بُعد، لا إذن إنترنت، محلي تمامًا</string>
+
+    <!-- > Links -->
+    <string name="links_title">روابط</string>
+    <string name="link_repository">مستودع GitHub</string>
+    <string name="link_report_bug">الإبلاغ عن مشكلة</string>
+    <string name="link_license">رخصة MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">معلومات تقنية</string>
+    <string name="tech_info_version">الإصدار</string>
+    <string name="tech_info_package">الحزمة</string>
+    <string name="tech_info_min_sdk">الحد الأدنى SDK</string>
+    <string name="tech_info_target_sdk">SDK الهدف</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">اللغة</string>
+    <string name="tech_info_status">الحالة</string>
+    <string name="tech_info_status_stable">مستقر</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">المساعدة والأسئلة الشائعة</string>
+    <string name="help_header_subtitle">اعثر على إجابات للمشكلات الشائعة وتعلم كيفية تحقيق أقصى استفادة من الإضافة.</string>
+
+    <string name="help_q1">كيف أعطل وظيفة Git بالكامل؟</string>
+    <string name="help_a1">انتقل إلى إعدادات CodeAssist، ثم الإضافات، وافتح إعدادات One Code For AI. ستجد هناك مفتاح \"تكامل Git\". عند تعطيله، تتعامل الإضافة مع مجلدك كملفات عادية.</string>
+
+    <string name="help_q2">لماذا لا يزال .gitignore يعمل عند تعطيل Git؟</string>
+    <string name="help_a2">إذا كان Git معطلاً، تبحث الإضافة تلقائيًا عن ملف .gitignore في المجلد المحدد ومجلداته الأصلية (حتى 5 مستويات). هذا يضمن بقاء قواعد التصفية سليمة.</string>
+
+    <string name="help_q3">ماذا تعني قواعد .gitignore الكهرمانية؟</string>
+    <string name="help_a3">يتم تمييز القاعدة بالكهرماني عندما يتجاوزها أحد عوامل التصفية اليدوية للتضمين أو الاستثناء بنشاط. للتضمينات والاستثناءات دائمًا الأولوية على .gitignore.</string>
+
+    <string name="help_q4">كيف أستخدم أنماط glob في عوامل التصفية؟</string>
+    <string name="help_a4">استخدم صيغة glob القياسية: *.log (أي ملف سجل)، build/ (مجلد محدد)، **/generated/** (أي مجلد مُنشأ متداخل). اضغط على أيقونة \"?\" بجوار أقسام عوامل التصفية للحصول على دليل سريع.</string>
+
+    <string name="help_q5">ماذا تفعل إعدادات Android المسبقة الجديدة؟</string>
+    <string name="help_a5">Android (Kotlin) يصدّر كل شيء. Android (source only) يزيل الاختبارات والوثائق. Android (Resources) يصدّر XML فقط (التخطيطات/المواضيع). يستبعدون تلقائيًا الملفات المُنشأة مثل R.java.</string>
+
+    <string name="help_q6">أين إعدادات الرسوم المتحركة والإشعارات؟</string>
+    <string name="help_a6">توجد في إعدادات CodeAssist الأصلية لهذه الإضافة. تعطيل الرسوم المتحركة يساعد الأداء على الأجهزة منخفضة الفئة. تعطيل الإشعارات يكتم تنبيهات التقدم والإكمال.</string>
+
+    <string name="help_q7">كيف أستثني مجلدًا بأكمله بسهولة؟</string>
+    <string name="help_a7">افتح معاينة شجرة الملفات في حوار التكوين. أزل علامة المجلد الذي تريد استثناءه. هذا أسرع وأكثر أمانًا من كتابة قواعد استثناء معقدة.</string>
+
+    <string name="help_q8">هل يمكنني إلغاء التصدير أثناء تشغيله؟</string>
+    <string name="help_a8">نعم. يمكنك الضغط على \"إلغاء\" في الحوار، أو ببساطة إغلاق الحوار. يعمل التصدير بأمان في الخلفية ويمكنك العودة لفحص تقدمه في أي وقت.</string>
+
+    <string name="help_q9">هل يتم رفع الكود الخاص بي إلى خادم؟</string>
+    <string name="help_a9">على الإطلاق. لا تتطلب الإضافة إذن إنترنت. يتم جميع عمليات الفحص والتصفية والتوليد محليًا بنسبة 100% على جهازك.</string>
+
+    <string name="help_q10">أين يتم حفظ الملفات المُنشأة؟</string>
+    <string name="help_a10">يتم حفظ الملفات المُصدّرة في التخزين العام لجهازك ضمن Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">مساعدة القسم</string>
+    <string name="help_inclusions_title">التضمينات</string>
+    <string name="help_inclusions_body">قائمة بيضاء من الامتدادات وأنماط glob، يتم تقييمها قبل .gitignore.\n\nالصيغة المدعومة (مطابقة لأنماط .gitignore):\n- الامتدادات: kt، json، xml\n- أحرف البدل: *.log، **/*.kt، src/*.kt\n- الدلائل: build/، **/generated/**\n\nيتم تصدير أي ملف يطابق تضمينًا حتى لو كان .gitignore أو الاستثناءات ستتخطاه.\n\nللتضمينات الأولوية على الاستثناءات وعلى .gitignore. استخدمها لفرض تضمين ملفات أو امتدادات محددة.</string>
+
+    <string name="help_exclusions_title">الاستثناءات</string>
+    <string name="help_exclusions_body">قائمة سوداء من الامتدادات وأنماط glob.\n\nالصيغة المدعومة (مطابقة لأنماط .gitignore):\n- الامتدادات: log، tmp، pyc\n- أحرف البدل: *.log، **/*.test.kt، src/*.bak\n- الدلائل: build/، **/generated/**\n\nيتم تخطي أي ملف يطابق استثناءً، حتى لو كان .gitignore سيتضمنه. للتضمينات الأولوية على الاستثناءات.\n\nلاستثناء مجلد محدد دون كتابة نمط، استخدم شجرة الملفات أدناه.</string>
+
+    <string name="help_gitignore_title">قواعد .gitignore</string>
+    <string name="help_gitignore_body">القواعد المكتشفة في ملف .gitignore الخاص بالمشروع.\n\nهذه القائمة للقراءة فقط - حرّر .gitignore مباشرة لتغييرها.\n\nللتضمينات والاستثناءات الأولوية على هذه القواعد: إضافة تضمين أو استثناء مطابق تفرض الملف داخلًا أو خارجًا بغض النظر عن .gitignore. يتم تمييز القواعد المتجاوزة بالكهرماني. تُعرض القواعد المنفية (التي تبدأ بـ \'!\') بخلفية مميزة لتكون قابلة للتمييز عن القواعد الإيجابية.</string>
+
+    <string name="help_binaries_title">استبعاد الملفات الثنائية</string>
+    <string name="help_binaries_body">يتم اكتشاف الملفات الثنائية بقائمة ثابتة من الامتدادات الثنائية المعروفة (الصور، الفيديو، الصوت، الأرشيفات، الملفات الثنائية المترجمة، الخطوط، قواعد البيانات). يتم تخطي الملفات بهذه الامتدادات ليبقى التفريغ مركزًا على الكود المصدري القابل للقراءة.\n\nالاكتشاف قائم على الامتداد فقط. لتخطي صيغة ثنائية غير شائعة، أضف امتدادها إلى الاستثناءات. لفرض تضمينها، أضفها إلى التضمينات.\n\nتعطيل هذا المفتاح يضمّن الامتدادات المدرجة في التصدير، وهو أمر نادرًا ما يكون مفيدًا لسياق الذكاء الاصطناعي.</string>
+
+    <string name="help_tree_title">معاينة شجرة المشروع</string>
+    <string name="help_tree_body">يعرض شجرة المشروع مع كل إدخال يطابق عوامل التصفية الحالية. أزل علامة أي ملف أو مجلد لاستثنائه من التصدير دون كتابة قاعدة استثناء.\n\nاستثناء مجلد يستثني أطفاله تلقائيًا. إعادة تضمين طفل واحد داخل مجلد مستثنى يعيد فقط ذلك الإدخال، مما يعكس سلوك نفي .gitignore.\n\nاستخدم مربع الاختيار في الرأس لتضمين أو استثناء المشروع بأكمله بنقرة واحدة. الشجرة هي معاينة: لا تعيد إنشاء الملفات، بل تعكس حالة التضمين الحالية فقط.</string>
+
+    <string name="help_max_size_title">حد حجم الملف</string>
+    <string name="help_max_size_body">عند التفعيل، يتم تخطي الملفات الأكبر من الحجم المحدد. يحمي هذا التفريغ من ملف واحد ضخم (مثل أصل مُجمّع أو SQL مُنشأ) يهيمن على المخرجات.\n\nعند التعطيل، يتم تضمين كل ملف نصي بغض النظر عن الحجم، مما قد ينتج تفريغات كبيرة جدًا. اجمعها مع الحد الإجمالي لحجم التصدير في الإعدادات للحفاظ على التصدير محدودًا.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

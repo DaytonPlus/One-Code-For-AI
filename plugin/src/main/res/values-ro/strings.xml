@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">Închide</string>
+    <string name="cancel">Anulează</string>
+    <string name="accept">OK</string>
+    <string name="save">Salvează</string>
+    <string name="delete">Șterge</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">GENERATOR DE CONTEXT  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Profil de export</string>
+    <string name="save_preset">Salvează profilul</string>
+    <string name="delete_preset">Șterge profilul</string>
+    <string name="delete_preset_message">Ștergi profilul \"%1$s\"? Această acțiune nu poate fi anulată.</string>
+    <string name="custom_preset">Personalizat</string>
+    <string name="preset_name_hint">Numele profilului</string>
+    <string name="preset_name_reserved">Acest nume este rezervat pentru un profil încorporat.</string>
+    <string name="preset_name_duplicate">Există deja un profil cu numele \"%1$s\".</string>
+
+    <!-- > Base filters -->
+    <string name="section_base_filters">Filtre de bază</string>
+    <string name="exclude_binaries">Exclude fișierele binare</string>
+    <string name="respect_gitignore">Respectă regulile .gitignore</string>
+    <string name="max_size">Dimensiune maximă</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Inclusions, exclusions, .gitignore -->
+    <string name="section_inclusions">Includeri</string>
+    <string name="section_exclusions">Excluderi</string>
+    <string name="section_gitignore_rules">Reguli detectate în .gitignore</string>
+    <string name="no_inclusions">Nicio extensie suplimentară</string>
+    <string name="no_exclusions">Nicio excludere personalizată</string>
+    <string name="no_gitignore_rules">Nu s-au găsit reguli în .gitignore</string>
+    <string name="add_inclusion_title">Adaugă includere</string>
+    <string name="add_exclusion_title">Adaugă excludere</string>
+    <string name="edit_extension">Editează extensia</string>
+    <string name="delete_rule">Șterge regula</string>
+    <string name="extension_hint">Ex.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Adaugă</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="section_version_control">Controlul versiunilor</string>
+    <string name="git_info">Ramura: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">nicio ramură</string>
+    <string name="no_commit">niciun commit</string>
+    <string name="read_from_git">Citește dintr-o referință Git</string>
+    <string name="git_refresh">Reîmprospătează info Git</string>
+    <string name="git_uncommitted_changes">Atenție: %1$d modificări neconfirmate</string>
+    <string name="git_ref_hint">Ex.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Răsfoiește referințele</string>
+    <string name="git_preview_diff">Previzualizează diff-ul cu arborele de lucru</string>
+    <string name="git_resolving">Se rezolvă…</string>
+    <string name="git_resolved_as">Rezolvat: %1$s</string>
+    <string name="git_ref_invalid">Referință Git invalidă</string>
+    <string name="git_ref_empty">Introdu sau selectează o referință Git</string>
+    <string name="git_not_repo">Acest dosar nu este un depozit Git</string>
+    <string name="git_open_parent_root">Mergi la rădăcina proiectului: %1$s</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Selectează o referință Git</string>
+    <string name="git_tab_branches">Ramura</string>
+    <string name="git_tab_tags">Etichete</string>
+    <string name="git_tab_commits">Commit-uri</string>
+    <string name="git_local_branches">Ramura locale</string>
+    <string name="git_remote_branches">Ramura la distanță</string>
+    <string name="git_no_branches">Nu s-au găsit ramuri</string>
+    <string name="git_no_tags">Nu s-au găsit etichete</string>
+    <string name="git_no_commits">Nu s-au găsit commit-uri</string>
+    <string name="git_current_marker">curentă</string>
+    <string name="git_remote_marker">distantă</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s vs arborele de lucru</string>
+    <string name="git_diff_stats">%1$d fișiere  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Nu s-au detectat modificări</string>
+    <string name="git_diff_content">Conținutul diff-ului</string>
+
+    <!-- > File tree -->
+    <string name="section_tree">Arborele fișierelor</string>
+    <string name="show_tree">Afișează arborele fișierelor</string>
+    <string name="action_expand">Extinde</string>
+    <string name="action_collapse">Restrânge</string>
+    <string name="action_reload">Reîncarcă</string>
+    <string name="analyzing">Se analizează…</string>
+    <string name="analyzing_files">Se analizează… %1$d fișiere</string>
+    <string name="canceled_retry">Anulat. Atinge un filtru pentru a reîncerca.</string>
+    <string name="tree_scan_error">Nu se poate scana arborele proiectului: %1$s</string>
+    <string name="no_tree_matches">Niciun fișier nu corespunde filtrelor</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Generează context</string>
+    <string name="generate_description">Se va genera un singur fișier .txt și va fi salvat în Download.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Se generează contextul…</string>
+    <string name="preparing_export">Se pregătește…</string>
+    <string name="processing_progress">Se procesează: %1$d/%2$d fișiere</string>
+    <string name="generation_complete">Generare finalizată</string>
+    <string name="generation_failed">Generare eșuată</string>
+    <string name="generation_minimize_hint">Poți minimiza acest dialog. Generarea continuă în fundal.</string>
+    <string name="saved_to_downloads">Salvat în Download/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Un export este deja în curs.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Salvează</string>
+    <string name="action_share">Partajează</string>
+    <string name="action_regenerate">Regenerează</string>
+    <string name="action_edit_settings">Editează setările</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d fișier</item>
+        <item quantity="few">%1$d fișiere</item>
+        <item quantity="other">%1$d de fișiere</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s token-uri</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Generează context TXT (Partajează/Exportă)</string>
+    <string name="dialog_already_open">Fereastra de configurare este deja deschisă.</string>
+    <string name="no_folder_selected">Niciun dosar selectat.</string>
+    <string name="select_valid_folder">Selectează un dosar valid.</string>
+    <string name="error_opening_dialog">Eroare: nu se poate deschide fereastra.</string>
+    <string name="opening_config">Se deschide configurarea…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Scrierea fișierului a eșuat.</string>
+    <string name="error_source_uri_unreadable">Nu se poate deschide fișierul sursă.</string>
+    <string name="error_output_stream_unavailable">Destinația nu a furnizat un flux de ieșire.</string>
+    <string name="error_media_store_finalize">Nu se poate finaliza fișierul destinație.</string>
+    <string name="error_downloads_dir_create">Nu se poate crea dosarul Download: %1$s</string>
+    <string name="error_project_root_not_dir">Rădăcina proiectului nu este un dosar: %1$s</string>
+    <string name="error_git_repo_unreadable">Dosarul selectat nu este un depozit Git lizibil.</string>
+    <string name="error_git_ref_unresolved">Nu se poate rezolva referința Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">Exportul Git este activat, dar nu a fost selectată nicio referință.</string>
+    <string name="unknown_error">Eroare necunoscută</string>
+    <string name="error_storage_permission">Este necesară permisiunea de stocare. Acordă-o în Setări > Aplicații > One Code For AI > Permisiuni.</string>
+    <string name="error_source_file_missing">Fișierul generat nu mai este disponibil. Regenerează contextul.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Context pregătit - %1$d eroare de citire</item>
+        <item quantity="few">Context pregătit - %1$d erori de citire</item>
+        <item quantity="other">Context pregătit - %1$d de erori de citire</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Partajează dump-ul cu:</string>
+    <string name="share_error">Eroare la partajare: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Context pregătit</string>
+    <string name="error_notification_title">Eroare One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Eroare</string>
+    <string name="notification_channel_actions">Rezultate One Code</string>
+    <string name="generating_dump">Se generează dump-ul de cod…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Integrare Git</string>
+    <string name="settings_git_global_desc">Detectează depozitele și activează toate funcțiile Git. Dezactivează pentru a forța modul dosar simplu chiar și într-un depozit. Regulile .gitignore se aplică în continuare.</string>
+    <string name="settings_animations">Animații</string>
+    <string name="settings_animations_desc">Tranziții de fade și scalare în dialog, arbore și selectorul de profiluri. Dezactivează pe dispozitivele de gamă joasă.</string>
+    <string name="settings_notifications">Notificări de generare</string>
+    <string name="settings_notifications_desc">Notificări de progres, finalizare și eroare în timpul exportului. Dezactivează pentru a liniști tava de notificări.</string>
+    <string name="settings_force_english">Forțează interfața în engleză</string>
+    <string name="settings_force_english_desc">Forțează interfața plugin-ului să folosească engleza indiferent de limba IDE-ului. Dialogurile și ecranele nou deschise folosesc engleza; ferestrele deja deschise își păstrează limba curentă până la redeschidere.</string>
+    <string name="settings_total_export_limit">Limita totală a dimensiunii exportului (KB)</string>
+    <string name="settings_total_export_limit_desc">Limită dură, în kilobiți, asupra dimensiunii totale a unui singur dump. La atingere, exportul încetează să includă fișiere și adaugă o notificare de trunchiere. Cel mai util când limita per fișier este dezactivată. Setează la 0 pentru nicio limită.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git este dezactivat global în setările CodeAssist. Activează-l acolo pentru a folosi ramuri, etichete și commit-uri.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFORMAȚII</string>
+    <string name="info_subtitle">Plugin pentru CodeAssist</string>
+    <string name="open_codeassist">Deschide CodeAssist</string>
+    <string name="footer_made_with">Făcut cu ❤️ pentru comunitate</string>
+    <string name="creator_dev">Dezvoltator independent</string>
+    <string name="codeassist_not_installed">CodeAssist nu este instalat</string>
+    <string name="codeassist_open_error">Nu se poate deschide CodeAssist</string>
+    <string name="no_app_for_link">Nicio aplicație disponibilă pentru a deschide linkuri</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">CE ESTE NOU</string>
+    <string name="whats_new_version">Versiunea %1$s</string>
+    <string name="whats_new_item_1">Adăugată o pagină de setări nativă pentru a comuta global Git, animații și notificări.</string>
+    <string name="whats_new_item_2">Introdus un comutator principal Git cu căutare inteligentă .gitignore în dosarele părinte.</string>
+    <string name="whats_new_item_3">Rescrise presetările cu profiluri profesionale Android și excluderi inteligente.</string>
+    <string name="whats_new_item_4">Adăugat suport complet pentru modele glob (*.log, build/, **/generated/**) și filtrare pe directoare.</string>
+    <string name="whats_new_item_5">Adăugate dialoguri de ajutor contextual, logare nativă IDE și corecții de bug-uri de reflexie.</string>
+    <string name="whats_new_item_6">Adăugat comutatorul \"Forțează interfața în engleză\" astfel încât plugin-ul să poată ignora limba IDE-ului când urmărești tutoriale sau documentație în engleză.</string>
+    <string name="whats_new_item_7">Adăugată o limită globală a dimensiunii totale de export pentru a preveni dump-uri de câțiva GB când limita per fișier este dezactivată.</string>
+    <string name="whats_new_item_8">Adăugat ajutor contextual pentru excluderea fișierelor binare și arborele proiectului; toate iconițele de ajutor folosesc acum o dimensiune vizuală mai mică cu o zonă de atingere mai mare.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Ghid de instalare</string>
+    <string name="guide_header_subtitle">Urmează acești pași pentru a activa One Code For AI în IDE-ul tău.</string>
+    <string name="guide_step1_title">Descarcă APK-ul</string>
+    <string name="guide_step1_desc">Obține cel mai recent .apk din depozitul oficial sau canalul de distribuție.</string>
+    <string name="guide_step2_title">Instalează aplicația</string>
+    <string name="guide_step2_desc">Deschide APK-ul pe dispozitivul tău și acceptă instalarea din surse necunoscute dacă ți se solicită.</string>
+    <string name="guide_step3_title">Deschide CodeAssist</string>
+    <string name="guide_step3_desc">Odată instalat, lansează aplicația CodeAssist pe dispozitivul tău.</string>
+    <string name="guide_step4_title">Activează plugin-ul</string>
+    <string name="guide_step4_desc">Mergi la Setări > Plugin-uri > Instalate și activează One Code For AI. Se va încărca automat.</string>
+    <string name="guide_step5_title">Repornește IDE-ul</string>
+    <string name="guide_step5_desc">Închide și redeschide CodeAssist pentru ca toate componentele să se încarce corect.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Integrare CodeAssist</string>
+    <string name="step_1_title">Deschide un proiect</string>
+    <string name="step_1_desc">Atinge arborele de fișiere al proiectului în CodeAssist</string>
+    <string name="step_2_title">Apasă lung pe un dosar</string>
+    <string name="step_2_desc">Se va deschide meniul contextual al opțiunilor</string>
+    <string name="step_3_title">Alege One Code For AI</string>
+    <string name="step_3_desc">Opțiunea de a genera dump-ul va apărea</string>
+    <string name="step_4_title">Exportă sau partajează</string>
+    <string name="step_4_desc">Salvează .txt în Download sau trimite-l la AI-ul tău</string>
+
+    <!-- > Features -->
+    <string name="features_title">Funcționalități</string>
+    <string name="feature_1">Filtre Glob avansate: folosește modele precum *.log, build/ sau **/generated/**</string>
+    <string name="feature_2">Integrare Git: exportă din ramuri, etichete, commit-uri sau previzualizează diff-uri</string>
+    <string name="feature_3">Presetări profesionale: Android (Kotlin, Sursă, Resurse), Web, Python, Text</string>
+    <string name="feature_4">Ajutor contextual: dialoguri inline explică filtre, modele și prioritatea .gitignore</string>
+    <string name="feature_5">Comutator principal Git: dezactivează complet Git păstrând fallback-ul .gitignore</string>
+    <string name="feature_6">Excluderi în arborele proiectului: bifează/debifează manual fișierele și dosarele înainte de export</string>
+    <string name="feature_7">Progres precis în octeți: urmărește progresul exportului în timp real cu procesare în fundal</string>
+    <string name="feature_8">Logare nativă IDE: depanarea este direcționată către consola CodeAssist cu împărțire automată</string>
+    <string name="feature_9">Pagină de setări globale: comutatoare native pentru Git, animații și notificări</string>
+    <string name="feature_10">100% offline și privat: fără telemetrie, fără permisiune la internet, complet local</string>
+
+    <!-- > Links -->
+    <string name="links_title">Linkuri</string>
+    <string name="link_repository">Depozit GitHub</string>
+    <string name="link_report_bug">Raportează o problemă</string>
+    <string name="link_license">Licență MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Informații tehnice</string>
+    <string name="tech_info_version">Versiune</string>
+    <string name="tech_info_package">Pachet</string>
+    <string name="tech_info_min_sdk">SDK minim</string>
+    <string name="tech_info_target_sdk">SDK țintă</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Limbaj</string>
+    <string name="tech_info_status">Stare</string>
+    <string name="tech_info_status_stable">Stabil</string>
+
+    <!-- > Help & FAQ -->
+    <string name="help_title">AJUTOR ȘI ÎNTREBĂRI FRECVENTE</string>
+    <string name="help_header_subtitle">Găsește răspunsuri la probleme comune și învață să profiți la maximum de plugin.</string>
+
+    <string name="help_q1">Cum dezactivez complet funcționalitatea Git?</string>
+    <string name="help_a1">Mergi la Setările CodeAssist, apoi la Plugin-uri și deschide setările One Code For AI. Acolo vei găsi comutatorul \"Integrare Git\". Când este dezactivat, plugin-ul tratează dosarul tău ca fișiere simple.</string>
+
+    <string name="help_q2">De ce .gitignore funcționează încă atunci când Git este dezactivat?</string>
+    <string name="help_a2">Dacă Git este dezactivat, plugin-ul caută automat un fișier .gitignore în dosarul selectat și în dosarele sale părinte (până la 5 niveluri). Astfel regulile tale de filtrare rămân intacte.</string>
+
+    <string name="help_q3">Ce înseamnă regulile .gitignore portocalii?</string>
+    <string name="help_a3">O regulă este evidențiată portocaliu atunci când unul dintre filtrele tale manuale de includere sau excludere o suprascrie activ. Includerile și excluderile au întotdeauna prioritate față de .gitignore.</string>
+
+    <string name="help_q4">Cum folosesc modelele glob în filtre?</string>
+    <string name="help_a4">Folosește sintaxa glob standard: *.log (orice fișier jurnal), build/ (dosar specific), **/generated/** (orice dosar generat imbricat). Atinge iconița \"?\" de lângă secțiunile de filtre pentru un ghid rapid.</string>
+
+    <string name="help_q5">Ce fac noile presetări Android?</string>
+    <string name="help_a5">Android (Kotlin) exportă totul. Android (source only) elimină testele și documentația. Android (Resources) exportă doar XML-uri (layout-uri/teme). Exclud automat fișierele generate precum R.java.</string>
+
+    <string name="help_q6">Unde sunt setările pentru animații și notificări?</string>
+    <string name="help_a6">Se află în setările native CodeAssist pentru acest plugin. Dezactivarea animațiilor ajută performanța pe dispozitivele de gamă joasă. Dezactivarea notificărilor liniștește alertele de progres și finalizare.</string>
+
+    <string name="help_q7">Cum exclud ușor un dosar întreg?</string>
+    <string name="help_a7">Deschide previzualizarea arborelui de fișiere în dialogul de configurare. Debifează dosarul pe care vrei să-l excluzi. Este mai rapid și mai sigur decât scrierea unor reguli complexe de excludere.</string>
+
+    <string name="help_q8">Pot anula un export în timpul execuției?</string>
+    <string name="help_a8">Da. Poți atinge \"Anulează\" în dialog sau poți pur și simplu închide dialogul. Exportul rulează în siguranță în fundal și poți reveni oricând pentru a-i verifica progresul.</string>
+
+    <string name="help_q9">Codul meu este încărcat pe un server?</string>
+    <string name="help_a9">Absolut deloc. Plugin-ul nu necesită permisiune la internet. Toată scanarea, filtrarea și generarea se întâmplă 100% local pe dispozitivul tău.</string>
+
+    <string name="help_q10">Unde sunt salvate fișierele generate?</string>
+    <string name="help_a10">Fișierele exportate sunt salvate în stocarea publică a dispozitivului tău în Download/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Ajutor secțiune</string>
+    <string name="help_inclusions_title">Includeri</string>
+    <string name="help_inclusions_body">Listă albă de extensii și modele glob, evaluată înainte de .gitignore.\n\nSintaxă suportată (identică cu modelele .gitignore):\n- Extensii: kt, json, xml\n- Caractere wildcard: *.log, **/*.kt, src/*.kt\n- Directoare: build/, **/generated/**\n\nOrice fișier care corespunde unei includeri va fi exportat chiar dacă .gitignore sau excluderile l-ar sări.\n\nIncluderile au prioritate față de excluderi și față de .gitignore. Folosește-le pentru a forța includerea unor fișiere sau extensii specifice.</string>
+
+    <string name="help_exclusions_title">Excluderi</string>
+    <string name="help_exclusions_body">Listă neagră de extensii și modele glob.\n\nSintaxă suportată (identică cu modelele .gitignore):\n- Extensii: log, tmp, pyc\n- Caractere wildcard: *.log, **/*.test.kt, src/*.bak\n- Directoare: build/, **/generated/**\n\nOrice fișier care corespunde unei excluderi va fi sărit, chiar dacă .gitignore l-ar include. Includerile au prioritate față de excluderi.\n\nPentru a exclude un dosar specific fără a scrie un model, folosește arborele de fișiere de mai jos.</string>
+
+    <string name="help_gitignore_title">Reguli .gitignore</string>
+    <string name="help_gitignore_body">Reguli detectate în fișierul .gitignore al proiectului.\n\nAceastă listă este doar pentru citire - editează direct .gitignore pentru a o modifica.\n\nIncluderile și excluderile au prioritate față de aceste reguli: adăugarea unei includeri sau excluderi potrivite forțează fișierul înăuntru sau în afară indiferent de .gitignore. Regulile suprascrise sunt evidențiate portocaliu. Regulile negate (care încep cu \'!\') sunt afișate cu un fundal distinct pentru a putea fi distinse de regulile pozitive.</string>
+
+    <string name="help_binaries_title">Excluderea fișierelor binare</string>
+    <string name="help_binaries_body">Fișierele binare sunt detectate printr-o listă fixă de extensii binare cunoscute (imagini, video, audio, arhive, binare compilate, fonturi, baze de date). Fișierele cu aceste extensii sunt sărite pentru ca dump-ul să rămână concentrat pe cod sursă lizibil.\n\nDetectarea se bazează doar pe extensie. Pentru a sări un format binar neobișnuit, adaugă extensia lui la Excluderi. Pentru a-l include forțat, adaugă-l la Includeri.\n\nDezactivarea acestui comutator include extensiile listate în export, ceea ce este rar util pentru contextul AI.</string>
+
+    <string name="help_tree_title">Previzualizare arbore proiect</string>
+    <string name="help_tree_body">Afișează arborele proiectului cu fiecare intrare care corespunde filtrelor curente. Debifează orice fișier sau dosar pentru a-l exclude din export fără a scrie o regulă de excludere.\n\nExcluderea unui dosar exclude automat copiii săi. Reincluderea unui singur copil într-un dosar exclus restaurează doar acea intrare, reflectând comportamentul negației .gitignore.\n\nFolosește caseta din antet pentru a include sau exclude întregul proiect cu o singură atingere. Arborele este o previzualizare: nu regenerează fișiere, doar reflectă starea curentă de includere.</string>
+
+    <string name="help_max_size_title">Limita de dimensiune per fișier</string>
+    <string name="help_max_size_body">Când este activată, fișierele mai mari decât dimensiunea selectată sunt sărite. Aceasta protejează dump-ul de un singur fișier uriaș (de ex. un asset împachetat sau SQL generat) care ar domina ieșirea.\n\nCând este dezactivată, fiecare fișier text este inclus indiferent de dimensiune, ceea ce poate produce dump-uri foarte mari. Combină cu limita totală a dimensiunii exportului din Setări pentru a menține exporturile mărginite.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>
