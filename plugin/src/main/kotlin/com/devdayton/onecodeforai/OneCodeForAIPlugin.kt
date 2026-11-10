@@ -52,19 +52,18 @@ import java.util.concurrent.atomic.AtomicBoolean
  * time as it is read here.
  *
  * ### Context-menu label refresh
- * The plugin's context-menu label is resolved from
- * [R.string.action_label] at registration time, using the effective locale
- * from [com.devdayton.onecodeforai.android.LanguageHelper.detectIdeLocale].
- * When the user changes the UI language from the settings page, the settings
- * page calls [refreshActionLabel], which re-registers the action with the
- * newly-localized label. Whether the host *actually* refreshes the visible
- * menu without an IDE restart is a host-side concern: some CodeAssist
- * versions treat `PluginRegistration.register(...)` for an already-registered
- * action ID as an in-place update, and others cache the label and only
- * re-read it on the next process start. [refreshActionLabel] performs the
- * best-effort update and logs a warning if the host throws, but it cannot
- * force a label refresh on hosts that do not support it. See the KDoc on
- * [refreshActionLabel] for the full rationale.
+ * The plugin's context-menu label is resolved from [R.string.action_label] at
+ * registration time, using the effective locale from
+ * [com.devdayton.onecodeforai.android.LanguageHelper.detectIdeLocale]. When
+ * the user changes the UI language from the settings page, the label in the
+ * context menu **does not update until the next CodeAssist restart**. This is
+ * a deliberate limitation: [PluginRegistration.register] is additive, not
+ * replacing, so re-invoking it to pick up a new label would duplicate the
+ * action in the menu. There is no portable way to force an in-place update
+ * across CodeAssist builds, so the plugin chooses not to re-register at all.
+ * Every other surface (dialogs, settings page, info screen, notifications,
+ * error messages) does pick up the new language on the next newly-opened
+ * window, matching the standard Android behavior for runtime locale changes.
  */
 class OneCodeForAIPlugin : Plugin {
 
@@ -104,12 +103,6 @@ class OneCodeForAIPlugin : Plugin {
      * This method initializes the global [PluginLogger], registers the UI action
      * for generating context, and registers the settings page.
      *
-     * The plugin stores a reference to itself, to the host's
-     * [PluginRegistration], and to the host-logger callback in the companion
-     * object so that [refreshActionLabel] can re-register the action later,
-     * without requiring the caller to thread those objects through. See the
-     * class-level *Context-menu label refresh* note for the full rationale.
-     *
      * @param reg The [PluginRegistration] object provided by the host.
      */
     override fun register(reg: PluginRegistration) {
@@ -121,48 +114,45 @@ class OneCodeForAIPlugin : Plugin {
 
         PluginLogger.i(TAG, "Plugin loaded and logger initialized.")
 
-        // Publish the plugin instance and registration to the companion so
-        // refreshActionLabel can rebuild the action without the settings
-        // page having to know about either. The log callback is stored
-        // separately from the raw `logger` object so re-registration does
-        // not need to re-resolve the host's logger API.
-        pluginInstance = this
-        activeRegistration = reg
-        activeLogCallback = { message -> logger.info(message) }
-
         val context = HostEnvironment.applicationContext()
         val actionLabel = context?.pluginString(R.string.action_label)
             ?: DEFAULT_ACTION_LABEL
 
-        registerAction(reg, actionLabel)
+        registerAction(reg, actionLabel) { message -> logger.info(message) }
 
         reg.register(SETTINGS_PAGE_EP, OneCodeForAISettingsPage())
     }
 
     /**
-     * Registers (or re-registers) the plugin's primary UI action with the
-     * supplied [actionLabel].
+     * Registers the plugin's primary UI action with the supplied [actionLabel].
      *
-     * Extracted from [register] so that [refreshActionLabel] can reuse the
-     * exact same [SimpleAction] construction (same ID, same places, same
-     * icon) when the UI language changes. Keeping the construction in one
-     * place is what guarantees that a language refresh cannot accidentally
-     * drop the action from one of its registered places or change its
-     * icon.
+     * Extracted from [register] so the construction of the [SimpleAction]
+     * (same ID, same places, same icon) lives in a single place. The click
+     * handler closes over the supplied [logCallback], not over the host
+     * logger object, which keeps the method usable from tests without
+     * needing a real [PluginRegistration].
      *
-     * The action's click handler is captured as a closure over the current
-     * plugin instance and the supplied [activeLogCallback], not over
-     * `reg` or a local `logger` variable. That is what makes the closure
-     * stable across re-registrations: it does not depend on any state that
-     * changes between calls.
+     * The method is called exactly once per process lifetime. It is
+     * deliberately **not** re-invoked when the UI language changes: the host
+     * treats each `register(...)` call as an addition rather than a
+     * replacement, so re-registering would duplicate the action in the
+     * context menu. See [com.devdayton.onecodeforai.OneCodeForAISettingsPage]
+     * for the user-facing consequence (the label refreshes after the next
+     * IDE restart).
      *
      * @param reg the host registration object to register the action with.
      * @param actionLabel localized label to display in the context menu and
      *   command palette. Resolved by the caller so this method stays
      *   locale-agnostic.
+     * @param logCallback forwards a message to the host's logger. Passed as
+     *   a parameter rather than read from a field so this method has no
+     *   hidden dependency on companion state.
      */
-    private fun registerAction(reg: PluginRegistration, actionLabel: String) {
-        val logCallback = activeLogCallback ?: return
+    private fun registerAction(
+        reg: PluginRegistration,
+        actionLabel: String,
+        logCallback: (String) -> Unit
+    ) {
         reg.register(
             UI_ACTION_EP,
             SimpleAction(
@@ -396,155 +386,5 @@ class OneCodeForAIPlugin : Plugin {
         const val KEY_EXCLUDE_BINARIES = "exclude_binaries"
         const val DEFAULT_ACTION_LABEL = "Generate Context TXT (Share/Export)"
         const val ROOT_SWITCH_DELAY_MS = 250L
-
-        /**
-         * Reference to the currently-active plugin instance.
-         *
-         * Set once in [register] and never cleared, because the host keeps
-         * the plugin registered for the lifetime of the process. Stored on
-         * the companion object so [refreshActionLabel] can invoke the
-         * instance-scoped [registerAction] helper without the settings page
-         * having to hold a plugin reference of its own.
-         *
-         * `@Volatile` because [refreshActionLabel] can be called from a
-         * different thread than the one that ran [register]; in practice
-         * both are the main thread, but the annotation makes the
-         * visibility guarantee explicit and costs nothing.
-         */
-        @Volatile
-        private var pluginInstance: OneCodeForAIPlugin? = null
-
-        /**
-         * The [PluginRegistration] the host handed to [register].
-         *
-         * Retained so [refreshActionLabel] can re-register the action with a
-         * new label. The reference is process-scoped by design — the host
-         * outlives the plugin, not the other way around — so there is no
-         * leak here.
-         */
-        @Volatile
-        private var activeRegistration: PluginRegistration? = null
-
-        /**
-         * Callback that forwards a message to the host's logger.
-         *
-         * Stored as a `(String) -> Unit` rather than as the raw host logger
-         * object so that [registerAction] does not need to re-resolve the
-         * host's logger API on every re-registration. The lambda is created
-         * once in [register] and captures the host logger by closure.
-         */
-        @Volatile
-        private var activeLogCallback: ((String) -> Unit)? = null
-
-        /**
-         * Re-registers the plugin's context-menu (and command-palette) action
-         * with the label that matches the currently-selected UI language.
-         *
-         * ### Why this exists
-         * The action's label is captured at registration time from
-         * [R.string.action_label]. Because Android resolves that string
-         * against the *current* locale, a user who changes the language
-         * from the settings page would otherwise see the context menu
-         * continue to display the old-language label until the next process
-         * start. This method is the bridge: it is called from
-         * [com.devdayton.onecodeforai.OneCodeForAISettingsPage.onChanged]
-         * immediately after the new language code is persisted, and it
-         * re-runs the same [SimpleAction] registration with a freshly
-         * resolved label.
-         *
-         * ### What actually happens on the host side
-         * Whether the visible menu label updates **without an IDE restart**
-         * depends entirely on the host:
-         *
-         *  - Some CodeAssist versions treat a second
-         *    `PluginRegistration.register(...)` for an already-registered
-         *    action ID as an in-place update. On those builds, the label
-         *    refreshes live, as the user expects.
-         *  - Other versions cache the action and only re-read its label on
-         *    the next process start. On those builds, the label in the
-         *    context menu keeps showing the old language until the IDE is
-         *    restarted, even though every other surface of the plugin
-         *    (settings page, configuration dialog, info activity, result
-         *    notifications, error messages) has already switched to the
-         *    new language.
-         *  - A third group may throw on the second registration because the
-         *    ID is already in use. That case is caught and logged; it does
-         *    not break anything, because the original registration remains
-         *    in effect.
-         *
-         * There is no portable way to force the first case on a build that
-         * implements the second, so this method deliberately does **not**
-         * attempt to fake it (e.g. by unregistering and re-registering,
-         * which some hosts do not support either, and which would briefly
-         * remove the action from the menu). Doing the best-effort
-         * re-registration and logging the outcome is the honest trade-off.
-         *
-         * ### Failure handling
-         * Any exception thrown by the host's `register` call is caught and
-         * logged at WARN level. The method never throws, because the
-         * language preference has already been persisted by the time it is
-         * called — a failure here must not roll back the user's choice or
-         * surface as an error in the settings page.
-         *
-         * ### No-op conditions
-         * Silently returns when any of the following is `null`:
-         *  - [pluginInstance] — the plugin has not been registered yet, which
-         *    can only happen if the settings page is somehow rendered before
-         *    the plugin's `register` method runs.
-         *  - [activeRegistration] — same.
-         *  - [activeLogCallback] — same.
-         *
-         * None of these are reachable in normal CodeAssist flows (the plugin
-         * is registered before the settings page can be opened), but
-         * guarding them keeps the method safe to call from a defensive
-         * `runCatching` block in the settings page.
-         *
-         * @param context any `Context`; only its resources are read, to
-         *   resolve [R.string.action_label] against the plugin's currently
-         *   selected locale. Using the host activity's context here would
-         *   resolve against the *host's* resources and produce the wrong
-         *   label — the settings page passes the application context, and
-         *   [pluginString] internally re-resolves the label against the
-         *   plugin's own locale-aware `Resources`, so either choice works.
-         */
-        fun refreshActionLabel(context: Context) {
-            val plugin = pluginInstance ?: run {
-                PluginLogger.d(
-                    TAG,
-                    "refreshActionLabel: plugin instance not available yet, skipping."
-                )
-                return
-            }
-            val reg = activeRegistration ?: run {
-                PluginLogger.d(
-                    TAG,
-                    "refreshActionLabel: no active registration, skipping."
-                )
-                return
-            }
-            if (activeLogCallback == null) {
-                PluginLogger.d(
-                    TAG,
-                    "refreshActionLabel: no log callback, skipping."
-                )
-                return
-            }
-
-            val newLabel = context.pluginString(R.string.action_label)
-                .ifEmpty { DEFAULT_ACTION_LABEL }
-
-            runCatching {
-                plugin.registerAction(reg, newLabel)
-                PluginLogger.i(TAG, "Context-menu label refreshed to: $newLabel")
-            }.onFailure { error ->
-                PluginLogger.w(
-                    TAG,
-                    "Could not refresh context-menu label. The old label will remain " +
-                        "until the next IDE restart. Cause: " +
-                        (error.message ?: error.javaClass.simpleName),
-                    error
-                )
-            }
-        }
     }
 }

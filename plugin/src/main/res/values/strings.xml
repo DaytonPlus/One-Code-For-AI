@@ -70,6 +70,7 @@
     <string name="git_ref_empty">Enter or select a Git reference</string>
     <string name="git_not_repo">This folder is not a Git repository</string>
     <string name="git_open_parent_root">Go to project root: %1$s</string>
+    <string name="git_diff_error">Could not compute the diff. Check the IDE console for details.</string>
 
     <!-- > Git reference picker -->
     <string name="git_pick_ref_title">Select a Git reference</string>

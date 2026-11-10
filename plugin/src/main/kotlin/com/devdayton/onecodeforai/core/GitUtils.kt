@@ -1,5 +1,6 @@
 package com.devdayton.onecodeforai.core
 
+import com.devdayton.onecodeforai.android.PluginLogger
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.ListBranchCommand.ListMode
 import org.eclipse.jgit.diff.DiffFormatter
@@ -46,6 +47,36 @@ import java.util.Locale
  *    unchanged. That is what lets the coordinator distinguish a real I/O
  *    failure from a user cancellation (see the `Cancellation` note below).
  *
+ * ### Why swallowed exceptions are still logged
+ * A swallowed exception in [withGit] used to disappear entirely. That made
+ * the diff-preview path silently show "no changes detected" whenever
+ * `scanDiff` threw — for example because `FileTreeIterator` could not read
+ * the working tree on Android. Every catch site in [withGit], [openGit], and
+ * [scanDiff] now logs the failure at WARN level with the directory and the
+ * exception message, so the IDE console shows *why* a diff (or any other
+ * query) came back empty instead of leaving the user with a green "nothing
+ * to review" message that hides a real error.
+ *
+ * ### Partial and shallow clones
+ * A repository cloned with `git clone --depth N` (shallow) or
+ * `--filter=blob:none` (partial) does not contain every historical blob
+ * locally. JGit 5.13 does not implement the promisor/fetch-on-demand
+ * protocol, so opening such a blob throws
+ * `org.eclipse.jgit.errors.MissingObjectException`. The diff preview is
+ * designed to degrade gracefully in that situation:
+ *
+ *  - [getDiffStats] processes each [DiffEntry] independently. A file whose
+ *    blob cannot be opened is still listed (with its change status) but
+ *    with `0` insertions and `0` deletions, so the user sees *that* the
+ *    file changed even though the line counts are unavailable.
+ *  - [getDiff] writes an inline `[diff unavailable for <path>: …]` marker
+ *    in place of the missing file's hunks, and continues with the rest.
+ *
+ * The user-facing remedy is `git fetch --unshallow` (shallow) or
+ * `git fetch` (partial), which restores the missing objects. The plugin
+ * cannot do this on the user's behalf without network access, which it
+ * deliberately does not request.
+ *
  * Cancellation
  * ------------
  * Only the export path is cancellable. [GitSnapshot.writeFileContent] streams
@@ -59,18 +90,36 @@ import java.util.Locale
 object GitUtils {
 
     /**
+     * Tag used for every diagnostic log emitted by this object. Kept short so
+     * the IDE console stays readable when the tree walk emits dozens of lines.
+     */
+    private const val TAG = "GitUtils"
+
+    /**
      * Opens a repository, runs [block], and always closes the repository.
      *
      * All exceptions raised by [block] are swallowed and reported as `null`,
      * including [InterruptedException]. That is intentional: this helper is
      * only used by the metadata and diff queries, which are not part of the
      * cancellable export path. See the class-level *Exception policy* note.
+     *
+     * Every swallowed exception is logged at WARN level with the directory and
+     * the underlying message. Without this log, a failing diff computation
+     * (e.g. `FileTreeIterator` hitting an unreadable working-tree file on
+     * Android) would silently appear as "no changes detected" in the UI, which
+     * is the exact failure mode that made the diff preview look broken.
      */
     private inline fun <T> withGit(directory: File, block: (Git) -> T): T? {
         val git = openGit(directory) ?: return null
         return try {
             block(git)
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            PluginLogger.w(
+                TAG,
+                "withGit: block failed for ${directory.absolutePath}: " +
+                    (error.message ?: error.javaClass.simpleName),
+                error
+            )
             null
         } finally {
             runCatching { git.close() }
@@ -85,13 +134,31 @@ object GitUtils {
      *  - project folders nested inside a larger repository.
      *
      * Returns `null` when the folder is not part of any repository or the
-     * repository cannot be opened.
+     * repository cannot be opened. The failure mode is logged so that a
+     * missing `.git` marker is distinguishable from a repository that exists
+     * but fails to open (e.g. a corrupted `config` file).
      */
-    private fun openGit(directory: File): Git? = runCatching {
-        val builder = FileRepositoryBuilder().findGitDir(directory.canonicalFile)
-        if (builder.gitDir == null) return null
-        Git(builder.build())
-    }.getOrNull()
+    private fun openGit(directory: File): Git? {
+        return try {
+            val builder = FileRepositoryBuilder().findGitDir(directory.canonicalFile)
+            if (builder.gitDir == null) {
+                PluginLogger.w(
+                    TAG,
+                    "openGit: no .git marker found for ${directory.absolutePath}"
+                )
+                return null
+            }
+            Git(builder.build())
+        } catch (error: Exception) {
+            PluginLogger.w(
+                TAG,
+                "openGit: failed for ${directory.absolutePath}: " +
+                    (error.message ?: error.javaClass.simpleName),
+                error
+            )
+            null
+        }
+    }
 
     /** Returns `true` if [dir] is inside a readable Git repository. */
     fun isGitRepo(dir: File): Boolean = withGit(dir) { true } ?: false
@@ -390,7 +457,16 @@ object GitUtils {
         val path: String,
         val status: Char,
         val insertions: Int,
-        val deletions: Int
+        val deletions: Int,
+        /**
+         * `true` when the file's change could be detected (the tree walk saw
+         * it) but its line-level stats could not be computed — typically
+         * because the repository is a shallow or partial clone and the
+         * historical blob is missing locally. In that case [insertions] and
+         * [deletions] are both `0` and the UI is expected to render the file
+         * with a "stats unavailable" hint instead of a misleading `+0 -0`.
+         */
+        val statsUnavailable: Boolean = false
     )
 
     /**
@@ -398,7 +474,22 @@ object GitUtils {
      *
      * The diff is computed with rename detection enabled so a moved file is
      * reported once as a rename instead of an add + delete pair. Returns `null`
-     * when the repository or ref cannot be read.
+     * when the repository, the ref, or the working tree cannot be read.
+     *
+     * ### Per-entry error handling
+     * Each [DiffEntry] is processed independently inside a `runCatching`. On a
+     * shallow or partial clone, `DiffFormatter.toFileHeader(...)` throws
+     * `MissingObjectException` for any file whose historical blob is not
+     * present in `.git/objects/`. Previously that exception aborted the whole
+     * computation and surfaced as "could not compute the diff"; now the
+     * affected file is still listed with its change status and a
+     * [FileChange.statsUnavailable] flag, so the user sees *which* files
+     * changed even when the line counts are unavailable.
+     *
+     * ### Why the failures are logged
+     * The log line names the exact path and blob that could not be opened, so
+     * the user can run `git fetch --unshallow` (or `git fetch` for a partial
+     * clone) and then retry the preview.
      */
     fun getDiffStats(dir: File, ref: String): DiffStats? = withGit(dir) { git ->
         val entries = scanDiff(git, ref) ?: return@withGit null
@@ -406,28 +497,69 @@ object GitUtils {
             formatter.setRepository(git.repository)
             formatter.setDetectRenames(true)
             entries.map { entry ->
-                val editList = formatter.toFileHeader(entry).toEditList()
-                val insertions = editList.sumOf { edit -> edit.endB - edit.beginB }
-                val deletions = editList.sumOf { edit -> edit.endA - edit.beginA }
-                FileChange(
-                    path = if (entry.changeType == DiffEntry.ChangeType.DELETE) entry.oldPath else entry.newPath,
-                    status = entry.changeType.toStatusChar(),
-                    insertions = insertions,
-                    deletions = deletions
-                )
+                val path = if (entry.changeType == DiffEntry.ChangeType.DELETE) entry.oldPath else entry.newPath
+                val status = entry.changeType.toStatusChar()
+                runCatching {
+                    val editList = formatter.toFileHeader(entry).toEditList()
+                    val insertions = editList.sumOf { edit -> edit.endB - edit.beginB }
+                    val deletions = editList.sumOf { edit -> edit.endA - edit.beginA }
+                    FileChange(
+                        path = path,
+                        status = status,
+                        insertions = insertions,
+                        deletions = deletions,
+                        statsUnavailable = false
+                    )
+                }.onFailure { error ->
+                    PluginLogger.w(
+                        TAG,
+                        "getDiffStats: stats unavailable for '$path' " +
+                            "(${entry.changeType}): " +
+                            (error.message ?: error.javaClass.simpleName) +
+                            " — this usually means the repository is a shallow " +
+                            "or partial clone and the historical blob is missing " +
+                            "locally. Run 'git fetch --unshallow' (or 'git fetch' " +
+                            "for a partial clone) to restore it."
+                    )
+                }.getOrElse {
+                    // Keep the entry visible with its change status so the user
+                    // still sees which files changed, even though we cannot
+                    // compute line-level stats for this one.
+                    FileChange(
+                        path = path,
+                        status = status,
+                        insertions = 0,
+                        deletions = 0,
+                        statsUnavailable = true
+                    )
+                }
             }
         }
-        DiffStats(
+        val stats = DiffStats(
             filesChanged = changes.size,
-            insertions = changes.sumOf(FileChange::insertions),
-            deletions = changes.sumOf(FileChange::deletions),
+            insertions = changes.filterNot { it.statsUnavailable }.sumOf(FileChange::insertions),
+            deletions = changes.filterNot { it.statsUnavailable }.sumOf(FileChange::deletions),
             files = changes.sortedBy { it.path.lowercase() }
         )
+        PluginLogger.d(
+            TAG,
+            "getDiffStats: '$ref' -> ${stats.filesChanged} files, " +
+                "+${stats.insertions} -${stats.deletions}, " +
+                "${changes.count { it.statsUnavailable }} with unavailable stats"
+        )
+        stats
     }
 
     /**
      * Unified diff text between [ref] and the working tree, truncated to
      * [maxLines] to keep the preview dialog responsive on large changes.
+     *
+     * ### Per-entry error handling
+     * Each [DiffEntry] is formatted inside its own `runCatching`. When a blob
+     * is missing (shallow or partial clone), the diff for that one file is
+     * replaced with an inline `[diff unavailable for <path>: …]` marker and
+     * the loop continues with the next entry, so the user still gets the diff
+     * for every file whose blobs *are* present.
      *
      * The truncation notice is appended in English so it reads consistently
      * regardless of the IDE locale.
@@ -438,9 +570,45 @@ object GitUtils {
         DiffFormatter(output).use { formatter ->
             formatter.setRepository(git.repository)
             formatter.setDetectRenames(true)
-            entries.forEach { entry -> formatter.format(entry) }
+            entries.forEach { entry ->
+                val path = if (entry.changeType == DiffEntry.ChangeType.DELETE) entry.oldPath else entry.newPath
+                runCatching { formatter.format(entry) }
+                    .onFailure { error ->
+                        PluginLogger.w(
+                            TAG,
+                            "getDiff: diff unavailable for '$path' " +
+                                "(${entry.changeType}): " +
+                                (error.message ?: error.javaClass.simpleName) +
+                                " — this usually means the repository is a shallow " +
+                                "or partial clone and the historical blob is missing " +
+                                "locally. Run 'git fetch --unshallow' (or 'git fetch' " +
+                                "for a partial clone) to restore it."
+                        )
+                        // Write an inline marker so the user sees *that* this
+                        // file changed even though its hunks are unavailable.
+                        // Best-effort: if even this write fails, the next
+                        // entry's header will still be written correctly.
+                        //
+                        // The marker string is built into a local first and
+                        // only then converted to bytes. Writing
+                        // `output.write("…" + "…".toByteArray())` would parse
+                        // as `String + ByteArray` because `.` binds tighter
+                        // than `+`, and none of ByteArrayOutputStream's
+                        // `write` overloads accept a String, which made the
+                        // call fail to compile.
+                        runCatching {
+                            val marker = "\n[diff unavailable for $path: " +
+                                "${error.message ?: error.javaClass.simpleName}]\n"
+                            output.write(marker.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+            }
         }
         val lines = output.toString(Charsets.UTF_8.name()).lineSequence().toList()
+        PluginLogger.d(
+            TAG,
+            "getDiff: '$ref' -> ${lines.size} lines, ${output.size()} bytes"
+        )
         val limit = maxLines.coerceAtLeast(1)
         if (lines.size > limit) {
             lines.take(limit).joinToString("\n") + "\n\n... (${lines.size - limit} lines truncated)"
@@ -449,15 +617,93 @@ object GitUtils {
         }
     }
 
+    /**
+     * Computes the raw list of [DiffEntry] between [ref] and the working tree.
+     *
+     * ### Failure modes and why they are logged
+     * The diff preview used to be silent about failures: any exception raised
+     * here was swallowed by [withGit] and surfaced as "no changes detected"
+     * in the dialog, which is indistinguishable from a genuinely clean diff.
+     * On Android the two most common causes are:
+     *
+     *  - **Working tree unreachable.** `findGitDir` can succeed while
+     *    `repository.workTree` still points at a directory that does not
+     *    exist or is not readable — a submodule with a stale `gitdir`, a
+     *    repository moved after the `.git` file was written, or a bare
+     *    repository used as a project root. `FileTreeIterator(repository)`
+     *    then throws during construction, and without an explicit check
+     *    the exception would be swallowed by [withGit].
+     *  - **Ref does not peel to a tree.** Rare, but possible with unusual
+     *    ref expressions or a partially-cloned repository. `^{tree}` peels
+     *    annotated tags and lightweight tags to the commit they point at,
+     *    so a failure here genuinely means the ref is unusable.
+     *
+     * Both checks log at WARN and return `null`, which the caller maps to
+     * the localized "could not compute the diff" message instead of the
+     * misleading "no changes detected".
+     *
+     * ### Why the entry count is logged
+     * When the diff *does* succeed, the number of entries is the single most
+     * useful datum for diagnosing a UI-side issue (e.g. an empty file list
+     * because a downstream filter dropped everything). Emitting it here
+     * avoids having to re-run the computation to find out.
+     *
+     * ### What this method does *not* check
+     * This method deliberately does not verify that the blobs referenced by
+     * the entries are present in `.git/objects/`. On a shallow or partial
+     * clone they may not be, and reading them happens downstream in
+     * [getDiffStats] / [getDiff], where each entry is processed independently
+     * so one missing blob cannot abort the whole preview. Doing the existence
+     * check here would double the cost for repositories that *do* have all
+     * their objects, which is the common case.
+     *
+     * @return the raw diff entries, or `null` when the diff cannot be
+     *   computed for any of the reasons above.
+     */
     private fun scanDiff(git: Git, ref: String): List<DiffEntry>? {
         val repository = git.repository
-        val baseTree = repository.resolve("${ref.trim()}^{tree}") ?: return null
-        repository.newObjectReader().use { reader ->
-            val oldTree = CanonicalTreeParser().apply { reset(reader, baseTree) }
+
+        // Resolve the ref to its tree. `^{tree}` peels annotated tags and
+        // lightweight tags down to the commit's tree, and works for branch
+        // names, remote branches, and full or abbreviated commit hashes.
+        val treeId = repository.resolve("${ref.trim()}^{tree}")
+        if (treeId == null) {
+            PluginLogger.w(
+                TAG,
+                "scanDiff: '$ref' could not be resolved to a tree"
+            )
+            return null
+        }
+
+        // The working tree iterator needs a real, readable directory. On
+        // Android this is the most common source of silent failures: a repo
+        // whose work tree was not resolved by `findGitDir` (e.g. a submodule
+        // with a relative `gitdir` file, or a bare repo) will make
+        // `FileTreeIterator(repository)` throw, and without this explicit
+        // check the exception would be swallowed by `withGit` and surface as
+        // "no changes detected".
+        val workTree = repository.workTree
+        if (workTree == null || !workTree.isDirectory) {
+            PluginLogger.w(
+                TAG,
+                "scanDiff: work tree is null or not a directory for '$ref' " +
+                    "(repo dir: ${repository.directory})"
+            )
+            return null
+        }
+
+        return repository.newObjectReader().use { reader ->
+            val oldTree = CanonicalTreeParser().apply { reset(reader, treeId) }
             DiffFormatter(DisabledOutputStream.INSTANCE).use { formatter ->
                 formatter.setRepository(repository)
                 formatter.setDetectRenames(true)
-                return formatter.scan(oldTree, FileTreeIterator(repository))
+                val entries = formatter.scan(oldTree, FileTreeIterator(repository))
+                PluginLogger.d(
+                    TAG,
+                    "scanDiff: '$ref' -> ${entries.size} entries " +
+                        "against work tree ${workTree.absolutePath}"
+                )
+                entries
             }
         }
     }

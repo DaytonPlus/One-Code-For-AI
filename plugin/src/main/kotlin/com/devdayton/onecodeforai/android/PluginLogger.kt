@@ -53,7 +53,7 @@ object PluginLogger {
      *
      * **Set to `false` for production releases.**
      */
-    private const val FORCE_DEBUG = false
+    private const val FORCE_DEBUG = true
 
     /**
      * The logger instance provided by CodeAssist during plugin registration.

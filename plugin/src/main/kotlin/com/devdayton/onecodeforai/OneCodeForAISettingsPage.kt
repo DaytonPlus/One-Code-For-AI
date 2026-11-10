@@ -236,8 +236,10 @@ internal class OneCodeForAISettingsPage : SettingsPage {
      *
      * Two branches have side effects beyond persisting the value:
      *  - [KEY_UI_LANGUAGE]: invalidates the locale caches so the next
-     *    dialog/activity instance uses the new language immediately, and
-     *    (best-effort) asks the plugin to refresh its context-menu label.
+     *    dialog/activity instance uses the new language immediately. The
+     *    context-menu label is **not** refreshed (the host treats
+     *    re-registration as additive and would duplicate the action); it
+     *    updates on the next IDE restart.
      *  - [KEY_TOTAL_EXPORT_LIMIT_KB]: clamps and parses the raw text input,
      *    falling back to `0` (no limit) on any non-numeric value.
      */
@@ -293,24 +295,17 @@ internal class OneCodeForAISettingsPage : SettingsPage {
                 LanguageHelper.invalidateCache()
                 UiFactory.invalidateLocalizedCtxCache()
 
-                // Best-effort: refresh the context-menu label so the entry
-                // the user sees in the IDE matches the language they just
-                // chose. The concrete mechanism (re-registering the action,
-                // invalidating the host's action cache, or simply relying on
-                // the next IDE restart) depends on the host API — see
-                // OneCodeForAIPlugin.refreshActionLabel for the documented
-                // fallback behaviour. The call is wrapped in runCatching
-                // because a failure here must not prevent the language
-                // preference from being saved.
-                runCatching {
-                    OneCodeForAIPlugin.refreshActionLabel(context)
-                }.onFailure { error ->
-                    PluginLogger.w(
-                        tag,
-                        "Could not refresh context-menu label after language change: " +
-                            (error.message ?: error.javaClass.simpleName)
-                    )
-                }
+                // The context-menu label is deliberately **not** refreshed
+                // here. `PluginRegistration.register(...)` is additive on this
+                // host: re-registering the same action ID appends a second
+                // copy instead of replacing the first, which produces visible
+                // duplicates in the menu after a few language switches.
+                // There is no portable in-place update or unregister API
+                // across CodeAssist builds, so the label keeps the language it
+                // had at plugin-load time and refreshes on the next IDE
+                // restart. Every other surface (configuration dialog, result
+                // panel, info activity, notifications, error messages) picks
+                // up the new language as soon as it is next opened.
             }
             KEY_TOTAL_EXPORT_LIMIT_KB -> {
                 val raw = values.getStringSafe(key, "0")
