@@ -1,48 +1,44 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
 
-    <!-- Scaled to 78% around the center: keeps every stroke inside the
-         guaranteed 66dp safe circle, regardless of the launcher mask. -->
-    <group
-        android:pivotX="54"
-        android:pivotY="54"
-        android:scaleX="0.78"
-        android:scaleY="0.78">
+    <group android:pivotX="54" android:pivotY="54"
+        android:scaleX="0.82" android:scaleY="0.82">
 
-        <!-- Soft glow halo behind the sparkle -->
-        <path
-            android:pathData="M54,54 m-22,0 a22,22 0 1,1 44,0 a22,22 0 1,1 -44,0"
-            android:fillColor="#1FD99460" />
+        <!-- Outer ambient glow -->
+        <path android:pathData="M54,54 m-30,0 a30,30 0 1,1 60,0 a30,30 0 1,1 -60,0"
+            android:fillColor="#18D99460" />
 
-        <!-- Left angle bracket -->
-        <path
-            android:pathData="M34,36 L22,54 L34,72"
-            android:strokeColor="#D99460"
-            android:strokeWidth="8"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"
+        <!-- Inner glow ring -->
+        <path android:pathData="M54,54 m-20,0 a20,20 0 1,1 40,0 a20,20 0 1,1 -40,0"
+            android:fillColor="#2ED99460" />
+
+        <!-- Left bracket -->
+        <path android:pathData="M36,34 L22,54 L36,74"
+            android:strokeColor="#D99460" android:strokeWidth="7"
+            android:strokeLineCap="round" android:strokeLineJoin="round"
             android:fillColor="#00000000" />
 
-        <!-- Right angle bracket -->
-        <path
-            android:pathData="M74,36 L86,54 L74,72"
-            android:strokeColor="#D99460"
-            android:strokeWidth="8"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round"
+        <!-- Right bracket -->
+        <path android:pathData="M72,34 L86,54 L72,74"
+            android:strokeColor="#D99460" android:strokeWidth="7"
+            android:strokeLineCap="round" android:strokeLineJoin="round"
             android:fillColor="#00000000" />
 
-        <!-- Central AI sparkle -->
-        <path
-            android:pathData="M54,38
-                              C54,46 62,54 70,54
-                              C62,54 54,62 54,70
-                              C54,62 46,54 38,54
-                              C46,54 54,46 54,38 Z"
+        <!-- Main sparkle (slightly asymmetric for elegance) -->
+        <path android:pathData="M54,32
+                              C55,44 59,50 72,54
+                              C59,58 55,64 54,76
+                              C53,64 49,58 36,54
+                              C49,50 53,44 54,32 Z"
             android:fillColor="#FFFFFF" />
+
+        <!-- Companion sparkle bottom-right -->
+        <path android:pathData="M72,68
+                              C72.3,70.7 73.3,71.7 76,72
+                              C73.3,72.3 72.3,73.3 72,76
+                              C71.7,73.3 70.7,72.3 68,72
+                              C70.7,71.7 71.7,70.7 72,68 Z"
+            android:fillColor="#FFFFFF" android:fillAlpha="0.75" />
     </group>
 </vector>
