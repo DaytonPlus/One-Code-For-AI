@@ -2,20 +2,27 @@ package com.devdayton.onecodeforai
 
 import com.devdayton.onecodeforai.R
 import com.devdayton.onecodeforai.android.LanguageHelper
+import com.devdayton.onecodeforai.android.PluginSettings
 import com.devdayton.onecodeforai.ui.CodeAssistTheme
 
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -27,15 +34,16 @@ import java.io.File
  * Plugin info screen.
  *
  * Sections, top to bottom:
- *   1. Header          - app name, subtitle, version
- *   2. What's New      - recent changelog for the current version
- *   3. Installation    - guide_step1..5 (download, install, open, enable, restart)
- *   4. How to use      - step_1..4 (open project, long-press, choose plugin, export)
- *   5. Features        - feature_1..10 with icons (advanced filtering, presets, etc.)
- *   6. Help & FAQ      - help_q1..10 / help_a1..10 as expandable Q/A items
- *   7. Links           - repository, issues, license, open CodeAssist
- *   8. Technical info  - version, package, min/target SDK, APK size, language, status
- *   9. Footer          - "Made with love" + author
+ *   1. Header          - // INFO, square close, hairline
+ *   2. Hero            - square icon slot, name, subtitle, [vX] [● STABLE]
+ *   3. What's New      - // 01 WHAT'S NEW
+ *   4. Installation    - // 02 INSTALLATION
+ *   5. How to use      - // 03 HOW TO USE
+ *   6. Features        - // 04 FEATURES
+ *   7. Help & FAQ      - // 05 HELP & FAQ
+ *   8. Links           - // 06 LINKS
+ *   9. Technical info  - // 07 TECH INFO
+ *  10. Footer          - // Made with love + author
  *
  * Localization
  * ------------
@@ -48,6 +56,47 @@ import java.io.File
  * keep the language they were created with, matching the standard Android
  * behavior for runtime locale changes.
  *
+ * Visual design — tech / minimalist
+ * ---------------------------------
+ * This screen deliberately rejects the "cards and bubbles" pattern that is
+ * common in modern mobile UIs. The aesthetic is closer to a development
+ * panel (Grafana, VS Code, a terminal): flat surfaces, thin hairlines,
+ * angular slots, monospace typography for anything structural, and a single
+ * accent colour used as punctuation rather than as fill.
+ *
+ *  - **No cards.** Sections are just header + body, separated by a 1dp
+ *    hairline. This keeps the screen dense and readable, and lets the eye
+ *    scan a full section without a rounded container competing for
+ *    attention.
+ *  - **Monospace everywhere structural.** Section numbers ("01"), labels,
+ *    values, the version tag, the status dot text, and the footer are all
+ *    monospace. This is the single most defining trait of the tech look:
+ *    it reads as machine output, not as marketing copy.
+ *  - **Square icon slots.** Feature, link, step and hero icons live inside
+ *    a small square slot with a 1dp accent-tinted border and a 2dp corner
+ *    radius. The slot is the "cell" of the layout; it gives every row a
+ *    consistent left edge without drawing a visible card around it.
+ *  - **Terminal punctuation.** Section headers use `// 01 TITLE`, the FAQ
+ *    uses a `>` prefix that rotates 90° when the answer expands, links use
+ *    a trailing `→`, the version is written as `[v1.0.90]`, and the footer
+ *    is prefixed with `//`. These are the small cues that make the screen
+ *    read as a dev tool rather than a generic app.
+ *  - **Hairlines as structure.** Every section boundary, every technical
+ *    info row, and the top bar are separated by a 1dp line at low alpha.
+ *    Lines are the only structural element besides spacing.
+ *  - **Single accent.** [CodeAssistTheme.ACCENT] is the only colour used
+ *    for emphasis; it appears on the `//` marks, section numbers, icon
+ *    strokes, the `>` prefix, the `→` arrow and the version tag. Everything
+ *    else is one of the theme's neutral text or outline tones.
+ *  - **Minimal motion.** A short staggered fade-and-slide entrance for the
+ *    sections, an animated rotation for the FAQ chevron, and a subtle
+ *    press-scale on the interactive rows. Everything is gated by
+ *    [PluginSettings.areAnimationsEnabled].
+ *
+ * Everything is built with platform widgets only — no AndroidX, no
+ * RecyclerView, no custom views. That keeps the plugin's dependency
+ * footprint at zero while still allowing expressive visuals.
+ *
  * Host package
  * ------------
  * The "Open CodeAssist" row launches the host IDE by package name. The
@@ -58,12 +107,11 @@ import java.io.File
  *
  * SDK values
  * ----------
- * `minSdk` and `targetSdk` are read from `BuildConfig.MIN_SDK_VERSION` and
- * `BuildConfig.TARGET_SDK_VERSION`, which are populated from
- * `module.toml`'s `[android.buildConfigFields]`. This avoids the previous
- * situation where the values were read from `PackageManager` with a
- * hardcoded numeric fallback that could drift out of sync with the actual
- * manifest after a version bump.
+ * `minSdk`, `targetSdk`, the version name and the APK size are read from
+ * the package manager exactly once during [onCreate] and cached on fields.
+ * A previous version read them on every call, which meant several separate
+ * `PackageManager` round-trips per render. The public getters on this class
+ * return the cached values, so the rest of the screen is unchanged.
  */
 class OneCodeForAIInfoActivity : Activity() {
 
@@ -72,6 +120,19 @@ class OneCodeForAIInfoActivity : Activity() {
     private val licenseUrl     = "$repositoryUrl/blob/main/LICENSE"
     private val authorUrl      = "https://github.com/daytonplus"
 
+    private var cachedVersionName: String = "?"
+    private var cachedApkSize: String = "—"
+    private var cachedMinSdk: Int = 26
+    private var cachedTargetSdk: Int = 36
+
+    /**
+     * Master switch for the entrance and press animations. Read through a
+     * getter so a change made in the plugin settings is picked up the next
+     * time the screen is opened, without needing to recreate the activity.
+     */
+    private val animationsEnabled: Boolean
+        get() = PluginSettings.areAnimationsEnabled(this)
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LanguageHelper.wrapContextWithIdeLocale(newBase))
     }
@@ -79,126 +140,231 @@ class OneCodeForAIInfoActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // One-shot PackageManager lookups. See the class KDoc for rationale.
+        cachedVersionName = readVersionName()
+        cachedApkSize = readApkSize()
+        cachedMinSdk = readMinSdk()
+        cachedTargetSdk = readTargetSdk()
+
+        // Match the system chrome to the screen surface so the activity
+        // reads as a single continuous dark block instead of a white status
+        // bar framing a dark body.
+        window?.apply {
+            statusBarColor = BG
+            navigationBarColor = BG
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                isStatusBarContrastEnforced = false
+                isNavigationBarContrastEnforced = false
+            }
+        }
+
         val scroll = ScrollView(this).apply {
-            setBackgroundColor(Color.parseColor("#0A0A0C"))
+            setBackgroundColor(BG)
             isVerticalScrollBarEnabled = false
+            clipToPadding = false
         }
 
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(16), dp(16), dp(28))
+            setPadding(dp(18), dp(14), dp(18), dp(32))
         }
 
         column.addView(buildTopBar())
-        column.addView(spacer(12))
-        column.addView(buildHeader())
-        column.addView(spacer(12))
-        column.addView(buildWhatsNewSection()) // <-- Changelog section
-        column.addView(spacer(16))
+        column.addView(sectionDivider(topDp = 12, bottomDp = 0))
+        column.addView(buildHeroSection())
+        column.addView(sectionDivider(topDp = 16, bottomDp = 0))
+        column.addView(buildWhatsNewSection())
+        column.addView(sectionDivider(topDp = 18, bottomDp = 0))
         column.addView(buildPluginInstallSection())
-        column.addView(spacer(12))
+        column.addView(sectionDivider(topDp = 18, bottomDp = 0))
         column.addView(buildInstallSection())
-        column.addView(spacer(12))
+        column.addView(sectionDivider(topDp = 18, bottomDp = 0))
         column.addView(buildFeaturesSection())
-        column.addView(spacer(12))
+        column.addView(sectionDivider(topDp = 18, bottomDp = 0))
         column.addView(buildHelpSection())
-        column.addView(spacer(12))
+        column.addView(sectionDivider(topDp = 18, bottomDp = 0))
         column.addView(buildLinksSection())
-        column.addView(spacer(12))
+        column.addView(sectionDivider(topDp = 18, bottomDp = 0))
         column.addView(buildTechSection())
-        column.addView(spacer(16))
+        column.addView(spacer(24))
         column.addView(buildFooter())
 
         scroll.addView(column)
         setContentView(scroll)
+
+        // Stagger the entrance after layout so the child heights are
+        // already measured and no section visibly jumps when its animation
+        // starts. Guard against a fast finish() before the post runs.
+        scroll.post {
+            if (!isFinishing && !isDestroyed) playEntrance(column)
+        }
     }
 
     // ---------------------------------------------------------------- sections
 
-    private fun buildTopBar(): View = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+    /**
+     * Top bar: `// INFO` on the left (accent slashes, muted text), a small
+     * square close button on the right (1dp outline, no fill), then a
+     * hairline underneath that separates the chrome from the body.
+     */
+    private fun buildTopBar(): View {
+        val bar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, 0)
+        }
 
-        addView(TextView(this@OneCodeForAIInfoActivity).apply {
-            text = getString(R.string.info_title)
-            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
-            textSize = 12f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            letterSpacing = 0.1f
+        val label = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        label.addView(TextView(this).apply {
+            text = "//"
+            setTextColor(CodeAssistTheme.ACCENT)
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            setPadding(0, 0, dp(8), 0)
         })
-
-        addView(TextView(this@OneCodeForAIInfoActivity).apply {
-            text = "✕"
+        label.addView(TextView(this).apply {
+            text = getString(R.string.info_title)
+                .uppercase(LanguageHelper.detectIdeLocale(this@OneCodeForAIInfoActivity))
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
-            textSize = 16f
-            gravity = Gravity.CENTER
-            background = roundedBackground(CodeAssistTheme.SURFACE_RAISED, CodeAssistTheme.OUTLINE, 10f)
-            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            letterSpacing = 0.15f
+        })
+        bar.addView(label)
+
+        val close = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(32), dp(32))
             isClickable = true
             isFocusable = true
+            background = RippleDrawable(
+                ColorStateList.valueOf(CodeAssistTheme.ACCENT.withAlpha(40)),
+                slotBackground(CodeAssistTheme.OUTLINE.withAlpha(140), radiusDp = 2f),
+                null
+            )
+            contentDescription = getString(R.string.close)
             setOnClickListener { finish() }
+        }
+        close.addView(TextView(this).apply {
+            text = "×"
+            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
+            textSize = 16f
+            typeface = Typeface.MONOSPACE
+            gravity = Gravity.CENTER
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
         })
+        attachPressScale(close)
+        bar.addView(close)
+
+        return bar
     }
 
-    private fun buildHeader(): View {
+    /**
+     * Hero block: square icon slot (48dp, 1dp accent-tinted border, 2dp
+     * radius), app name in medium sans, subtitle in muted sans, and a
+     * monospace tag row `[vX]  ● STABLE` underneath. No background, no
+     * rounded card — the hero is just the first line of the panel.
+     */
+    private fun buildHeroSection(): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(4), 0, dp(4))
+            setPadding(0, dp(8), 0, dp(4))
         }
 
-        row.addView(ImageView(this).apply {
+        // Square icon slot. The 2dp radius is the only rounding on the
+        // whole hero — everything else is angular.
+        val iconSlot = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply {
+                marginEnd = dp(14)
+            }
+            background = slotBackground(
+                CodeAssistTheme.ACCENT.withAlpha(90),
+                radiusDp = 2f
+            )
+        }
+        iconSlot.addView(ImageView(this).apply {
             setImageResource(R.drawable.ic_tech_rocket)
             setColorFilter(CodeAssistTheme.ACCENT)
-            layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply { marginEnd = dp(14) }
+            layoutParams = FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER)
         })
+        row.addView(iconSlot)
 
-        val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val texts = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
         texts.addView(TextView(this).apply {
             text = getString(R.string.app_name)
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
-            textSize = 18f
+            textSize = 17f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            letterSpacing = -0.005f
         })
+
         texts.addView(TextView(this).apply {
             text = getString(R.string.info_subtitle)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
-            setPadding(0, dp(2), 0, 0)
+            setPadding(0, dp(2), 0, dp(8))
         })
-        texts.addView(TextView(this).apply {
-            text = "v${getVersionName()}"
+
+        // Tag row: [v1.0.90]    ● STABLE — all monospace, no chips.
+        val tagRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        tagRow.addView(TextView(this).apply {
+            text = "[v$cachedVersionName]"
             setTextColor(CodeAssistTheme.ACCENT)
             textSize = 10f
             typeface = Typeface.MONOSPACE
-            setPadding(0, dp(4), 0, 0)
         })
+        tagRow.addView(TextView(this).apply {
+            text = "●"
+            setTextColor(CodeAssistTheme.TAG_INCLUDE_TEXT)
+            textSize = 8f
+            setPadding(dp(12), 0, dp(6), 0)
+        })
+        tagRow.addView(TextView(this).apply {
+            text = getString(R.string.tech_info_status_stable)
+                .uppercase(LanguageHelper.detectIdeLocale(this@OneCodeForAIInfoActivity))
+            setTextColor(CodeAssistTheme.TAG_INCLUDE_TEXT)
+            textSize = 10f
+            typeface = Typeface.MONOSPACE
+            letterSpacing = 0.12f
+        })
+        texts.addView(tagRow)
+
         row.addView(texts)
         return row
     }
 
     /**
-     * Builds the "What's New" changelog section.
-     * Highlights the most important features introduced in the current version.
-     *
-     * Items are rendered in the order they appear in the list. New entries are
-     * appended at the end so the historical order stays stable across releases:
-     * `whats_new_item_9..10` in this version cover the unified share helper
-     * and the dead-code / Download-path cleanup. Items 1..8 were rewritten for
-     * 1.0.90 to focus on the language selector, the JGit downgrade, the
-     * `.gitignore` fixes, and the tree-traversal safety changes.
+     * What's New. Header `// 01 WHAT'S NEW`, then the version line, then
+     * one row per changelog item (small icon + text, no container).
      */
     private fun buildWhatsNewSection(): View {
-        val card = sectionCard()
-        card.addView(sectionTitle(R.string.whats_new_title))
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
-        card.addView(TextView(this).apply {
+        column.addView(sectionHeader("01", R.string.whats_new_title))
+
+        column.addView(TextView(this).apply {
             text = getString(R.string.whats_new_version, getVersionName())
             setTextColor(CodeAssistTheme.ACCENT)
-            textSize = 12f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            setPadding(0, 0, 0, dp(8))
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            setPadding(0, dp(2), 0, dp(8))
         })
 
         val changes = listOf(
@@ -213,81 +379,109 @@ class OneCodeForAIInfoActivity : Activity() {
             R.string.whats_new_item_9,
             R.string.whats_new_item_10,
         )
+        changes.forEach { column.addView(iconRow(R.drawable.ic_tech_check, getString(it))) }
 
-        changes.forEach {
-            card.addView(iconRow(R.drawable.ic_tech_check, getString(it)))
-        }
-
-        return card
+        return column
     }
 
+    /**
+     * Installation guide. Header `// 02 INSTALLATION`, subtitle, then
+     * numbered steps (01..05) with monospace numbers in the accent colour.
+     */
     private fun buildPluginInstallSection(): View {
-        val card = sectionCard()
-        card.addView(sectionTitle(R.string.guide_header_title))
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
-        card.addView(TextView(this).apply {
+        column.addView(sectionHeader("02", R.string.guide_header_title))
+        column.addView(TextView(this).apply {
             text = getString(R.string.guide_header_subtitle)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
-            setPadding(0, 0, 0, dp(10))
+            setPadding(0, 0, 0, dp(6))
         })
 
         data class Step(val num: String, val title: Int, val desc: Int)
         val steps = listOf(
-            Step("1", R.string.guide_step1_title, R.string.guide_step1_desc),
-            Step("2", R.string.guide_step2_title, R.string.guide_step2_desc),
-            Step("3", R.string.guide_step3_title, R.string.guide_step3_desc),
-            Step("4", R.string.guide_step4_title, R.string.guide_step4_desc),
-            Step("5", R.string.guide_step5_title, R.string.guide_step5_desc),
+            Step("01", R.string.guide_step1_title, R.string.guide_step1_desc),
+            Step("02", R.string.guide_step2_title, R.string.guide_step2_desc),
+            Step("03", R.string.guide_step3_title, R.string.guide_step3_desc),
+            Step("04", R.string.guide_step4_title, R.string.guide_step4_desc),
+            Step("05", R.string.guide_step5_title, R.string.guide_step5_desc),
         )
-        steps.forEach { card.addView(stepRow(it.num, getString(it.title), getString(it.desc))) }
-        return card
+        steps.forEach { column.addView(stepRow(it.num, getString(it.title), getString(it.desc))) }
+
+        return column
     }
 
+    /**
+     * How to use. Header `// 03 HOW TO USE`, then four numbered steps.
+     */
     private fun buildInstallSection(): View {
-        val card = sectionCard()
-        card.addView(sectionTitle(R.string.integration_title))
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        column.addView(sectionHeader("03", R.string.integration_title))
 
         data class Step(val num: String, val title: Int, val desc: Int)
         val steps = listOf(
-            Step("1", R.string.step_1_title, R.string.step_1_desc),
-            Step("2", R.string.step_2_title, R.string.step_2_desc),
-            Step("3", R.string.step_3_title, R.string.step_3_desc),
-            Step("4", R.string.step_4_title, R.string.step_4_desc),
+            Step("01", R.string.step_1_title, R.string.step_1_desc),
+            Step("02", R.string.step_2_title, R.string.step_2_desc),
+            Step("03", R.string.step_3_title, R.string.step_3_desc),
+            Step("04", R.string.step_4_title, R.string.step_4_desc),
         )
-        steps.forEach { card.addView(stepRow(it.num, getString(it.title), getString(it.desc))) }
-        return card
+        steps.forEach { column.addView(stepRow(it.num, getString(it.title), getString(it.desc))) }
+
+        return column
     }
 
+    /**
+     * Features list. Header `// 04 FEATURES`, ten rows with small slot
+     * icons and single-line labels. No separators — the spacing between
+     * rows is enough structure for a list of single-line items.
+     */
     private fun buildFeaturesSection(): View {
-        val card = sectionCard()
-        card.addView(sectionTitle(R.string.features_title))
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        column.addView(sectionHeader("04", R.string.features_title))
 
         val features = listOf(
-            R.drawable.ic_tech_filter to R.string.feature_1,
-            R.drawable.ic_tech_git    to R.string.feature_2,
-            R.drawable.ic_tech_code   to R.string.feature_3,
-            R.drawable.ic_tech_share  to R.string.feature_4,
-            R.drawable.ic_tech_folder to R.string.feature_5,
-            R.drawable.ic_tech_chart  to R.string.feature_6,
-            R.drawable.ic_tech_check  to R.string.feature_7,
-            R.drawable.ic_tech_search to R.string.feature_8,
+            R.drawable.ic_tech_filter   to R.string.feature_1,
+            R.drawable.ic_tech_git      to R.string.feature_2,
+            R.drawable.ic_tech_code     to R.string.feature_3,
+            R.drawable.ic_tech_share    to R.string.feature_4,
+            R.drawable.ic_tech_folder   to R.string.feature_5,
+            R.drawable.ic_tech_chart    to R.string.feature_6,
+            R.drawable.ic_tech_check    to R.string.feature_7,
+            R.drawable.ic_tech_search   to R.string.feature_8,
             R.drawable.ic_tech_settings to R.string.feature_9,
-            R.drawable.ic_tech_rocket to R.string.feature_10,
+            R.drawable.ic_tech_rocket   to R.string.feature_10,
         )
-        features.forEach { card.addView(iconRow(it.first, getString(it.second))) }
-        return card
+        features.forEach { column.addView(iconRow(it.first, getString(it.second))) }
+
+        return column
     }
 
+    /**
+     * Help & FAQ. Header `// 05 HELP & FAQ`, subtitle, then one collapsible
+     * item per Q/A pair. Each item uses a `>` prefix (terminal style) that
+     * rotates 90° when the answer expands. Items are separated by a thin
+     * hairline so the list reads as a table rather than a card stack.
+     */
     private fun buildHelpSection(): View {
-        val card = sectionCard()
-        card.addView(sectionTitle(R.string.help_title))
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
-        card.addView(TextView(this).apply {
+        column.addView(sectionHeader("05", R.string.help_title))
+        column.addView(TextView(this).apply {
             text = getString(R.string.help_header_subtitle)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
-            setPadding(0, 0, 0, dp(8))
+            setPadding(0, 0, 0, dp(4))
         })
 
         val items = listOf(
@@ -302,31 +496,46 @@ class OneCodeForAIInfoActivity : Activity() {
             R.string.help_q9  to R.string.help_a9,
             R.string.help_q10 to R.string.help_a10,
         )
-        items.forEach { (q, a) -> card.addView(helpItem(q, a)) }
-        return card
+        items.forEachIndexed { index, (q, a) ->
+            column.addView(helpItem(q, a))
+            if (index < items.lastIndex) {
+                column.addView(rowDivider())
+            }
+        }
+
+        return column
     }
 
+    /**
+     * Builds a single expandable FAQ row.
+     *
+     * The `>` prefix is a single monospace glyph in the accent colour. On
+     * expand it rotates 90° (pointing down) and the answer body fades in
+     * with a short slide; on collapse the same animation is reversed and
+     * the body is only then set to `View.GONE`. That "animate then hide"
+     * pattern avoids the abrupt jump of a plain visibility toggle.
+     */
     private fun helpItem(questionRes: Int, answerRes: Int): View {
         val item = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(4), 0, dp(4))
         }
 
         val answer = TextView(this).apply {
             text = getString(answerRes)
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
-            setLineSpacing(0f, 1.15f)
+            setLineSpacing(0f, 1.2f)
             visibility = View.GONE
-            setPadding(dp(24), dp(6), 0, dp(6))
+            setPadding(dp(20), dp(2), 0, dp(10))
         }
 
-        val chevron = TextView(this).apply {
-            text = "▸"
+        val prefix = TextView(this).apply {
+            text = ">"
             setTextColor(CodeAssistTheme.ACCENT)
-            textSize = 11f
-            setPadding(0, 0, dp(6), 0)
-            layoutParams = LinearLayout.LayoutParams(dp(16), ViewGroup.LayoutParams.WRAP_CONTENT)
+            textSize = 12f
+            typeface = Typeface.MONOSPACE
+            setPadding(0, 0, dp(10), 0)
+            layoutParams = LinearLayout.LayoutParams(dp(14), ViewGroup.LayoutParams.WRAP_CONTENT)
         }
 
         val question = TextView(this).apply {
@@ -334,22 +543,57 @@ class OneCodeForAIInfoActivity : Activity() {
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
             textSize = 12f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setLineSpacing(0f, 1.15f)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
 
         val questionRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
-            setPadding(0, dp(6), 0, dp(6))
+            setPadding(0, dp(9), 0, dp(9))
             isClickable = true
             isFocusable = true
+            background = RippleDrawable(
+                ColorStateList.valueOf(CodeAssistTheme.ACCENT.withAlpha(24)),
+                null,
+                null
+            )
             setOnClickListener {
-                val expand = answer.visibility != View.VISIBLE
-                answer.visibility = if (expand) View.VISIBLE else View.GONE
-                chevron.text = if (expand) "▾" else "▸"
+                val expanding = answer.visibility != View.VISIBLE
+                if (animationsEnabled) {
+                    if (expanding) {
+                        answer.visibility = View.VISIBLE
+                        answer.alpha = 0f
+                        answer.translationY = -dp(3).toFloat()
+                        answer.animate()
+                            .alpha(1f).translationY(0f)
+                            .setDuration(180)
+                            .setInterpolator(DecelerateInterpolator())
+                            .start()
+                        prefix.animate()
+                            .rotation(90f)
+                            .setDuration(200)
+                            .setInterpolator(DecelerateInterpolator())
+                            .start()
+                    } else {
+                        answer.animate()
+                            .alpha(0f).translationY(-dp(3).toFloat())
+                            .setDuration(140)
+                            .withEndAction { answer.visibility = View.GONE }
+                            .start()
+                        prefix.animate()
+                            .rotation(0f)
+                            .setDuration(200)
+                            .setInterpolator(DecelerateInterpolator())
+                            .start()
+                    }
+                } else {
+                    answer.visibility = if (expanding) View.VISIBLE else View.GONE
+                    prefix.rotation = if (expanding) 90f else 0f
+                }
             }
         }
-        questionRow.addView(chevron)
+        questionRow.addView(prefix)
         questionRow.addView(question)
 
         item.addView(questionRow)
@@ -357,101 +601,159 @@ class OneCodeForAIInfoActivity : Activity() {
         return item
     }
 
+    /**
+     * Links section. Header `// 06 LINKS`, then one clickable row per link
+     * with a small slot icon, label and a trailing `→`. The `→` reads as
+     * "go to" without the softness of a chevron. Rows have a subtle ripple
+     * and a press-scale effect.
+     */
     private fun buildLinksSection(): View {
-        val card = sectionCard()
-        card.addView(sectionTitle(R.string.links_title))
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
-        card.addView(linkRow(R.drawable.ic_tech_github,  getString(R.string.link_repository), repositoryUrl))
-        card.addView(linkRow(R.drawable.ic_tech_bug,     getString(R.string.link_report_bug), issuesUrl))
-        card.addView(linkRow(R.drawable.ic_tech_license, getString(R.string.link_license),    licenseUrl))
-        card.addView(linkRow(R.drawable.ic_tech_rocket,  getString(R.string.open_codeassist), null) {
+        column.addView(sectionHeader("06", R.string.links_title))
+
+        column.addView(linkRow(R.drawable.ic_tech_github,  getString(R.string.link_repository), repositoryUrl))
+        column.addView(linkRow(R.drawable.ic_tech_bug,     getString(R.string.link_report_bug), issuesUrl))
+        column.addView(linkRow(R.drawable.ic_tech_license, getString(R.string.link_license),    licenseUrl))
+        column.addView(linkRow(R.drawable.ic_tech_rocket,  getString(R.string.open_codeassist), null) {
             launchCodeAssist()
         })
-        return card
+
+        return column
     }
 
+    /**
+     * Technical information. Header `// 07 TECH INFO`, then a two-column
+     * grid: uppercase monospace label on the left (muted), monospace value
+     * on the right (primary). Rows are separated by a hairline so the
+     * section reads as a table.
+     */
     private fun buildTechSection(): View {
-        val card = sectionCard()
-        card.addView(sectionTitle(R.string.tech_info_title))
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
-        card.addView(infoRow(R.string.tech_info_version,    "v${getVersionName()}"))
-        card.addView(infoRow(R.string.tech_info_package,    packageName))
-        card.addView(infoRow(R.string.tech_info_min_sdk,    "API ${getMinSdk()}"))
-        card.addView(infoRow(R.string.tech_info_target_sdk, "API ${getTargetSdk()}"))
-        card.addView(infoRow(R.string.tech_info_apk,        getApkSize()))
-        card.addView(infoRow(R.string.tech_info_language,   "Kotlin / Java 17"))
-        card.addView(infoRow(R.string.tech_info_status,     getString(R.string.tech_info_status_stable)))
-        return card
+        column.addView(sectionHeader("07", R.string.tech_info_title))
+
+        val entries = listOf(
+            R.string.tech_info_version    to "v${getVersionName()}",
+            R.string.tech_info_package    to packageName,
+            R.string.tech_info_min_sdk    to "API ${getMinSdk()}",
+            R.string.tech_info_target_sdk to "API ${getTargetSdk()}",
+            R.string.tech_info_apk        to getApkSize(),
+            R.string.tech_info_language   to "Kotlin / Java 17",
+            R.string.tech_info_status     to getString(R.string.tech_info_status_stable),
+        )
+
+        entries.forEachIndexed { index, (labelRes, value) ->
+            column.addView(infoRow(labelRes, value))
+            if (index < entries.lastIndex) {
+                column.addView(rowDivider())
+            }
+        }
+
+        return column
     }
 
     private fun buildFooter(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        gravity = Gravity.CENTER_HORIZONTAL
+        gravity = Gravity.START
 
         addView(TextView(this@OneCodeForAIInfoActivity).apply {
-            text = getString(R.string.footer_made_with)
+            text = "// ${getString(R.string.footer_made_with)}"
             setTextColor(CodeAssistTheme.TEXT_MUTED)
             textSize = 10f
-            gravity = Gravity.CENTER
+            typeface = Typeface.MONOSPACE
         })
         addView(TextView(this@OneCodeForAIInfoActivity).apply {
-            text = "DaytonPlus • ${getString(R.string.creator_dev)}"
+            text = "// DaytonPlus • ${getString(R.string.creator_dev)}"
             setTextColor(CodeAssistTheme.TEXT_MUTED)
             textSize = 10f
-            gravity = Gravity.CENTER
+            typeface = Typeface.MONOSPACE
             setPadding(0, dp(4), 0, 0)
             isClickable = true
+            isFocusable = true
+            background = RippleDrawable(
+                ColorStateList.valueOf(CodeAssistTheme.ACCENT.withAlpha(24)),
+                null,
+                null
+            )
             setOnClickListener { openUrl(authorUrl) }
         })
     }
 
     // ---------------------------------------------------------------- helpers
 
-    private fun sectionCard(): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(14), dp(14), dp(14), dp(14))
-        background = roundedBackground(CodeAssistTheme.SURFACE_RAISED, CodeAssistTheme.OUTLINE, 12f)
-    }
-
-    private fun sectionTitle(resId: Int): View {
+    /**
+     * Section header: `// NN TITLE`.
+     *
+     * `//` is in the accent colour, the two-digit number is monospace and
+     * muted, and the title itself is uppercased with letter-spacing so it
+     * reads as a panel header rather than a paragraph. All three pieces
+     * share the same baseline and stay on a single line.
+     *
+     * @param number the two-digit section number, e.g. `"01"`.
+     * @param titleRes the string resource for the section title.
+     */
+    private fun sectionHeader(number: String, titleRes: Int): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, dp(10))
+            setPadding(0, dp(14), 0, dp(10))
         }
+
         row.addView(TextView(this).apply {
-            text = "#"
+            text = "//"
             setTextColor(CodeAssistTheme.ACCENT)
-            textSize = 12f
+            textSize = 11f
             typeface = Typeface.MONOSPACE
-            setPadding(0, 0, dp(6), 0)
+            setPadding(0, 0, dp(8), 0)
         })
+
         row.addView(TextView(this).apply {
-            // Locale-aware uppercase; see UiFactory.sectionTitle.
-            text = getString(resId).uppercase(LanguageHelper.detectIdeLocale(this@OneCodeForAIInfoActivity))
+            text = number
+            setTextColor(CodeAssistTheme.TEXT_MUTED)
+            textSize = 11f
+            typeface = Typeface.MONOSPACE
+            setPadding(0, 0, dp(10), 0)
+        })
+
+        row.addView(TextView(this).apply {
+            text = getString(titleRes)
+                .uppercase(LanguageHelper.detectIdeLocale(this@OneCodeForAIInfoActivity))
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
             textSize = 11f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            letterSpacing = 0.1f
+            letterSpacing = 0.15f
         })
+
         return row
     }
 
+    /**
+     * Numbered step row. The number is monospace, accent, two digits
+     * (`01`, `02`, …) so the column stays aligned across steps. The title
+     * and description stack to the right of it. No badge, no circle —
+     * the number is the marker.
+     */
     private fun stepRow(number: String, title: String, desc: String): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.TOP
             setPadding(0, dp(6), 0, dp(6))
         }
+
         row.addView(TextView(this).apply {
             text = number
-            setTextColor(Color.WHITE)
+            setTextColor(CodeAssistTheme.ACCENT)
             textSize = 11f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(10) }
-            background = roundedBackground(CodeAssistTheme.ACCENT, null, 12f)
+            typeface = Typeface.MONOSPACE
+            setPadding(0, dp(1), dp(12), 0)
+            layoutParams = LinearLayout.LayoutParams(dp(24), ViewGroup.LayoutParams.WRAP_CONTENT)
         })
+
         val texts = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -459,77 +761,133 @@ class OneCodeForAIInfoActivity : Activity() {
         texts.addView(TextView(this).apply {
             text = title
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
-            textSize = 13f
+            textSize = 12f
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         })
         texts.addView(TextView(this).apply {
             text = desc
             setTextColor(CodeAssistTheme.TEXT_SECONDARY)
             textSize = 11f
+            setLineSpacing(0f, 1.15f)
             setPadding(0, dp(2), 0, 0)
         })
         row.addView(texts)
         return row
     }
 
+    /**
+     * Feature / changelog row: small square icon slot (16dp, 1dp accent
+     * border, 2dp radius) followed by a single-line label. Tight vertical
+     * padding so the list stays dense.
+     */
     private fun iconRow(iconRes: Int, label: String): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(4), 0, dp(4))
+            gravity = Gravity.TOP
+            setPadding(0, dp(5), 0, dp(5))
         }
-        row.addView(ImageView(this).apply {
+
+        val iconSlot = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(16), dp(16)).apply {
+                marginEnd = dp(10)
+                topMargin = dp(1)
+            }
+            background = slotBackground(
+                CodeAssistTheme.ACCENT.withAlpha(70),
+                radiusDp = 2f
+            )
+        }
+        iconSlot.addView(ImageView(this).apply {
             setImageResource(iconRes)
             setColorFilter(CodeAssistTheme.ACCENT)
-            layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginEnd = dp(10) }
+            layoutParams = FrameLayout.LayoutParams(dp(9), dp(9), Gravity.CENTER)
         })
+        row.addView(iconSlot)
+
         row.addView(TextView(this).apply {
             text = label
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
             textSize = 12f
+            setLineSpacing(0f, 1.18f)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
+
         return row
     }
 
+    /**
+     * Clickable link row. Icon slot, label, trailing `→`. Ripple feedback
+     * over the whole row plus press-scale.
+     */
     private fun linkRow(iconRes: Int, label: String, url: String?, action: (() -> Unit)? = null): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(8), 0, dp(8))
+            setPadding(0, dp(10), 0, dp(10))
             isClickable = true
             isFocusable = true
+            background = RippleDrawable(
+                ColorStateList.valueOf(CodeAssistTheme.ACCENT.withAlpha(24)),
+                null,
+                null
+            )
             setOnClickListener {
                 if (action != null) action() else url?.let { openUrl(it) }
             }
         }
-        row.addView(ImageView(this).apply {
+
+        val iconSlot = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply {
+                marginEnd = dp(12)
+            }
+            background = slotBackground(
+                CodeAssistTheme.ACCENT.withAlpha(80),
+                radiusDp = 2f
+            )
+        }
+        iconSlot.addView(ImageView(this).apply {
             setImageResource(iconRes)
             setColorFilter(CodeAssistTheme.ACCENT)
-            layoutParams = LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginEnd = dp(10) }
+            layoutParams = FrameLayout.LayoutParams(dp(11), dp(11), Gravity.CENTER)
         })
+        row.addView(iconSlot)
+
         row.addView(TextView(this).apply {
             text = label
             setTextColor(CodeAssistTheme.TEXT_PRIMARY)
-            textSize = 13f
+            textSize = 12f
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
+
         row.addView(TextView(this).apply {
-            text = "›"
-            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
-            textSize = 16f
+            text = "→"
+            setTextColor(CodeAssistTheme.ACCENT)
+            textSize = 14f
+            typeface = Typeface.MONOSPACE
         })
+
+        attachPressScale(row)
         return row
     }
 
+    /**
+     * Two-column tech info row. Label is uppercase monospace muted, value
+     * is monospace primary and end-aligned. Both are 10–11 sp so the grid
+     * stays dense.
+     */
     private fun infoRow(labelRes: Int, value: String): View {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(3), 0, dp(3))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(7), 0, dp(7))
         }
         row.addView(TextView(this).apply {
             text = getString(labelRes)
-            setTextColor(CodeAssistTheme.TEXT_SECONDARY)
-            textSize = 11f
+                .uppercase(LanguageHelper.detectIdeLocale(this@OneCodeForAIInfoActivity))
+            setTextColor(CodeAssistTheme.TEXT_MUTED)
+            textSize = 10f
+            typeface = Typeface.MONOSPACE
+            letterSpacing = 0.06f
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
         row.addView(TextView(this).apply {
@@ -546,22 +904,120 @@ class OneCodeForAIInfoActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(dpValue))
     }
 
-    private fun roundedBackground(fill: Int, stroke: Int?, radiusDp: Float): GradientDrawable =
+    /**
+     * Hairline divider between major sections. 1dp, `OUTLINE` at ~70%
+     * alpha. Same visual weight as the top bar separator so the whole
+     * screen reads as one continuous panel.
+     */
+    private fun sectionDivider(topDp: Int, bottomDp: Int): View = View(this).apply {
+        setBackgroundColor(CodeAssistTheme.OUTLINE.withAlpha(90))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
+        ).apply {
+            topMargin = dp(topDp)
+            bottomMargin = dp(bottomDp)
+        }
+    }
+
+    /**
+     * Hairline divider between rows inside a section (FAQ, tech info). Same
+     * colour as [sectionDivider] but with no vertical margin — the row
+     * padding already provides the spacing.
+     */
+    private fun rowDivider(): View = View(this).apply {
+        setBackgroundColor(CodeAssistTheme.OUTLINE.withAlpha(60))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
+        )
+    }
+
+    /**
+     * Square slot background used by every icon container on this screen.
+     *
+     * The slot is what gives the icon rows a consistent left edge without
+     * wrapping them in a card. It's a 1dp stroke at the given colour on a
+     * 2dp-radius rectangle; the inside is transparent so the parent's
+     * background shows through.
+     */
+    private fun slotBackground(strokeColor: Int, radiusDp: Float): GradientDrawable =
         GradientDrawable().apply {
-            setColor(fill)
+            shape = GradientDrawable.RECTANGLE
+            setColor(Color.TRANSPARENT)
             cornerRadius = radiusDp * resources.displayMetrics.density
-            if (stroke != null) setStroke(1, stroke)
+            setStroke(1, strokeColor)
         }
 
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
+    /**
+     * Returns the same colour with a different alpha channel.
+     *
+     * Used throughout this screen to derive the low-alpha accent and
+     * outline tones that back the slots, ripples and hairlines. Doing it
+     * at the call site (instead of hardcoding a second set of ARGB
+     * literals) keeps [CodeAssistTheme] as the single source of truth for
+     * the actual palette.
+     */
+    private fun Int.withAlpha(alpha: Int): Int =
+        Color.argb(alpha, Color.red(this), Color.green(this), Color.blue(this))
+
+    /**
+     * Attaches the standard press-scale effect (0.97x on down, 1.0x on up)
+     * to a clickable view. No-op when animations are disabled.
+     */
+    private fun attachPressScale(view: View) {
+        if (!animationsEnabled) return
+        view.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN ->
+                    v.animate().scaleX(0.97f).scaleY(0.97f)
+                        .setDuration(80)
+                        .setInterpolator(DecelerateInterpolator())
+                        .start()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                    v.animate().scaleX(1f).scaleY(1f)
+                        .setDuration(120)
+                        .setInterpolator(DecelerateInterpolator())
+                        .start()
+            }
+            false
+        }
+    }
+
+    /**
+     * Minimal entrance animation. Each top-level child of the content
+     * column fades in and slides up by 8dp, staggered by 30ms. Short and
+     * unobtrusive on purpose — this is a tech screen, not a landing page.
+     */
+    private fun playEntrance(root: ViewGroup) {
+        if (!animationsEnabled) return
+        for (i in 0 until root.childCount) {
+            val child = root.getChildAt(i)
+            child.alpha = 0f
+            child.translationY = dp(8).toFloat()
+            child.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(i * 30L)
+                .setDuration(260)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density + 0.5f).toInt()
 
     // ---------------------------------------------------------------- system info
 
-    private fun getVersionName(): String = try {
+    private fun getVersionName(): String = cachedVersionName
+    private fun getApkSize(): String = cachedApkSize
+    private fun getMinSdk(): Int = cachedMinSdk
+    private fun getTargetSdk(): Int = cachedTargetSdk
+
+    private fun readVersionName(): String = try {
         packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
     } catch (_: Exception) { "?" }
 
-    private fun getApkSize(): String = try {
+    private fun readApkSize(): String = try {
         val path = packageManager.getApplicationInfo(packageName, 0).sourceDir
         val bytes = File(path).length()
         when {
@@ -571,32 +1027,15 @@ class OneCodeForAIInfoActivity : Activity() {
         }
     } catch (_: Exception) { "—" }
 
-    /**
-     * Reads the app's minimum SDK level from the package manager.
-     *
-     * `ApplicationInfo.minSdkVersion` is available since API 24, and the
-     * plugin's own `minSdk` is 26, so this is always the manifest value the
-     * build system stamped in. Falls back to 26 only if the package manager
-     * lookup throws, which on a well-formed install should never happen.
-     *
-     * A previous iteration read this from a custom `BuildConfig` field, but
-     * CodeAssist's build system does not always regenerate `BuildConfig.java`
-     * after a `module.toml` change, so the runtime `PackageManager` value is
-     * the source of truth.
-     */
-    private fun getMinSdk(): Int = try {
+    private fun readMinSdk(): Int = try {
         packageManager.getApplicationInfo(packageName, 0).minSdkVersion
     } catch (_: Exception) { 26 }
 
-    /**
-     * Reads the app's target SDK level from the package manager.
-     *
-     * `ApplicationInfo.targetSdkVersion` is available since API 4. Falls back
-     * to 36 to match the current `module.toml` if the lookup throws.
-     */
-    private fun getTargetSdk(): Int = try {
+    private fun readTargetSdk(): Int = try {
         packageManager.getApplicationInfo(packageName, 0).targetSdkVersion
     } catch (_: Exception) { 36 }
+
+    // ---------------------------------------------------------------- actions
 
     private fun openUrl(url: String) {
         try {
@@ -630,5 +1069,14 @@ class OneCodeForAIInfoActivity : Activity() {
         } catch (_: Exception) {
             Toast.makeText(this, getString(R.string.codeassist_open_error), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private companion object {
+        /**
+         * Window background. Kept as a single named constant so the activity
+         * background, the status bar and the navigation bar all reference
+         * the exact same value and cannot drift apart in a future edit.
+         */
+        const val BG = 0xFF0A0A0C.toInt()
     }
 }
