@@ -90,16 +90,32 @@ import java.util.concurrent.atomic.AtomicLong
  *    implements in its `include = true` branch, and it mirrors the negation
  *    behavior of `.gitignore`.
  *
+ * ### Sticky header semantics
+ * The pinned root row is a **summary of the tree below it**, not an
+ * independent toggle. Its checkbox reflects "at least one direct child is
+ * included" (see [hasAnyIncludedNode]) rather than the previous "nothing
+ * is excluded" rule, so unchecking a single child no longer unchecks the
+ * root as long as some other child is still included. Clicking the sticky
+ * checkbox still performs a bulk operation in both directions — see
+ * [setAllIncluded] — but the visual state shown is what the user would
+ * expect from a normal parent-child checkbox group.
+ *
  * ### Performance
- * Two optimizations keep large trees responsive:
+ * Three optimizations keep large trees responsive:
  *
  *  - [refreshVisibleRows] updates the checkbox, icon and text color of the
- *    currently visible rows in place, instead of tearing down and rebuilding
- *    the whole tree when a single checkbox flips. Without it, toggling the
- *    root checkbox on a project with thousands of nodes would drop frames
- *    for seconds.
- *  - [TreeNode] keeps direct references to its row views so a refresh never
- *    has to search the hierarchy for the widget it needs to update.
+ *    currently visible rows in place, instead of tearing down and
+ *    rebuilding the whole tree when a single checkbox flips. Without it,
+ *    toggling the root checkbox on a project with thousands of nodes would
+ *    drop frames for seconds.
+ *  - [refreshVisibleRows] and [refreshNodeRow] guard every `isChecked`
+ *    assignment behind a "value actually changed" check. A single child
+ *    toggle therefore repaints only the rows whose visual state differs
+ *    from the model, instead of re-writing every visible checkbox on every
+ *    refresh — a measurable win on wide project trees where a checkbox
+ *    toggle happens with dozens or hundreds of rows on screen.
+ *  - [TreeNode] keeps direct references to its row views so a refresh
+ *    never has to search the hierarchy for the widget it needs to update.
  *
  * ### Related views
  *  - [com.devdayton.onecodeforai.ui.ConfigurationDialog] embeds this view and
@@ -496,7 +512,7 @@ class ProjectTreeView(
      *   because visibility does not affect the aggregates; re-emitting them
      *   would only cause redundant work in the parent dialog.
      */
-    private fun renderInternal(fireStats: Boolean) {
+    private fun renderInternal(fireStats: Boolean = true) {
         val root = rootNode ?: return
 
         // Sticky header: only the root row, never any children.
@@ -602,9 +618,27 @@ class ProjectTreeView(
      * destroying and rebuilding the whole tree.
      *
      * Cost is O(visible) rather than O(all). Called from [setNodeIncluded]
-     * and [toggleAllMarked], where previously every call went through
+     * and [setAllIncluded], where previously every call went through
      * `renderInternal(fireStats = true)` — recreating hundreds or thousands
      * of Views just to reflect a change in one subtree.
+     *
+     * ### Sticky header state
+     * The sticky checkbox is updated to [hasAnyIncludedNode], not to
+     * `excludedPaths.isEmpty()`. The two differ whenever *some* — but not
+     * all — children are excluded, and the new rule is what makes the
+     * header behave like a normal parent checkbox: unchecking a single
+     * child no longer unchecks the root while other children remain
+     * included. See the class-level *Sticky header semantics* note.
+     *
+     * ### Redundant-setter guard
+     * The `if (cb.isChecked != newState)` check is not cosmetic. Without
+     * it, a single child toggle would walk every visible row and reassign
+     * `isChecked` on each of them, even though the vast majority still hold
+     * the same value. Each assignment goes through `CompoundButton`'s
+     * property setter, invalidates the drawable state, and (on some OEM
+     * builds) triggers a layout pass — measurable on trees with dozens of
+     * rows on screen. Guarding the assignment turns a bulk repaint into a
+     * paint of only the rows whose state actually changed.
      *
      * @param fireStats whether to recompute and forward [PreviewStats].
      *   Always `true` in the current call sites, because every path that
@@ -614,9 +648,15 @@ class ProjectTreeView(
     private fun refreshVisibleRows(fireStats: Boolean = true) {
         val root = rootNode ?: return
         stickyCheckbox?.let { cb ->
-            isRefreshingRows = true
-            cb.isChecked = currentConfig.excludedPaths.isEmpty()
-            isRefreshingRows = false
+            val newState = hasAnyIncludedNode()
+            // [PERF] Only touch the widget when the visual state actually
+            // changes. See the KDoc section "Redundant-setter guard" for
+            // the rationale.
+            if (cb.isChecked != newState) {
+                isRefreshingRows = true
+                cb.isChecked = newState
+                isRefreshingRows = false
+            }
         }
         refreshNodeVisible(root)
         if (fireStats) onStatsChanged(computeStatsFromTree(root))
@@ -655,13 +695,27 @@ class ProjectTreeView(
      * programmatic `isChecked = included` assignment does not fire the
      * `setOnCheckedChangeListener` installed in [buildRow], which would
      * otherwise call [setNodeIncluded] and re-trigger the whole refresh.
+     *
+     * ### Redundant-setter guard
+     * As in [refreshVisibleRows], the `isChecked` assignment is guarded by
+     * an equality check so a row whose state has not changed is not
+     * touched. Combined with the same guard on the sticky checkbox, this
+     * is what keeps a single child toggle from repainting the entire
+     * visible tree. The tint and text-color assignments are left
+     * unguarded because they are cheap and idempotent — `setColorFilter`
+     * and `setTextColor` do not invalidate layout, only the drawable
+     * state, which is already the minimum repaint cost.
      */
     private fun refreshNodeRow(node: TreeNode) {
         val included = !node.selfExcluded && !node.ancestorExcluded
         node.checkbox?.let { cb ->
-            isRefreshingRows = true
-            cb.isChecked = included
-            isRefreshingRows = false
+            // [PERF] Skip redundant setter when the state already matches.
+            // See this method's KDoc section "Redundant-setter guard".
+            if (cb.isChecked != included) {
+                isRefreshingRows = true
+                cb.isChecked = included
+                isRefreshingRows = false
+            }
             cb.buttonTintList = ColorStateList.valueOf(
                 if (node.ancestorExcluded) CodeAssistTheme.TEXT_MUTED
                 else CodeAssistTheme.ACCENT
@@ -695,7 +749,9 @@ class ProjectTreeView(
      *
      * @param isSticky `true` for the pinned header row (root). Sticky rows
      *   skip the chevron, use the "include all" checkbox handler, and never
-     *   respond to row-wide taps.
+     *   respond to row-wide taps. The sticky checkbox reflects
+     *   [hasAnyIncludedNode] rather than `excludedPaths.isEmpty()` — see
+     *   the class-level *Sticky header semantics* note for why.
      */
     private fun buildRow(node: TreeNode, isSticky: Boolean = false): View {
         val isRoot = node.depth == 0
@@ -746,7 +802,10 @@ class ProjectTreeView(
         // The root's "include all" affordance lives on the sticky header.
         if (isSticky || !isRoot) {
             val cb = CheckBox(activity).apply {
-                val included = if (isSticky) currentConfig.excludedPaths.isEmpty()
+                // Sticky header reflects "at least one direct child is
+                // included", NOT "nothing is excluded". See the class-level
+                // *Sticky header semantics* note.
+                val included = if (isSticky) hasAnyIncludedNode()
                                else !node.selfExcluded && !node.ancestorExcluded
                 isChecked = included
                 isEnabled = true
@@ -780,7 +839,16 @@ class ProjectTreeView(
                 setOnCheckedChangeListener { _, checked ->
                     // [PERF] Ignore programmatic updates from refreshNodeRow.
                     if (isRefreshingRows) return@setOnCheckedChangeListener
-                    if (isSticky) toggleAllMarked() else setNodeIncluded(node, checked)
+                    // For the sticky header the new value of the checkbox
+                    // is the *target* state for the whole tree: checked
+                    // means "include every child", unchecked means
+                    // "exclude every child". `setAllIncluded` takes that
+                    // flag directly instead of inferring it from the
+                    // current exclusion list, because the list and the
+                    // visual state no longer agree after the sticky-header
+                    // fix (some-but-not-all-children included shows a
+                    // checked box while the list is non-empty).
+                    if (isSticky) setAllIncluded(checked) else setNodeIncluded(node, checked)
                 }
             }
             node.checkbox = cb
@@ -963,6 +1031,16 @@ class ProjectTreeView(
      * [refreshVisibleRows] rather than incrementally, because the
      * sibling re-exclusion loop above can add or remove an arbitrary number
      * of paths.
+     *
+     * ### Sticky header propagation
+     * The sticky checkbox is not updated here directly. Instead,
+     * [refreshVisibleRows] reads [hasAnyIncludedNode] and reflects the
+     * result on the header, so a single child toggle leaves the header
+     * checked while at least one other child is still included, and
+     * automatically unchecks it when the last included child is excluded.
+     * That is the children-to-parent direction of the standard checkbox
+     * group behavior described in the class-level *Sticky header
+     * semantics* note.
      */
     private fun setNodeIncluded(node: TreeNode, include: Boolean) {
         val excluded = currentConfig.excludedPaths.toMutableList()
@@ -1008,7 +1086,8 @@ class ProjectTreeView(
         rootNode?.let { refreshExclusionFlags(it) }
 
         // [PERF] Update only the visible rows rather than rebuilding the
-        // whole tree.
+        // whole tree. The sticky header is refreshed by the same call
+        // (see [hasAnyIncludedNode]).
         refreshVisibleRows(fireStats = true)
         node.rowView?.let { pulseRow(it) }
     }
@@ -1030,7 +1109,10 @@ class ProjectTreeView(
      * The traversal is top-down: a node is excluded if its own path is in
      * the list *or* its parent was excluded. Caching the ancestor result in
      * [TreeNode.ancestorExcluded] is what lets [refreshNodeRow] answer
-     * "should this row look included?" with a single boolean read.
+     * "should this row look included?" with a single boolean read, and what
+     * lets [hasAnyIncludedNode] answer "is any direct child of the root
+     * still included?" in O(children-of-root) without walking the whole
+     * tree.
      */
     private fun refreshExclusionFlags(root: TreeNode) {
         val stack = ArrayDeque<Pair<TreeNode, Boolean>>()
@@ -1045,24 +1127,89 @@ class ProjectTreeView(
     }
 
     /**
-     * Handles the sticky header's "include all" checkbox: toggles between
-     * "nothing excluded" and "everything excluded".
+     * Returns `true` if at least one direct child of the root is currently
+     * included.
      *
-     * When switching to "everything excluded", only the root's direct
-     * children are written into the list; the ancestor propagation in
-     * [refreshExclusionFlags] then marks every descendant as excluded
-     * without the list having to enumerate the whole tree.
+     * ### Why direct children are sufficient
+     * Excluding a folder also excludes every descendant, because
+     * [refreshExclusionFlags] propagates `ancestorExcluded` top-down. A
+     * direct child whose own flags are both `false` therefore implies the
+     * entire subtree under it is included (no descendant can be
+     * `selfExcluded` without the scan rebuild having flipped the flags, and
+     * the scan always sets `ancestorExcluded` from the parent). Conversely,
+     * if every direct child is excluded, every descendant is excluded as
+     * well. That is why the check can stop at the first level and stay
+     * O(children-of-root) — a meaningful constant on any realistic project
+     * even when the tree below is huge.
+     *
+     * ### What this fixes
+     * The sticky header used to reflect `excludedPaths.isEmpty()`, which is
+     * equivalent to "every single node in the whole tree is included". That
+     * made unchecking any one descendant uncheck the root, which is the
+     * behavior this method replaces. See the class-level *Sticky header
+     * semantics* note for the full contract.
+     *
+     * ### Used by
+     *  - [refreshVisibleRows] to update the sticky checkbox after any
+     *    inclusion change.
+     *  - [buildRow] for the sticky header's initial `isChecked` value on
+     *    render (including re-render after filter changes).
+     *  - [setAllIncluded] indirectly, via the [refreshVisibleRows] call at
+     *    the end of the bulk operation.
+     *
+     * @return `true` when at least one direct child of the root is visible
+     *   and included. `false` when the tree has not been scanned yet, when
+     *   the root has no visible children, or when every visible child is
+     *   excluded (either directly or via an excluded ancestor).
      */
-    private fun toggleAllMarked() {
-        val currentlyAllMarked = currentConfig.excludedPaths.isEmpty()
-        val newExcluded: List<String> = if (currentlyAllMarked) {
+    private fun hasAnyIncludedNode(): Boolean {
+        val root = rootNode ?: return false
+        return root.children.any { !it.selfExcluded && !it.ancestorExcluded }
+    }
+
+    /**
+     * Applies a bulk inclusion decision to the whole tree.
+     *
+     * When [include] is `true`, every exclusion is cleared. When `false`,
+     * every top-level entry that would otherwise be visible is written to
+     * the exclusion list; because excluding a directory implicitly excludes
+     * its whole subtree (see [refreshExclusionFlags]), the single-level list
+     * covers the entire project without having to enumerate every node.
+     *
+     * ### Why the direction is a parameter
+     * The previous implementation inferred the direction from
+     * `excludedPaths.isEmpty()`: if nothing was excluded, the click meant
+     * "exclude everything"; otherwise it meant "include everything". That
+     * worked while the sticky checkbox showed "nothing excluded", but
+     * stopped matching the moment the sticky checkbox was fixed to show
+     * "at least one child included" — the checkbox can now be checked with
+     * a non-empty exclusion list, and inferring direction from the list
+     * would then invert the user's click. Taking the new checkbox state as
+     * the target makes the bulk operation follow the checkbox exactly in
+     * both directions, which is the behavior a standard parent checkbox is
+     * expected to have.
+     *
+     * ### Caller contract
+     * Only [buildRow]'s sticky checkbox listener calls this method, and it
+     * always passes the post-toggle `isChecked` value it just received
+     * from the listener. `checked = true` therefore always means "include
+     * everything", and `checked = false` always means "exclude
+     * everything", regardless of what the previous state happened to be.
+     *
+     * @param include target inclusion state for every visible child of the
+     *   root. `true` clears all exclusions; `false` excludes every visible
+     *   top-level entry (which, by subtree propagation, excludes the whole
+     *   project).
+     */
+    private fun setAllIncluded(include: Boolean) {
+        val newExcluded: List<String> = if (include) {
+            emptyList()
+        } else {
             val filter = FileFilter(projectRoot, currentConfig)
             projectRoot.listFiles()
                 ?.filter { file -> filter.include(file, respectExcludedPaths = false) }
                 ?.map { it.name }
                 ?: emptyList()
-        } else {
-            emptyList()
         }
         currentConfig = currentConfig.copy(excludedPaths = newExcluded)
         onExcludedPathsChanged(newExcluded)
