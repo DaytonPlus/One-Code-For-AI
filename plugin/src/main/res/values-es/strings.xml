@@ -43,10 +43,10 @@
     <string name="kb_suffix"> KB</string>
 
     <!-- > Section toggle labels -->
-    <!-- Etiquetas cortas usadas como casilla de cada sección de reglas y
-         como cabecera de la sección General (que no tiene casilla propia:
-         contiene los indicadores base en lugar de una única lista de
-         reglas activable). -->
+    <!-- Short labels used as the checkbox of each rule-list section, and
+         as the section header for the General group (which has no
+         checkbox of its own — it contains the base flags rather than
+         a single toggleable rule list). -->
     <string name="section_general">General</string>
     <string name="section_inclusions">Inclusiones</string>
     <string name="section_exclusions">Exclusiones</string>
@@ -55,8 +55,8 @@
     <string name="section_version_control">Control de versiones</string>
     <string name="section_tree">Árbol de archivos</string>
 
-    <!-- > Etiqueta heredada conservada por compatibilidad con
-         traducciones anteriores. No la usa el diálogo actual. -->
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
     <string name="section_gitignore_rules">Reglas detectadas en .gitignore</string>
 
     <!-- > Empty-state placeholders -->
@@ -73,10 +73,9 @@
     <string name="delete_rule">Eliminar regla</string>
     <string name="extension_hint">ej.: kt, json, *.test.kt</string>
     <string name="action_add">+ Añadir</string>
-    <!-- Acción secundaria junto a "+ Añadir" que vacía la lista en un
-         solo toque. Visible en Inclusiones, Exclusiones y Solo
-         referencia. No se muestra en Gitignore, cuya lista es de solo
-         lectura. -->
+    <!-- Secondary action next to "+ Add" that empties the flow in one tap.
+         Shown on Inclusions, Exclusions and Reference only. Not shown on
+         Gitignore, whose flow is read-only. -->
     <string name="action_clear">Vaciar</string>
 
     <!-- > Version control (config dialog) -->
@@ -321,10 +320,9 @@
     <string name="feature_privacy_1">100% offline: sin permiso de internet, sin telemetría</string>
     <string name="feature_privacy_2">Procesamiento local - sin nube, sin subidas</string>
 
-    <!-- Legacy flat feature list. Conservada por compatibilidad con
-         traducciones anteriores; la pantalla de información actual
-         agrupa la misma información bajo las cuatro cadenas de
-         categoría de arriba. -->
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current info screen groups the same
+         information under the four category strings above. -->
     <string name="feature_1">Filtros glob avanzados: usa patrones como *.log, build/ o directorios generados anidados</string>
     <string name="feature_2">Integración con Git: exporta desde ramas, etiquetas, commits o previsualiza diffs</string>
     <string name="feature_3">Presets profesionales: Android (Kotlin, Código, Resources), Web, Python, Texto</string>
@@ -416,10 +414,9 @@
 
     <!-- ============================================================== -->
     <!-- HOST INTEGRATION                                                -->
-    <!-- Package name del IDE anfitrión que se abre desde la fila        -->
-    <!-- "Abrir CodeAssist" de la pantalla de información. Sobrescríbelo -->
-    <!-- aquí para forks o hosts con otra marca sin tocar el código de   -->
-    <!-- la activity.                                                    -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
     <!-- ============================================================== -->
     <string name="host_ide_package">com.tyron.code</string>
 </resources>

@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+    <string name="app_display_name">One Code For AI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">Закрити</string>
+    <string name="cancel">Скасувати</string>
+    <string name="accept">OK</string>
+    <string name="save">Зберегти</string>
+    <string name="delete">Видалити</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">ГЕНЕРАТОР КОНТЕКСТУ  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Профіль експорту</string>
+    <string name="save_preset">Зберегти профіль</string>
+    <string name="delete_preset">Видалити профіль</string>
+    <string name="delete_preset_message">Видалити профіль \"%1$s\"? Цю дію не можна скасувати.</string>
+    <string name="custom_preset">Власний</string>
+    <string name="preset_name_hint">Назва профілю</string>
+    <string name="preset_name_reserved">Ця назва зарезервована для вбудованого профілю.</string>
+    <string name="preset_name_duplicate">Профіль із назвою \"%1$s\" вже існує.</string>
+
+    <!-- > Section help: presets -->
+    <string name="help_presets_title">Профіль експорту</string>
+    <string name="help_presets_body">Профілі експорту — це багаторазові набори правил фільтрації: включення, виключення, шаблони «лише посилання» та базові перемикачі (бінарні файли, gitignore, обмеження розміру). Вбудовані профілі охоплюють типові типи проєктів; збережіть власний профіль із діалогу, коли налаштуєте вибір, який вам підходить.\n\nВибір профілю повторно сканує дерево з правилами цього профілю. Будь-які ручні зміни, зроблені в дереві під іншим профілем, відкидаються під час зміни профілю, оскільки вони належали контексту попереднього профілю. Вони знову з'являться, коли ви повернетеся до того профілю.</string>
+
+    <!-- > Base flags -->
+    <string name="exclude_binaries">Виключати бінарні файли</string>
+    <string name="respect_gitignore">Дотримуватися правил .gitignore</string>
+    <string name="max_size">Максимальний розмір</string>
+    <string name="kb_suffix"> КБ</string>
+
+    <!-- > Section toggle labels -->
+    <string name="section_general">Загальні</string>
+    <string name="section_inclusions">Включення</string>
+    <string name="section_exclusions">Виключення</string>
+    <string name="section_stub_patterns">Лише посилання</string>
+    <string name="section_gitignore">Gitignore</string>
+    <string name="section_version_control">Контроль версій</string>
+    <string name="section_tree">Дерево файлів</string>
+
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
+    <string name="section_gitignore_rules">Правила, виявлені в .gitignore</string>
+
+    <!-- > Empty-state placeholders -->
+    <string name="no_inclusions">Немає додаткових розширень</string>
+    <string name="no_exclusions">Немає користувацьких виключень</string>
+    <string name="no_stub_patterns">Немає шаблонів «лише посилання»</string>
+    <string name="no_gitignore_rules">У .gitignore не знайдено жодного правила</string>
+
+    <!-- > Add / edit / delete tag dialogs -->
+    <string name="add_inclusion_title">Додати включення</string>
+    <string name="add_exclusion_title">Додати виключення</string>
+    <string name="add_stub_title">Додати шаблон «лише посилання»</string>
+    <string name="edit_extension">Редагувати шаблон</string>
+    <string name="delete_rule">Видалити правило</string>
+    <string name="extension_hint">напр.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Додати</string>
+    <string name="action_clear">Очистити</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="help_version_control_title">Контроль версій</string>
+    <string name="help_version_control_body">Якщо цей розділ увімкнено, а проєкт є Git-репозиторієм, ви можете експортувати знімок Git замість поточного робочого дерева.\n\nВиберіть гілку, тег або коміт через значок пошуку біля поля посилання або введіть будь-який вираз, який Git може розв'язати (HEAD~3, origin/main, v1.2.0). Під полем з'явиться розв'язаний короткий хеш для підтвердження.\n\nПопередній перегляд різниць показує, що зміниться між вибраним посиланням і робочим деревом, нічого не змінюючи.\n\nВи можете повністю вимкнути Git на сторінці налаштувань плагіна; тоді розділ покаже повідомлення «вимкнено глобально». Правила .gitignore продовжують діяти в обох випадках.\n\nЗняття прапорця «Контроль версій» вимикає весь розділ без втрати налаштованого посилання: посилання залишається в профілі й буде застосовано повторно, коли ви наступного разу позначите прапорець.</string>
+    <string name="git_info">Гілка: %1$s  |  Коміт: %2$s</string>
+    <string name="no_branch">немає гілки</string>
+    <string name="no_commit">немає коміту</string>
+    <string name="read_from_git">Читати з посилання Git</string>
+    <string name="git_refresh">Оновити відомості Git</string>
+    <string name="git_uncommitted_changes">Попередження: незакомічених змін: %1$d</string>
+    <string name="git_ref_hint">напр.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Огляд посилань</string>
+    <string name="git_preview_diff">Попередній перегляд різниць із робочим деревом</string>
+    <string name="git_resolving">Розв'язування…</string>
+    <string name="git_resolved_as">Розв'язано: %1$s</string>
+    <string name="git_ref_invalid">Недійсне посилання Git</string>
+    <string name="git_ref_empty">Введіть або виберіть посилання Git</string>
+    <string name="git_not_repo">Ця тека не є Git-репозиторієм</string>
+    <string name="git_open_parent_root">Перейти до кореня проєкту: %1$s</string>
+    <string name="git_diff_error">Не вдалося обчислити різниці. Перевірте консоль IDE.</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Виберіть посилання Git</string>
+    <string name="git_tab_branches">Гілки</string>
+    <string name="git_tab_tags">Теги</string>
+    <string name="git_tab_commits">Коміти</string>
+    <string name="git_local_branches">Локальні гілки</string>
+    <string name="git_remote_branches">Віддалені гілки</string>
+    <string name="git_no_branches">Гілок не знайдено</string>
+    <string name="git_no_tags">Тегів не знайдено</string>
+    <string name="git_no_commits">Комітів не знайдено</string>
+    <string name="git_current_marker">поточна</string>
+    <string name="git_remote_marker">віддалена</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Різниці: %1$s і робоче дерево</string>
+    <string name="git_diff_stats">%1$d файлів  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Змін не виявлено</string>
+    <string name="git_diff_content">Вміст різниць</string>
+
+    <!-- > File tree -->
+    <string name="show_tree">Показати дерево файлів</string>
+    <string name="tree_show_locked">Показати заблоковані</string>
+    <string name="tree_locked_hint">(заблоковано)</string>
+    <string name="tree_unlock_scanning">Сканування піддерева…</string>
+    <string name="action_expand">Розгорнути</string>
+    <string name="action_collapse">Згорнути</string>
+    <string name="action_reload">Перезавантажити</string>
+    <string name="analyzing">Аналіз…</string>
+    <string name="analyzing_files">Аналіз… %1$d файлів</string>
+    <string name="canceled_retry">Скасовано. Торкніться фільтра, щоб повторити.</string>
+    <string name="tree_scan_error">Не вдалося просканувати дерево проєкту: %1$s</string>
+    <string name="no_tree_matches">Немає файлів, що відповідають фільтрам</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Згенерувати контекст</string>
+    <string name="generate_description">Буде створено один .txt-файл і збережено в «Завантаження».</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Генерація контексту…</string>
+    <string name="preparing_export">Підготовка…</string>
+    <string name="processing_progress">Обробка: %1$d з %2$d файлів</string>
+    <string name="generation_complete">Генерацію завершено</string>
+    <string name="generation_failed">Генерація не вдалася</string>
+    <string name="generation_minimize_hint">Ви можете згорнути цей діалог. Генерація продовжиться у фоні.</string>
+    <string name="saved_to_downloads">Збережено в Завантаження/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Експорт уже виконується.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Зберегти</string>
+    <string name="action_share">Поділитися</string>
+    <string name="action_regenerate">Згенерувати знову</string>
+    <string name="action_edit_settings">Змінити налаштування</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d файл</item>
+        <item quantity="few">%1$d файли</item>
+        <item quantity="many">%1$d файлів</item>
+        <item quantity="other">%1$d файлу</item>
+    </plurals>
+    <plurals name="stats_stub_files">
+        <item quantity="one">%1$d посилання</item>
+        <item quantity="few">%1$d посилання</item>
+        <item quantity="many">%1$d посилань</item>
+        <item quantity="other">%1$d посилання</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s токенів</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Згенерувати контекст TXT (Поділитися/Експорт)</string>
+    <string name="dialog_already_open">Вікно конфігурації вже відкрите.</string>
+    <string name="no_folder_selected">Теку не вибрано.</string>
+    <string name="select_valid_folder">Виберіть дійсну теку.</string>
+    <string name="error_opening_dialog">Помилка: не вдалося відкрити вікно.</string>
+    <string name="opening_config">Відкриття конфігурації…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Не вдалося записати файл.</string>
+    <string name="error_source_uri_unreadable">Не вдалося відкрити вихідний файл.</string>
+    <string name="error_output_stream_unavailable">Призначення не надало потік виводу.</string>
+    <string name="error_media_store_finalize">Не вдалося завершити файл призначення.</string>
+    <string name="error_downloads_dir_create">Не вдалося створити каталог «Завантаження»: %1$s</string>
+    <string name="error_project_root_not_dir">Корінь проєкту не є каталогом: %1$s</string>
+    <string name="error_git_repo_unreadable">Вибрана тека не є читабельним Git-репозиторієм.</string>
+    <string name="error_git_ref_unresolved">Не вдалося розв'язати посилання Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">Експорт Git увімкнено, але посилання не вибрано.</string>
+    <string name="unknown_error">Невідома помилка</string>
+    <string name="error_storage_permission">Потрібен дозвіл на сховище. Надайте його в «Налаштування > Застосунки > One Code For AI > Дозволи».</string>
+    <string name="error_source_file_missing">Згенерований файл більше недоступний. Згенеруйте контекст знову, щоб відтворити його.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Контекст готовий - %1$d помилка читання</item>
+        <item quantity="few">Контекст готовий - %1$d помилки читання</item>
+        <item quantity="many">Контекст готовий - %1$d помилок читання</item>
+        <item quantity="other">Контекст готовий - %1$d помилки читання</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Поділитися дампом з:</string>
+    <string name="share_error">Помилка спільного доступу: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Контекст готовий</string>
+    <string name="error_notification_title">Помилка One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Err</string>
+    <string name="notification_channel_actions">Результати One Code</string>
+    <string name="generating_dump">Генерація дампу коду…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Інтеграція з Git</string>
+    <string name="settings_git_global_desc">Виявляє репозиторії та вмикає всі функції Git. Вимкніть, щоб примусово використовувати режим звичайної теки навіть усередині репозиторію. Правила .gitignore усе одно застосовуються.</string>
+    <string name="settings_animations">Анімації</string>
+    <string name="settings_animations_desc">Переходи згасання та масштабування в діалозі, дереві й селекторі профілів. Вимкніть на малопотужних пристроях.</string>
+    <string name="settings_notifications">Сповіщення про генерацію</string>
+    <string name="settings_notifications_desc">Сповіщення про поступ, завершення та помилки під час експорту. Вимкніть, щоб заглушити панель сповіщень.</string>
+    <string name="settings_total_export_limit">Загальне обмеження розміру експорту (КБ)</string>
+    <string name="settings_total_export_limit_desc">Жорстке обмеження в кілобайтах на загальний розмір одного дампу. Після досягнення експорт припиняє включати файли й додає повідомлення про скорочення. Найкорисніше, коли обмеження на файл вимкнено. Установіть 0, щоб не обмежувати.</string>
+    <string name="settings_ui_language">Мова інтерфейсу</string>
+    <string name="settings_ui_language_desc">Мова, яку використовує інтерфейс плагіна. «Авто» слідує мові IDE. Зміна застосовується лише до нових діалогів і екранів; уже відкриті вікна зберігають поточну мову до повторного відкриття.</string>
+    <string name="settings_ui_theme">Тема</string>
+    <string name="settings_ui_theme_desc">Колірна схема інтерфейсу плагіна. «Темна» — типова й зберігає оригінальну палітру плагіна. «Системна» слідує світлому/темному режиму пристрою, а «Світла» завжди використовує світлу палітру. Зміна застосовується лише до нових діалогів і екранів; уже відкриті вікна зберігають поточну тему до повторного відкриття.</string>
+    <string name="settings_ui_theme_system">Системна (за пристроєм)</string>
+    <string name="settings_ui_theme_light">Світла</string>
+    <string name="settings_ui_theme_dark">Темна</string>
+    <string name="settings_parent_search_limit">Обмеження пошуку в батьківських теках</string>
+    <string name="settings_parent_search_limit_desc">Скільки батьківських тек плагін проходить угору в пошуках .gitignore або кореня проєкту CodeAssist. Збільште для дуже глибоких дерев пакетів. Установіть 0, щоб ніколи не виходити з вибраної теки.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git вимкнено глобально в налаштуваннях CodeAssist. Увімкніть його там, щоб використовувати гілки, теги й коміти.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">Плагін для CodeAssist</string>
+    <string name="open_codeassist">Відкрити CodeAssist</string>
+    <string name="footer_made_with">Зроблено з любов'ю для спільноти</string>
+    <string name="creator_dev">Незалежний розробник</string>
+    <string name="codeassist_not_installed">CodeAssist не встановлено</string>
+    <string name="codeassist_open_error">Не вдалося відкрити CodeAssist</string>
+    <string name="no_app_for_link">Немає застосунку для відкриття посилань</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">ЩО НОВОГО</string>
+    <string name="whats_new_version">Версія %1$s</string>
+    <string name="whats_new_item_1">Дерево v2: дерево проєкту тепер є авторитетним джерелом того, що потрапляє до дампу. Кожен запис можна включити, позначити як «лише посилання» або виключити безпосередньо з дерева, і вибір зберігається для кожного проєкту.</string>
+    <string name="whats_new_item_2">Записи «лише посилання»: перелічують файл у дампі за назвою та розміром, не читаючи його вміст. Ідеально для lock-файлів, згенерованого коду й локальної конфігурації. Позначаються суфіксом [ref] у заголовку дерева та маркером [content omitted: N B — reference only] у тілі.</string>
+    <string name="whats_new_item_3">Однорідне перемикання тек: клацання по теці примусово застосовує наступний стан до кожного незаблокованого нащадка на будь-якій глибині, тож індикатор теки ніколи не суперечить її вмісту. Позначення глибокого файлу оновлює кожного предка аж до кореня, не торкаючись сусідів.</string>
+    <string name="whats_new_item_4">Показати заблоковані: жорстко виключені теки й бінарні файли відображаються як заблоковані вузли. Увімкнення перемикача робить їх інтерактивними та сканує їхній вміст на вимогу; вимкнення знову блокує все й відкидає те, що було включено під час розблокування.</string>
+    <string name="whats_new_item_5">Новий розділ «Загальні»: «Виключати бінарні файли» та «Максимальний розмір» тепер під власним заголовком великими літерами вгорі форми.</string>
+    <string name="whats_new_item_6">Перемикачі розділів: Включення, Виключення, Лише посилання, Gitignore, Контроль версій і Дерево файлів дотримуються однієї схеми: прапорець + заголовок великими літерами + довідка. Зняття Включень/Виключень/Лише посилання вимикає список без його видалення, а кнопка «Очистити» біля «Додати» очищає список одним дотиком.</string>
+    <string name="whats_new_item_7">Темна тема тепер типова. Нове встановлення відкривається з оригінальною палітрою плагіна. Селектор теми, як і раніше, пропонує «Системну» та «Світлу», а користувачі, які явно обрали тему, зберігають свій вибір.</string>
+    <string name="whats_new_item_8">Екран інформації перероблено: функції згруповано в чотири категорії, кількість піктограм у рядку скорочено з ~25 до 10, додано hero-блок із версією та рядком чипів статусу.</string>
+    <string name="whats_new_item_9">Розв'язання кореня проєкту: триступенева евристика (пошук .gitignore, межа проєкту CodeAssist, відкат до вибраної теки), обмежена новим налаштуванням «Обмеження пошуку в батьківських теках».</string>
+    <string name="whats_new_item_10">Власний каталог плагіна .platform тепер жорстко виключено з дампу разом із .git, .gradle і .idea, тож конфігурація проєкту ніколи не потрапить до контексту моделі. Контекстна довідка тепер доступна в кожному розділі.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Посібник зі встановлення</string>
+    <string name="guide_header_subtitle">Виконайте ці кроки, щоб увімкнути One Code For AI у вашій IDE.</string>
+    <string name="guide_step1_title">Завантажте APK</string>
+    <string name="guide_step1_desc">Отримайте останній .apk з офіційного репозиторію або каналу розповсюдження.</string>
+    <string name="guide_step2_title">Установіть застосунок</string>
+    <string name="guide_step2_desc">Відкрийте APK на пристрої та прийміть встановлення з невідомих джерел, якщо буде запропоновано.</string>
+    <string name="guide_step3_title">Відкрийте CodeAssist</string>
+    <string name="guide_step3_desc">Після встановлення запустіть застосунок CodeAssist на пристрої.</string>
+    <string name="guide_step4_title">Увімкніть плагін</string>
+    <string name="guide_step4_desc">Перейдіть у «Налаштування > Плагіни > Встановлені» та ввімкніть One Code For AI. Він завантажиться автоматично.</string>
+    <string name="guide_step5_title">Перезапустіть IDE</string>
+    <string name="guide_step5_desc">Закрийте й знову відкрийте CodeAssist, щоб усі компоненти завантажилися коректно.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Інтеграція з CodeAssist</string>
+    <string name="integration_subtitle">Експортуйте проєкт як готовий для AI контекст за чотири кроки.</string>
+    <string name="step_1_title">Відкрийте проєкт</string>
+    <string name="step_1_desc">Торкніться дерева файлів проєкту в CodeAssist</string>
+    <string name="step_2_title">Довге натискання на теку</string>
+    <string name="step_2_desc">Відкриється контекстне меню параметрів</string>
+    <string name="step_3_title">Виберіть One Code For AI</string>
+    <string name="step_3_desc">З'явиться опція генерації дампу</string>
+    <string name="step_4_title">Експортуйте або поділіться</string>
+    <string name="step_4_desc">Збережіть .txt у «Завантаження» або надішліть своєму AI</string>
+
+    <!-- > Features -->
+    <string name="features_title">Можливості</string>
+
+    <!-- Category headers -->
+    <string name="feature_cat_export">Експорт і фільтрація</string>
+    <string name="feature_cat_git">Інтеграція з Git</string>
+    <string name="feature_cat_customize">Налаштування</string>
+    <string name="feature_cat_privacy">Конфіденційність</string>
+
+    <!-- Export and filtering -->
+    <string name="feature_export_1">Розширені glob-фільтри: *.log, build/ і glob-шаблони шляхів із подвійною зірочкою</string>
+    <string name="feature_export_2">Професійні пресети: Android, Web, Python, Простий текст</string>
+    <string name="feature_export_3">Інтерактивне дерево з тристановим контролем (Включено, Лише посилання, Виключено)</string>
+    <string name="feature_export_4">Режим «лише посилання» для lock-файлів і згенерованого коду</string>
+    <string name="feature_export_5">Поступ у реальному часі з фоновою генерацією</string>
+
+    <!-- Git integration -->
+    <string name="feature_git_1">Експорт із гілок, тегів або конкретних комітів</string>
+    <string name="feature_git_2">Попередній перегляд різниць перед генерацією</string>
+    <string name="feature_git_3">Глобальний вимикач для повного вимкнення Git</string>
+
+    <!-- Customization -->
+    <string name="feature_customize_1">Світла й темна теми, темна за замовчуванням</string>
+    <string name="feature_customize_2">19 мов, вибір незалежно від IDE</string>
+    <string name="feature_customize_3">Контекстна довідка в кожному розділі</string>
+    <string name="feature_customize_4">Налаштовувані обмеження на файл і на загальний експорт</string>
+
+    <!-- Privacy -->
+    <string name="feature_privacy_1">100% офлайн: без дозволу на інтернет, без телеметрії</string>
+    <string name="feature_privacy_2">Лише локальна обробка - без хмари, без вивантажень</string>
+
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current info screen groups the same
+         information under the four category strings above. -->
+    <string name="feature_1">Розширені Glob-фільтри: використовуйте шаблони на кшталт *.log, build/ або вкладені згенеровані каталоги</string>
+    <string name="feature_2">Інтеграція з Git: експорт із гілок, тегів, комітів або попередній перегляд різниць</string>
+    <string name="feature_3">Професійні пресети: Android (Kotlin, Джерела, Ресурси), Web, Python, Текст</string>
+    <string name="feature_4">Контекстна довідка: вбудовані діалоги пояснюють фільтри, шаблони й пріоритет .gitignore</string>
+    <string name="feature_5">Глобальний вимикач Git: повне вимкнення Git із збереженням fallback-режиму .gitignore</string>
+    <string name="feature_6">Виключення в дереві проєкту: позначення/зняття позначки файлів і тек перед експортом</string>
+    <string name="feature_7">Точний поступ у байтах: відстеження експорту в реальному часі з фоновою обробкою</string>
+    <string name="feature_8">Нативне логування в IDE: налагодження спрямовується до консолі CodeAssist з автоматичним подрібненням</string>
+    <string name="feature_9">Сторінка глобальних налаштувань: нативні перемикачі для Git, Анімацій і Сповіщень</string>
+    <string name="feature_10">100% офлайн і приватно: без телеметрії, без дозволу на інтернет, повністю локально</string>
+
+    <!-- > Links -->
+    <string name="links_title">Посилання</string>
+    <string name="link_repository">Репозиторій GitHub</string>
+    <string name="link_report_bug">Повідомити про проблему</string>
+    <string name="link_license">Ліцензія MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Технічна інформація</string>
+    <string name="tech_info_version">Версія</string>
+    <string name="tech_info_package">Пакет</string>
+    <string name="tech_info_min_sdk">Min SDK</string>
+    <string name="tech_info_target_sdk">Target SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Мова</string>
+    <string name="tech_info_status">Статус</string>
+    <string name="tech_info_status_stable">Стабільний</string>
+
+    <!-- > Help and FAQ -->
+    <string name="help_title">ДОВІДКА Й ЧАСТІ ПИТАННЯ</string>
+    <string name="help_header_subtitle">Знайдіть відповіді на типові питання та дізнайтеся, як отримати максимум від плагіна.</string>
+
+    <string name="help_q1">Як повністю вимкнути функціональність Git?</string>
+    <string name="help_a1">Перейдіть у «Налаштування CodeAssist», потім «Плагіни» й відкрийте налаштування One Code For AI. Там ви знайдете перемикач «Інтеграція з Git». Коли його вимкнено, плагін поводиться з вашою текою як зі звичайними файлами.</string>
+
+    <string name="help_q2">Чому .gitignore продовжує працювати, коли Git вимкнено?</string>
+    <string name="help_a2">Якщо Git вимкнено, плагін автоматично шукає файл .gitignore у вибраній теці та її батьківських каталогах. Пошук обмежений налаштуванням «Обмеження пошуку в батьківських теках», яке типово становить 10 рівнів і може бути збільшене на сторінці налаштувань.</string>
+
+    <string name="help_q3">Що означають бурштинові правила .gitignore?</string>
+    <string name="help_a3">Правило підсвічується бурштиновим, коли один із ваших ручних фільтрів включення, виключення або «лише посилання» активно його перекриває. Включення, виключення й шаблони «лише посилання» завжди мають пріоритет над .gitignore.</string>
+
+    <string name="help_q4">Як використовувати glob-шаблони у фільтрах?</string>
+    <string name="help_a4">Використовуйте стандартний синтаксис glob: *.log (будь-який лог-файл), build/ (конкретна тека) і glob-шаблони шляхів із подвійною зірочкою для будь-якої вкладеної згенерованої теки. Торкніться значка «?» біля розділів фільтрів, щоб відкрити коротку довідку.</string>
+
+    <string name="help_q5">Що роблять нові пресети Android?</string>
+    <string name="help_a5">Android (Kotlin) експортує все. Android (лише джерела) прибирає тести й документацію. Android (Ресурси) експортує лише XML (макети/теми). Згенеровані файли, як-от R.java і local.properties, типово перелічуються як «лише посилання».</string>
+
+    <string name="help_q6">Де налаштування анімацій і сповіщень?</string>
+    <string name="help_a6">Вони в нативних налаштуваннях CodeAssist для цього плагіна. Вимкнення анімацій допомагає на малопотужних пристроях. Вимкнення сповіщень заглушує оповіщення про поступ і завершення.</string>
+
+    <string name="help_q7">Як легко виключити цілу теку?</string>
+    <string name="help_a7">Відкрийте попередній перегляд дерева файлів у діалозі конфігурації. Торкайтеся тристанового індикатора теки, доки він не перемкнеться в стан «виключено». Це швидше й безпечніше, ніж писати складні правила виключення.</string>
+
+    <string name="help_q8">Чи можна скасувати експорт під час його виконання?</string>
+    <string name="help_a8">Так. Ви можете натиснути «Скасувати» в діалозі або просто закрити діалог. Експорт безпечно виконується у фоні, і ви можете повернутися, щоб перевірити його поступ у будь-який момент.</string>
+
+    <string name="help_q9">Чи вивантажується мій код на сервер?</string>
+    <string name="help_a9">Абсолютно ні. Плагін не потребує дозволу на інтернет. Усе сканування, фільтрація й генерація виконуються на 100% локально на вашому пристрої.</string>
+
+    <string name="help_q10">Де зберігаються згенеровані файли?</string>
+    <string name="help_a10">Експортовані файли зберігаються в загальнодоступному сховищі пристрою в «Завантаження/OneCodeForAI».</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Довідка розділу</string>
+
+    <string name="help_inclusions_title">Включення</string>
+    <string name="help_inclusions_body">Білий список розширень і glob-шаблонів, що обробляється до .gitignore.\n\nПідтримуваний синтаксис (той самий, що й у шаблонах .gitignore):\n- Розширення: kt, json, xml\n- Шаблони з підстановкою: *.log, src/*.kt\n- Каталоги: build/\n\nБудь-який файл, що відповідає включенню, експортується, навіть якщо .gitignore або виключення його б пропустили.\n\nВключення мають пріоритет над виключеннями та .gitignore. Використовуйте їх, щоб примусово включити конкретні файли або розширення.\n\nЗняття прапорця «Включення» вимикає список без його видалення: правила залишаються в профілі й застосовуються повторно, коли ви наступного разу позначите прапорець. Кнопка «Очистити» біля «Додати» очищає список одним дотиком.</string>
+
+    <string name="help_exclusions_title">Виключення</string>
+    <string name="help_exclusions_body">Чорний список розширень і glob-шаблонів.\n\nПідтримуваний синтаксис (той самий, що й у шаблонах .gitignore):\n- Розширення: log, tmp, pyc\n- Шаблони з підстановкою: *.log, src/*.bak\n- Каталоги: build/\n\nБудь-який файл, що відповідає виключенню, пропускається, навіть якщо .gitignore його б включив. Включення мають пріоритет над виключеннями.\n\nЩоб виключити конкретну теку без шаблону, використовуйте дерево файлів нижче.\n\nЗняття прапорця «Виключення» вимикає список без його видалення. Кнопка «Очистити» біля «Додати» очищає список одним дотиком.</string>
+
+    <string name="help_stub_title">Лише посилання</string>
+    <string name="help_stub_body">Шаблони для файлів, які слід перелічити в дампі, але вміст яких не читається. Корисно для lock-файлів, згенерованого коду й локальної конфігурації.\n\nФайл «лише посилання» відображається в дереві каталогів із суфіксом [ref] і маркером розміру, але без вмісту. Модель AI дізнається, що файл існує і який він завбільшки, не отримуючи його тіла.\n\nПідтримуваний синтаксис (той самий, що й у включеннях і виключеннях):\n- Назви файлів: package-lock.json, local.properties\n- Шаблони з підстановкою: *.lock\n\nШаблони «лише посилання» мають пріоритет над включеннями й виключеннями. Включення мають пріоритет над виключеннями.\n\nЗняття прапорця «Лише посилання» вимикає список без його видалення. Кнопка «Очистити» біля «Додати» очищає список одним дотиком.</string>
+
+    <string name="help_gitignore_title">Правила Gitignore</string>
+    <string name="help_gitignore_body">Правила, виявлені у файлі .gitignore проєкту.\n\nЦей список доступний лише для читання - щоб його змінити, редагуйте .gitignore безпосередньо.\n\nВключення, виключення й шаблони «лише посилання» мають пріоритет над цими правилами: додавання відповідного правила примусово включає файл, виключає його або переводить у режим «лише посилання» незалежно від .gitignore. Перекриті правила підсвічуються бурштиновим. Негативні правила (що починаються з '!') відображаються з окремим тлом, щоб їх можна було розрізнити.\n\nЗняття прапорця «Gitignore» вимикає правила .gitignore без видалення файлу.</string>
+
+    <string name="help_binaries_title">Виключення бінарних файлів</string>
+    <string name="help_binaries_body">Бінарні файли визначаються за фіксованим списком відомих бінарних розширень (зображення, відео, аудіо, архіви, скомпільовані бінарники, шрифти, бази даних). Файли з цими розширеннями пропускаються, щоб дамп залишався зосередженим на читабельному вихідному коді.\n\nВизначення базується лише на розширенні. Щоб пропустити нетиповий бінарний формат, додайте його розширення до «Виключень». Щоб примусово включити його, додайте до «Включень», а щоб перелічити як «лише посилання» — до «Лише посилання».\n\nВимкнення цього перемикача включає перелічені розширення до експорту, що рідко корисно для контексту AI.</string>
+
+    <string name="help_tree_title">Попередній перегляд дерева проєкту</string>
+    <string name="help_tree_body">Показує дерево проєкту з кожним записом, вибраним фільтрами. Кожен запис має три стани:\n\n- Включено: повний вміст файлу записується до дампу.\n- Лише посилання: записуються назва файлу, розмір і маркер [ref], але вміст не читається.\n- Виключено: файл не записується до дампу.\n\nКлацніть рядок, щоб перемкнути три стани. Клацніть теку, щоб застосувати наступний стан до всього її піддерева.\n\nЖорстко виключені теки (як-от .git, node_modules) і бінарні файли спочатку заблоковані: видимі, але неактивні. Увімкніть «Показати заблоковані», щоб розблокувати їх. Розгортання розблокованої теки сканує її вміст на вимогу.\n\nЗняття прапорця «Дерево файлів» приховує дерево без втрати ваших ручних перекриттів.</string>
+
+    <string name="help_tree_locked_title">Заблоковані вузли</string>
+    <string name="help_tree_locked_body">Заблоковані вузли — це жорстко виключені теки (як-от .git, node_modules, build) і бінарні файли. Вони відображаються в дереві, але не інтерактивні, доки ви не ввімкнете «Показати заблоковані».\n\nЧому заблоковані: ці записи типово виключаються, щоб дерево залишалося швидким і щоб випадково не вивантажити вміст тек залежностей. Увімкнення «Показати заблоковані» розблоковує їх, щоб ви могли явно включити, позначити як «лише посилання» або виключити.\n\nБлокування діє в межах сеансу. Воно не зберігається в проєкті, оскільки розблокування node_modules майже завжди є одноразовою дією.</string>
+
+    <string name="help_max_size_title">Обмеження розміру на файл</string>
+    <string name="help_max_size_body">Якщо ввімкнено, файли, більші за вибраний розмір, пропускаються. Це захищає дамп від одного величезного файлу (наприклад, вбудованого ресурсу або згенерованого SQL), який домінував би у виводі.\n\nЯкщо вимкнено, кожен текстовий файл включається незалежно від розміру, що може дати дуже великі дампи. Поєднуйте із загальним обмеженням розміру експорту в «Налаштуваннях», щоб тримати експорт під контролем.\n\nЗняття прапорця «Максимальний розмір» не видаляє поточне значення: число залишається в полі й буде застосовано повторно, коли ви наступного разу позначите прапорець.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

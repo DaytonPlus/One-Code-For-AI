@@ -57,13 +57,14 @@ import dev.ide.platform.settings.SettingsPage
  * ### Language selector
  *
  * The plugin used to expose a boolean "Force English UI" toggle. With the
- * addition of ~20 localisations, that model no longer scales: a user whose
- * IDE runs in French may want the plugin in Spanish, a language neither the
- * system nor the IDE is using. The toggle is therefore now a
- * [SettingControl.Choice] dropdown listing every bundled language plus an
- * "Auto (follow IDE)" entry. The selected option is persisted as an ISO-639
- * code (or [PluginSettings.LANGUAGE_AUTO]) under ui_language; the mapping
- * to a java.util.Locale lives in LanguageHelper.detectIdeLocale.
+ * addition of 26 localisations plus English, that model no longer scales:
+ * a user whose IDE runs in French may want the plugin in Spanish, a
+ * language neither the system nor the IDE is using. The toggle is
+ * therefore now a [SettingControl.Choice] dropdown listing every bundled
+ * language plus an "Auto (follow IDE)" entry. The selected option is
+ * persisted as an ISO-639 code (or [PluginSettings.LANGUAGE_AUTO]) under
+ * ui_language; the mapping to a java.util.Locale lives in
+ * LanguageHelper.detectIdeLocale.
  *
  * The "Auto" entry is first in the list and is the default, so a fresh
  * install and a user who never opens this page both keep the pre-selector
@@ -787,6 +788,30 @@ internal class OneCodeForAISettingsPage : SettingsPage {
          * the trade-off is documented here rather than relying on a runtime
          * warning that most users would never see.
          *
+         * ### Right-to-left languages
+         *
+         * `ar` (Arabic), `fa` (Persian) and `he` (Hebrew) are written
+         * right-to-left. Each resolves to its own `values-*/` folder
+         * through `LanguageHelper.localeForLanguageCode`, and Android's
+         * automatic `layoutDirection` resolution from the applied
+         * `Configuration` takes care of mirroring the framework widgets.
+         * The plugin's own custom views (`FlowLayout`, `ProjectTreeView`)
+         * are documented as LTR-only; any user-visible mirroring regression
+         * in an RTL language should be investigated there, not in this
+         * list.
+         *
+         * ### Language count
+         *
+         * The list currently holds **27 entries**: "Auto (follow IDE)"
+         * plus 26 bundled languages. That count is the authoritative answer
+         * to "how many languages does the plugin support?" and is what the
+         * README's "27 languages" phrase refers to. When a new language is
+         * added, append it at the end of this list, add the matching
+         * `values-<code>/strings.xml` folder, and add the matching branch
+         * to `LanguageHelper.localeForLanguageCode`. Updating the README's
+         * language table and the count in the phrase above are the last
+         * two steps; both are easy to forget.
+         *
          * ### zh vs zh-rCH
          *
          * The bundle ships values-zh-rCH/, not values-zh/. Mapping the code
@@ -797,6 +822,8 @@ internal class OneCodeForAISettingsPage : SettingsPage {
          */
         val LANGUAGE_OPTIONS: List<Pair<String, String>> = listOf(
             PluginSettings.LANGUAGE_AUTO to "Auto (follow IDE)",
+
+            // --- Pre-1.1.0 languages ---
             "en" to "English",
             "es" to "Español",
             "fr" to "Français",
@@ -815,7 +842,22 @@ internal class OneCodeForAISettingsPage : SettingsPage {
             "vi" to "Tiếng Việt",
             "ja" to "日本語",
             "ko" to "한국어",
-            "zh" to "中文"
+            "zh" to "中文",
+
+            // --- Languages added after 1.1.0 (i18n expansion pass) ---
+            // Appended (not inserted) so hosts that persist the dropdown
+            // selection as an integer index keep pointing at the same code.
+            // Each of these must have a matching values-<code>/strings.xml
+            // folder and a matching branch in
+            // LanguageHelper.localeForLanguageCode.
+            "bn" to "বাংলা",
+            "ca" to "Català",
+            "fa" to "فارسی",
+            "he" to "עברית",
+            "nl" to "Nederlands",
+            "sv" to "Svenska",
+            "th" to "ไทย",
+            "uk" to "Українська"
         )
 
         /**

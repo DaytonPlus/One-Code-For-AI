@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+    <string name="app_display_name">One Code For AI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">ปิด</string>
+    <string name="cancel">ยกเลิก</string>
+    <string name="accept">ตกลง</string>
+    <string name="save">บันทึก</string>
+    <string name="delete">ลบ</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">ตัวสร้างบริบท  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">โปรไฟล์การส่งออก</string>
+    <string name="save_preset">บันทึกโปรไฟล์</string>
+    <string name="delete_preset">ลบโปรไฟล์</string>
+    <string name="delete_preset_message">ลบโปรไฟล์ \"%1$s\"? การกระทำนี้ไม่สามารถย้อนกลับได้</string>
+    <string name="custom_preset">กำหนดเอง</string>
+    <string name="preset_name_hint">ชื่อโปรไฟล์</string>
+    <string name="preset_name_reserved">ชื่อนี้สงวนไว้สำหรับโปรไฟล์ในตัว</string>
+    <string name="preset_name_duplicate">มีโปรไฟล์ชื่อ \"%1$s\" อยู่แล้ว</string>
+
+    <!-- > Section help: presets -->
+    <string name="help_presets_title">โปรไฟล์การส่งออก</string>
+    <string name="help_presets_body">โปรไฟล์การส่งออกคือชุดกฎตัวกรองที่นำกลับมาใช้ใหม่ได้: การรวม การยกเว้น รูปแบบอ้างอิงเท่านั้น และสวิตช์พื้นฐาน (ไบนารี, gitignore, ขีดจำกัดขนาด) โปรไฟล์ในตัวครอบคลุมประเภทโปรเจกต์ทั่วไป บันทึกโปรไฟล์ของคุณเองจากไดอะล็อกเมื่อคุณปรับการเลือกที่พอใจแล้ว\n\nการเลือกโปรไฟล์จะสแกนทรีใหม่ด้วยกฎของโปรไฟล์นั้น การปรับแต่งด้วยตนเองใด ๆ ที่คุณทำในทรีภายใต้โปรไฟล์อื่นจะถูกทิ้งเมื่อเปลี่ยนโปรไฟล์ เนื่องจากเป็นส่วนหนึ่งของบริบทของโปรไฟล์ก่อนหน้า มันจะปรากฏขึ้นอีกครั้งเมื่อคุณกลับไปที่โปรไฟล์นั้น</string>
+
+    <!-- > Base flags -->
+    <string name="exclude_binaries">ยกเว้นไฟล์ไบนารี</string>
+    <string name="respect_gitignore">เคารพกฎ .gitignore</string>
+    <string name="max_size">ขนาดสูงสุด</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Section toggle labels -->
+    <string name="section_general">ทั่วไป</string>
+    <string name="section_inclusions">การรวม</string>
+    <string name="section_exclusions">การยกเว้น</string>
+    <string name="section_stub_patterns">อ้างอิงเท่านั้น</string>
+    <string name="section_gitignore">Gitignore</string>
+    <string name="section_version_control">การควบคุมเวอร์ชัน</string>
+    <string name="section_tree">ทรีไฟล์</string>
+
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
+    <string name="section_gitignore_rules">กฎที่ตรวจพบใน .gitignore</string>
+
+    <!-- > Empty-state placeholders -->
+    <string name="no_inclusions">ไม่มีนามสกุลเพิ่มเติม</string>
+    <string name="no_exclusions">ไม่มีการยกเว้นที่กำหนดเอง</string>
+    <string name="no_stub_patterns">ไม่มีรูปแบบอ้างอิงเท่านั้น</string>
+    <string name="no_gitignore_rules">ไม่พบกฎใน .gitignore</string>
+
+    <!-- > Add / edit / delete tag dialogs -->
+    <string name="add_inclusion_title">เพิ่มการรวม</string>
+    <string name="add_exclusion_title">เพิ่มการยกเว้น</string>
+    <string name="add_stub_title">เพิ่มรูปแบบอ้างอิงเท่านั้น</string>
+    <string name="edit_extension">แก้ไขรูปแบบ</string>
+    <string name="delete_rule">ลบกฎ</string>
+    <string name="extension_hint">เช่น: kt, json, *.test.kt</string>
+    <string name="action_add">+ เพิ่ม</string>
+    <string name="action_clear">ล้าง</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="help_version_control_title">การควบคุมเวอร์ชัน</string>
+    <string name="help_version_control_body">เมื่อส่วนนี้เปิดใช้งานและโปรเจกต์เป็นที่เก็บ Git คุณสามารถส่งออกสแนปช็อต Git แทนทรีการทำงานปัจจุบันได้\n\nเลือกแบรนช์ แท็ก หรือคอมมิตโดยใช้ไอคอนค้นหาถัดจากฟิลด์อ้างอิง หรือพิมพ์นิพจน์ใด ๆ ที่ Git แก้ไขได้ (HEAD~3, origin/main, v1.2.0) แฮชสั้นที่แก้ไขแล้วจะแสดงใต้ฟิลด์เพื่อยืนยัน\n\nตัวอย่างความแตกต่างแสดงสิ่งที่จะเปลี่ยนระหว่างอ้างอิงที่เลือกและทรีการทำงาน โดยไม่ดัดแปลงสิ่งใด\n\nคุณสามารถปิดใช้งาน Git ทั้งหมดจากหน้าตั้งค่าปลั๊กอิน ส่วนนี้จะแสดงข้อความ \"ปิดใช้งานทั่วโลก\" กฎ .gitignore ยังคงทำงานในทั้งสองกรณี\n\nการยกเลิกการเลือกช่องการควบคุมเวอร์ชันจะปิดใช้งานทั้งส่วนโดยไม่สูญเสียอ้างอิงที่กำหนด อ้างอิงยังคงอยู่ในโปรไฟล์และจะถูกนำไปใช้อีกครั้งเมื่อคุณเลือกช่องอีกครั้ง</string>
+    <string name="git_info">แบรนช์: %1$s  |  คอมมิต: %2$s</string>
+    <string name="no_branch">ไม่มีแบรนช์</string>
+    <string name="no_commit">ไม่มีคอมมิต</string>
+    <string name="read_from_git">อ่านจากอ้างอิง Git</string>
+    <string name="git_refresh">รีเฟรชข้อมูล Git</string>
+    <string name="git_uncommitted_changes">คำเตือน: %1$d การเปลี่ยนแปลงที่ยังไม่ได้คอมมิต</string>
+    <string name="git_ref_hint">เช่น: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">เรียกดูอ้างอิง</string>
+    <string name="git_preview_diff">ดูตัวอย่างความแตกต่างกับทรีการทำงาน</string>
+    <string name="git_resolving">กำลังแก้ไข…</string>
+    <string name="git_resolved_as">แก้ไขเป็น: %1$s</string>
+    <string name="git_ref_invalid">อ้างอิง Git ไม่ถูกต้อง</string>
+    <string name="git_ref_empty">ป้อนหรือเลือกอ้างอิง Git</string>
+    <string name="git_not_repo">โฟลเดอร์นี้ไม่ใช่ที่เก็บ Git</string>
+    <string name="git_open_parent_root">ไปที่รากโปรเจกต์: %1$s</string>
+    <string name="git_diff_error">ไม่สามารถคำนวณความแตกต่างได้ ตรวจสอบคอนโซล IDE</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">เลือกอ้างอิง Git</string>
+    <string name="git_tab_branches">แบรนช์</string>
+    <string name="git_tab_tags">แท็ก</string>
+    <string name="git_tab_commits">คอมมิต</string>
+    <string name="git_local_branches">แบรนช์ในเครื่อง</string>
+    <string name="git_remote_branches">แบรนช์ระยะไกล</string>
+    <string name="git_no_branches">ไม่พบแบรนช์</string>
+    <string name="git_no_tags">ไม่พบแท็ก</string>
+    <string name="git_no_commits">ไม่พบคอมมิต</string>
+    <string name="git_current_marker">ปัจจุบัน</string>
+    <string name="git_remote_marker">ระยะไกล</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">ความแตกต่าง: %1$s กับทรีการทำงาน</string>
+    <string name="git_diff_stats">%1$d ไฟล์  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">ไม่พบการเปลี่ยนแปลง</string>
+    <string name="git_diff_content">เนื้อหาความแตกต่าง</string>
+
+    <!-- > File tree -->
+    <string name="show_tree">แสดงทรีไฟล์</string>
+    <string name="tree_show_locked">แสดงที่ล็อก</string>
+    <string name="tree_locked_hint">(ล็อก)</string>
+    <string name="tree_unlock_scanning">กำลังสแกนทรีย่อย…</string>
+    <string name="action_expand">ขยาย</string>
+    <string name="action_collapse">ยุบ</string>
+    <string name="action_reload">โหลดใหม่</string>
+    <string name="analyzing">กำลังวิเคราะห์…</string>
+    <string name="analyzing_files">กำลังวิเคราะห์… %1$d ไฟล์</string>
+    <string name="canceled_retry">ยกเลิกแล้ว แตะตัวกรองเพื่อลองอีกครั้ง</string>
+    <string name="tree_scan_error">ไม่สามารถสแกนทรีโปรเจกต์ได้: %1$s</string>
+    <string name="no_tree_matches">ไม่มีไฟล์ที่ตรงกับตัวกรอง</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">สร้างบริบท</string>
+    <string name="generate_description">ไฟล์ .txt ไฟล์เดียวจะถูกสร้างและบันทึกไปยัง Downloads</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">กำลังสร้างบริบท…</string>
+    <string name="preparing_export">กำลังเตรียม…</string>
+    <string name="processing_progress">กำลังประมวลผล: %1$d/%2$d ไฟล์</string>
+    <string name="generation_complete">การสร้างเสร็จสมบูรณ์</string>
+    <string name="generation_failed">การสร้างล้มเหลว</string>
+    <string name="generation_minimize_hint">คุณสามารถย่อไดอะล็อกนี้ได้ การสร้างจะดำเนินต่อไปในพื้นหลัง</string>
+    <string name="saved_to_downloads">บันทึกไปยัง Downloads/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">มีการส่งออกที่กำลังดำเนินอยู่แล้ว</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">บันทึก</string>
+    <string name="action_share">แชร์</string>
+    <string name="action_regenerate">สร้างใหม่</string>
+    <string name="action_edit_settings">แก้ไขการตั้งค่า</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="other">%1$d ไฟล์</item>
+    </plurals>
+    <plurals name="stats_stub_files">
+        <item quantity="other">%1$d การอ้างอิง</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s โทเค็น</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">สร้างบริบท TXT (แชร์/ส่งออก)</string>
+    <string name="dialog_already_open">หน้าต่างการกำหนดค่าเปิดอยู่แล้ว</string>
+    <string name="no_folder_selected">ไม่ได้เลือกโฟลเดอร์</string>
+    <string name="select_valid_folder">เลือกโฟลเดอร์ที่ถูกต้อง</string>
+    <string name="error_opening_dialog">ข้อผิดพลาด: ไม่สามารถเปิดหน้าต่างได้</string>
+    <string name="opening_config">กำลังเปิดการกำหนดค่า…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">การเขียนไฟล์ล้มเหลว</string>
+    <string name="error_source_uri_unreadable">ไม่สามารถเปิดไฟล์ต้นทางได้</string>
+    <string name="error_output_stream_unavailable">ปลายทางไม่ได้ให้สตรีมเอาต์พุต</string>
+    <string name="error_media_store_finalize">ไม่สามารถทำให้ไฟล์ปลายทางสมบูรณ์ได้</string>
+    <string name="error_downloads_dir_create">ไม่สามารถสร้างไดเรกทอรี Downloads: %1$s</string>
+    <string name="error_project_root_not_dir">รากโปรเจกต์ไม่ใช่ไดเรกทอรี: %1$s</string>
+    <string name="error_git_repo_unreadable">โฟลเดอร์ที่เลือกไม่ใช่ที่เก็บ Git ที่อ่านได้</string>
+    <string name="error_git_ref_unresolved">ไม่สามารถแก้อ้างอิง Git \"%1$s\" ได้</string>
+    <string name="error_git_export_no_ref">การส่งออก Git เปิดใช้งานอยู่แต่ไม่ได้เลือกอ้างอิง</string>
+    <string name="unknown_error">ข้อผิดพลาดที่ไม่รู้จัก</string>
+    <string name="error_storage_permission">ต้องมีการอนุญาตการจัดเก็บ ให้สิทธิ์ในการตั้งค่า > แอป > One Code For AI > การอนุญาต</string>
+    <string name="error_source_file_missing">ไฟล์ที่สร้างขึ้นไม่พร้อมใช้งานแล้ว สร้างบริบทอีกครั้งเพื่อสร้างใหม่</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="other">บริบทพร้อมแล้ว - ข้อผิดพลาดในการอ่าน %1$d รายการ</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">แชร์ดัมพ์กับ:</string>
+    <string name="share_error">ข้อผิดพลาดในการแชร์: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">บริบทพร้อมแล้ว</string>
+    <string name="error_notification_title">ข้อผิดพลาด One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Err</string>
+    <string name="notification_channel_actions">ผลลัพธ์ One Code</string>
+    <string name="generating_dump">กำลังสร้างดัมพ์โค้ด…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">การรวม Git</string>
+    <string name="settings_git_global_desc">ตรวจหาที่เก็บและเปิดใช้งานฟีเจอร์ Git ทั้งหมด ปิดใช้งานเพื่อบังคับโหมดโฟลเดอร์ปกติแม้อยู่ในที่เก็บ กฎ .gitignore ยังคงมีผล</string>
+    <string name="settings_animations">แอนิเมชัน</string>
+    <string name="settings_animations_desc">การเปลี่ยนเฟดและมาตราส่วนในไดอะล็อก ทรี และตัวเลือกโปรไฟล์ ปิดใช้งานบนอุปกรณ์ที่มีประสิทธิภาพต่ำ</string>
+    <string name="settings_notifications">การแจ้งเตือนการสร้าง</string>
+    <string name="settings_notifications_desc">การแจ้งเตือนความคืบหน้า การเสร็จสิ้น และข้อผิดพลาดระหว่างการส่งออก ปิดใช้งานเพื่อปิดเสียงถาดแจ้งเตือน</string>
+    <string name="settings_total_export_limit">ขีดจำกัดขนาดการส่งออกรวม (KB)</string>
+    <string name="settings_total_export_limit_desc">ขีดจำกัดสูงสุดแบบตายตัวเป็นกิโลไบต์ของขนาดรวมของดัมพ์เดียว เมื่อถึงขีดจำกัด การส่งออกจะหยุดรวมไฟล์และเพิ่มประกาศการตัดทอน มีประโยชน์ที่สุดเมื่อขีดจำกัดต่อไฟล์ถูกปิด ตั้งค่าเป็น 0 เพื่อไม่จำกัด</string>
+    <string name="settings_ui_language">ภาษาของอินเทอร์เฟซ</string>
+    <string name="settings_ui_language_desc">ภาษาที่อินเทอร์เฟซปลั๊กอินใช้ \"อัตโนมัติ\" จะตามภาษาของ IDE เฉพาะไดอะล็อกและหน้าจอที่เปิดใหม่เท่านั้นที่จะรับการเปลี่ยนแปลง หน้าต่างที่เปิดอยู่จะคงภาษาปัจจุบันจนกว่าจะเปิดใหม่</string>
+    <string name="settings_ui_theme">ธีม</string>
+    <string name="settings_ui_theme_desc">ชุดสีที่อินเทอร์เฟซปลั๊กอินใช้ \"มืด\" เป็นค่าเริ่มต้นและคงชุดสีดั้งเดิมของปลั๊กอิน \"ระบบ\" จะตามโหมดสว่าง/มืดของอุปกรณ์ และ \"สว่าง\" จะใช้ชุดสีสว่างเสมอ เฉพาะไดอะล็อกและหน้าจอที่เปิดใหม่เท่านั้นที่จะรับการเปลี่ยนแปลง หน้าต่างที่เปิดอยู่จะคงธีมปัจจุบันจนกว่าจะเปิดใหม่</string>
+    <string name="settings_ui_theme_system">ระบบ (ตามอุปกรณ์)</string>
+    <string name="settings_ui_theme_light">สว่าง</string>
+    <string name="settings_ui_theme_dark">มืด</string>
+    <string name="settings_parent_search_limit">ขีดจำกัดการค้นหาโฟลเดอร์แม่</string>
+    <string name="settings_parent_search_limit_desc">จำนวนโฟลเดอร์แม่ที่ปลั๊กอินจะไล่ขึ้นไปเพื่อค้นหา .gitignore หรือรากโปรเจกต์ CodeAssist เพิ่มสำหรับทรีแพ็กเกจที่ลึกมาก ตั้งค่าเป็น 0 เพื่อไม่ให้ออกจากโฟลเดอร์ที่เลือกเลย</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git ถูกปิดใช้งานทั่วโลกในการตั้งค่า CodeAssist เปิดใช้งานที่นั่นเพื่อใช้แบรนช์ แท็ก และคอมมิต</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">ปลั๊กอินสำหรับ CodeAssist</string>
+    <string name="open_codeassist">เปิด CodeAssist</string>
+    <string name="footer_made_with">สร้างด้วยความรักเพื่อชุมชน</string>
+    <string name="creator_dev">นักพัฒนาอิสระ</string>
+    <string name="codeassist_not_installed">CodeAssist ไม่ได้ติดตั้ง</string>
+    <string name="codeassist_open_error">ไม่สามารถเปิด CodeAssist ได้</string>
+    <string name="no_app_for_link">ไม่มีแอปที่พร้อมใช้งานสำหรับเปิดลิงก์</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">มีอะไรใหม่</string>
+    <string name="whats_new_version">เวอร์ชัน %1$s</string>
+    <string name="whats_new_item_1">ทรี v2: ทรีโปรเจกต์เป็นแหล่งข้อมูลที่เชื่อถือได้ของสิ่งที่อยู่ในดัมพ์แล้ว ทุกรายการสามารถตั้งเป็นรวม อ้างอิงเท่านั้น หรือยกเว้นได้โดยตรงจากทรี และการเลือกจะถูกเก็บไว้ต่อโปรเจกต์</string>
+    <string name="whats_new_item_2">รายการอ้างอิงเท่านั้น: แสดงรายชื่อไฟล์ในดัมพ์ตามชื่อและขนาดโดยไม่ต้องอ่านเนื้อหา เหมาะสำหรับไฟล์ล็อก โค้ดที่สร้างขึ้น และการกำหนดค่าเฉพาะเครื่อง ทำเครื่องหมายด้วยส่วนต่อท้าย [ref] ในส่วนหัวทรีและเครื่องหมาย [content omitted: N B — reference only] ในเนื้อหา</string>
+    <string name="whats_new_item_3">การหมุนเวียนโฟลเดอร์แบบสม่ำเสมอ: การคลิกโฟลเดอร์จะบังคับสถานะถัดไปกับทุกทายาทที่ไม่ได้ล็อกในทุกความลึก เพื่อให้ตัวบ่งชี้โฟลเดอร์ไม่ขัดแย้งกับลูก การทำเครื่องหมายไฟล์ที่ลึกจะอัปเดตทุกบรรพบุรุษจนถึงรากโดยไม่แตะพี่น้อง</string>
+    <string name="whats_new_item_4">แสดงที่ล็อก: โฟลเดอร์ที่ถูกยกเว้นแบบตายตัวและไฟล์ไบนารีจะปรากฏเป็นโหนดที่ล็อก การเปิดใช้งานสวิตช์จะทำให้โต้ตอบได้และสแกนเนื้อหาตามต้องการ การปิดใช้งานจะล็อกทุกอย่างอีกครั้งและทิ้งสิ่งที่รวมไว้ระหว่างการปลดล็อก</string>
+    <string name="whats_new_item_5">ส่วนทั่วไปใหม่: \"ยกเว้นไฟล์ไบนารี\" และ \"ขนาดสูงสุด\" อยู่ภายใต้ชื่อตัวพิมพ์ใหญ่ของตัวเองที่ด้านบนของฟอร์มแล้ว</string>
+    <string name="whats_new_item_6">สวิตช์ส่วน: การรวม การยกเว้น อ้างอิงเท่านั้น Gitignore การควบคุมเวอร์ชัน และทรีไฟล์ทั้งหมดทำตามรูปแบบช่องทำเครื่องหมาย + ชื่อตัวพิมพ์ใหญ่ + ความช่วยเหลือเหมือนกัน การยกเลิกการเลือกการรวม/การยกเว้น/อ้างอิงเท่านั้นจะปิดใช้งานรายการโดยไม่ลบ และปุ่มล้างถัดจากเพิ่มจะล้างโฟลว์ด้วยการแตะครั้งเดียว</string>
+    <string name="whats_new_item_7">ธีมมืดเป็นค่าเริ่มต้นแล้ว การติดตั้งใหม่จะเปิดในชุดสีดั้งเดิมของปลั๊กอิน ตัวเลือกธีมยังคงมีระบบและสว่าง และผู้ใช้ที่มีอยู่ซึ่งเลือกธีมอย่างชัดเจนจะเก็บตัวเลือกที่บันทึกไว้</string>
+    <string name="whats_new_item_8">หน้าจอข้อมูลออกแบบใหม่: ฟีเจอร์จัดกลุ่มเป็นสี่หมวดหมู่ จำนวนไอคอนต่อแถวลดลงจาก ~25 เป็น 10 และบล็อกฮีโร่พร้อมเวอร์ชันและแถวชิปสถานะ</string>
+    <string name="whats_new_item_9">การแก้ไขรากโปรเจกต์: ฮิวริสติกสามขั้นตอน (ค้นหา .gitignore, ขอบเขตโปรเจกต์ CodeAssist, สำรองไปยังโฟลเดอร์ที่เลือก) จำกัดด้วยการตั้งค่า \"ขีดจำกัดการค้นหาโฟลเดอร์แม่\" ใหม่</string>
+    <string name="whats_new_item_10">ไดเรกทอรี .platform ของปลั๊กอินเองถูกยกเว้นแบบตายตัวจากดัมพ์แล้ว พร้อมกับ .git, .gradle และ .idea เพื่อให้การกำหนดค่าต่อโปรเจกต์ไม่สามารถเข้าไปในบริบทของโมเดลได้ ความช่วยเหลือตามบริบทพร้อมใช้งานในทุกส่วนแล้ว</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">คู่มือการติดตั้ง</string>
+    <string name="guide_header_subtitle">ทำตามขั้นตอนเหล่านี้เพื่อเปิดใช้งาน One Code For AI ใน IDE ของคุณ</string>
+    <string name="guide_step1_title">ดาวน์โหลด APK</string>
+    <string name="guide_step1_desc">รับ .apk ล่าสุดจากที่เก็บอย่างเป็นทางการหรือช่องทางจัดจำหน่าย</string>
+    <string name="guide_step2_title">ติดตั้งแอป</string>
+    <string name="guide_step2_desc">เปิด APK บนอุปกรณ์ของคุณและยอมรับการติดตั้งจากแหล่งที่ไม่รู้จักหากได้รับแจ้ง</string>
+    <string name="guide_step3_title">เปิด CodeAssist</string>
+    <string name="guide_step3_desc">เมื่อติดตั้งแล้ว ให้เปิดแอป CodeAssist บนอุปกรณ์ของคุณ</string>
+    <string name="guide_step4_title">เปิดใช้งานปลั๊กอิน</string>
+    <string name="guide_step4_desc">ไปที่การตั้งค่า > ปลั๊กอิน > ที่ติดตั้งแล้ว และเปิดใช้งาน One Code For AI มันจะโหลดโดยอัตโนมัติ</string>
+    <string name="guide_step5_title">รีสตาร์ท IDE</string>
+    <string name="guide_step5_desc">ปิดและเปิด CodeAssist อีกครั้งเพื่อให้คอมโพเนนต์ทั้งหมดโหลดอย่างถูกต้อง</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">การรวม CodeAssist</string>
+    <string name="integration_subtitle">ส่งออกโปรเจกต์เป็นบริบทพร้อมสำหรับ AI ในสี่ขั้นตอน</string>
+    <string name="step_1_title">เปิดโปรเจกต์</string>
+    <string name="step_1_desc">แตะทรีไฟล์โปรเจกต์ใน CodeAssist</string>
+    <string name="step_2_title">กดโฟลเดอร์ค้างไว้</string>
+    <string name="step_2_desc">เมนูบริบทตัวเลือกจะเปิดขึ้น</string>
+    <string name="step_3_title">เลือก One Code For AI</string>
+    <string name="step_3_desc">ตัวเลือกในการสร้างดัมพ์จะปรากฏขึ้น</string>
+    <string name="step_4_title">ส่งออกหรือแชร์</string>
+    <string name="step_4_desc">บันทึก .txt ไปยัง Downloads หรือส่งไปยัง AI ของคุณ</string>
+
+    <!-- > Features -->
+    <string name="features_title">ฟีเจอร์</string>
+
+    <!-- Category headers -->
+    <string name="feature_cat_export">การส่งออกและการกรอง</string>
+    <string name="feature_cat_git">การรวม Git</string>
+    <string name="feature_cat_customize">การปรับแต่ง</string>
+    <string name="feature_cat_privacy">ความเป็นส่วนตัว</string>
+
+    <!-- Export and filtering -->
+    <string name="feature_export_1">ตัวกรอง glob ขั้นสูง: *.log, build/ และ glob เส้นทางแบบดาวคู่</string>
+    <string name="feature_export_2">พรีเซ็ตระดับมืออาชีพ: Android, Web, Python, ข้อความล้วน</string>
+    <string name="feature_export_3">ทรีแบบโต้ตอบพร้อมการควบคุมสามสถานะ (รวม, อ้างอิงเท่านั้น, ยกเว้น)</string>
+    <string name="feature_export_4">โหมดอ้างอิงเท่านั้นสำหรับไฟล์ล็อกและโค้ดที่สร้างขึ้น</string>
+    <string name="feature_export_5">ความคืบหน้าแบบเรียลไทม์พร้อมการสร้างในพื้นหลัง</string>
+
+    <!-- Git integration -->
+    <string name="feature_git_1">ส่งออกจากแบรนช์ แท็ก หรือคอมมิตที่ระบุ</string>
+    <string name="feature_git_2">ดูตัวอย่างความแตกต่างก่อนสร้าง</string>
+    <string name="feature_git_3">สวิตช์ปิดการใช้งานทั่วโลกเพื่อปิด Git ทั้งหมด</string>
+
+    <!-- Customization -->
+    <string name="feature_customize_1">ธีมสว่างและมืด ค่าเริ่มต้นคือมืด</string>
+    <string name="feature_customize_2">19 ภาษา เลือกได้อย่างอิสระจาก IDE</string>
+    <string name="feature_customize_3">ความช่วยเหลือตามบริบทในทุกส่วน</string>
+    <string name="feature_customize_4">ขีดจำกัดต่อไฟล์และรวมที่กำหนดค่าได้</string>
+
+    <!-- Privacy -->
+    <string name="feature_privacy_1">ออฟไลน์ 100%: ไม่มีการอนุญาตอินเทอร์เน็ต ไม่มี telemetry</string>
+    <string name="feature_privacy_2">ประมวลผลในเครื่องเท่านั้น - ไม่มีคลาวด์ ไม่มีการอัปโหลด</string>
+
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current info screen groups the same
+         information under the four category strings above. -->
+    <string name="feature_1">ตัวกรอง Glob ขั้นสูง: ใช้รูปแบบเช่น *.log, build/ หรือไดเรกทอรีที่สร้างขึ้นแบบซ้อน</string>
+    <string name="feature_2">การรวม Git: ส่งออกจากแบรนช์ แท็ก คอมมิต หรือดูตัวอย่างความแตกต่าง</string>
+    <string name="feature_3">พรีเซ็ตระดับมืออาชีพ: Android (Kotlin, ซอร์ส, ทรัพยากร), Web, Python, ข้อความ</string>
+    <string name="feature_4">ความช่วยเหลือตามบริบท: ไดอะล็อกแบบอินไลน์อธิบายตัวกรอง รูปแบบ และลำดับความสำคัญของ .gitignore</string>
+    <string name="feature_5">สวิตช์ปิด Git ทั่วโลก: ปิดใช้งาน Git ทั้งหมดโดยรักษาการสำรอง .gitignore</string>
+    <string name="feature_6">การยกเว้นทรีโปรเจกต์: เลือก/ยกเลิกการเลือกไฟล์และโฟลเดอร์ด้วยตนเองก่อนส่งออก</string>
+    <string name="feature_7">ความคืบหน้าที่แม่นยำระดับไบต์: ติดตามการส่งออกแบบเรียลไทม์ด้วยการประมวลผลในพื้นหลัง</string>
+    <string name="feature_8">การบันทึกแบบเนทีฟ IDE: เส้นทางดีบักไปยังคอนโซล CodeAssist พร้อมการแบ่งชิ้นอัตโนมัติ</string>
+    <string name="feature_9">หน้าการตั้งค่าทั่วโลก: สวิตช์เนทีฟสำหรับ Git, แอนิเมชัน และการแจ้งเตือน</string>
+    <string name="feature_10">ออฟไลน์ 100% และเป็นส่วนตัว: ไม่มี telemetry ไม่มีการอนุญาตอินเทอร์เน็ต ทั้งหมดในเครื่อง</string>
+
+    <!-- > Links -->
+    <string name="links_title">ลิงก์</string>
+    <string name="link_repository">ที่เก็บ GitHub</string>
+    <string name="link_report_bug">รายงานปัญหา</string>
+    <string name="link_license">สัญญาอนุญาต MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">ข้อมูลทางเทคนิค</string>
+    <string name="tech_info_version">เวอร์ชัน</string>
+    <string name="tech_info_package">แพ็กเกจ</string>
+    <string name="tech_info_min_sdk">Min SDK</string>
+    <string name="tech_info_target_sdk">Target SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">ภาษา</string>
+    <string name="tech_info_status">สถานะ</string>
+    <string name="tech_info_status_stable">เสถียร</string>
+
+    <!-- > Help and FAQ -->
+    <string name="help_title">ความช่วยเหลือและคำถามที่พบบ่อย</string>
+    <string name="help_header_subtitle">ค้นหาคำตอบสำหรับปัญหาทั่วไปและเรียนรู้วิธีใช้ประโยชน์สูงสุดจากปลั๊กอิน</string>
+
+    <string name="help_q1">ฉันจะปิดใช้งานฟังก์ชัน Git ทั้งหมดได้อย่างไร?</string>
+    <string name="help_a1">ไปที่การตั้งค่า CodeAssist แล้วไปที่ปลั๊กอิน และเปิดการตั้งค่าของ One Code For AI ที่นั่นคุณจะพบสวิตช์ \"การรวม Git\" เมื่อปิดใช้งาน ปลั๊กอินจะถือว่าโฟลเดอร์ของคุณเป็นไฟล์ทั่วไป</string>
+
+    <string name="help_q2">ทำไม .gitignore ยังทำงานเมื่อ Git ถูกปิดใช้งาน?</string>
+    <string name="help_a2">หาก Git ถูกปิดใช้งาน ปลั๊กอินจะค้นหาไฟล์ .gitignore ในโฟลเดอร์ที่คุณเลือกและไดเรกทอรีแม่อย่างอัตโนมัติ การค้นหาถูกจำกัดโดยการตั้งค่า \"ขีดจำกัดการค้นหาโฟลเดอร์แม่\" ซึ่งมีค่าเริ่มต้น 10 ระดับและสามารถเพิ่มได้จากหน้าตั้งค่า</string>
+
+    <string name="help_q3">กฎ .gitignore สีเหลืองอำพันหมายความว่าอย่างไร?</string>
+    <string name="help_a3">กฎจะถูกไฮไลต์เป็นสีเหลืองอำพันเมื่อตัวกรองการรวม การยกเว้น หรืออ้างอิงเท่านั้นด้วยตนเองตัวใดตัวหนึ่งของคุณกำลังแทนที่มันอย่างแข็งขัน การรวม การยกเว้น และรูปแบบอ้างอิงเท่านั้นมีลำดับความสำคัญเหนือ .gitignore เสมอ</string>
+
+    <string name="help_q4">ฉันจะใช้รูปแบบ glob ในตัวกรองได้อย่างไร?</string>
+    <string name="help_a4">ใช้ไวยากรณ์ glob มาตรฐาน: *.log (ไฟล์ล็อกใดก็ได้), build/ (โฟลเดอร์เฉพาะ) และ glob เส้นทางแบบดาวคู่สำหรับโฟลเดอร์ที่สร้างขึ้นแบบซ้อนใด ๆ แตะไอคอน \"?\" ถัดจากส่วนตัวกรองเพื่อดูคู่มือด่วน</string>
+
+    <string name="help_q5">พรีเซ็ต Android ใหม่ทำอะไร?</string>
+    <string name="help_a5">Android (Kotlin) ส่งออกทุกอย่าง Android (เฉพาะซอร์ส) จะลบการทดสอบและเอกสาร Android (ทรัพยากร) ส่งออกเฉพาะ XML (เลย์เอาต์/ธีม) ไฟล์ที่สร้างขึ้นเช่น R.java และ local.properties จะถูกแสดงรายการเป็นอ้างอิงเท่านั้นโดยค่าเริ่มต้น</string>
+
+    <string name="help_q6">การตั้งค่าสำหรับแอนิเมชันและการแจ้งเตือนอยู่ที่ไหน?</string>
+    <string name="help_a6">อยู่ในการตั้งค่า CodeAssist แบบเนทีฟสำหรับปลั๊กอินนี้ การปิดใช้งานแอนิเมชันช่วยเพิ่มประสิทธิภาพบนอุปกรณ์ที่มีทรัพยากรต่ำ การปิดใช้งานการแจ้งเตือนจะปิดเสียงการแจ้งเตือนความคืบหน้าและการเสร็จสิ้น</string>
+
+    <string name="help_q7">ฉันจะยกเว้นทั้งโฟลเดอร์ได้ง่าย ๆ อย่างไร?</string>
+    <string name="help_a7">เปิดตัวอย่างทรีไฟล์ในไดอะล็อกการกำหนดค่า แตะตัวบ่งชี้สามสถานะของโฟลเดอร์จนกว่าจะหมุนเวียนไปยังสถานะที่ถูกยกเว้น วิธีนี้เร็วกว่าและปลอดภัยกว่าการเขียนกฎการยกเว้นที่ซับซ้อน</string>
+
+    <string name="help_q8">ฉันสามารถยกเลิกการส่งออกในขณะที่กำลังทำงานได้หรือไม่?</string>
+    <string name="help_a8">ได้ คุณสามารถแตะ \"ยกเลิก\" ในไดอะล็อก หรือเพียงแค่ปิดไดอะล็อก การส่งออกทำงานอย่างปลอดภัยในพื้นหลังและคุณสามารถกลับมาตรวจสอบความคืบหน้าได้ทุกเมื่อ</string>
+
+    <string name="help_q9">โค้ดของฉันถูกอัปโหลดไปยังเซิร์ฟเวอร์หรือไม่?</string>
+    <string name="help_a9">ไม่แน่นอน ปลั๊กอินไม่ต้องการการอนุญาตอินเทอร์เน็ต การสแกน การกรอง และการสร้างทั้งหมดเกิดขึ้นในเครื่องของคุณ 100%</string>
+
+    <string name="help_q10">ไฟล์ที่สร้างขึ้นถูกบันทึกที่ไหน?</string>
+    <string name="help_a10">ไฟล์ที่ส่งออกจะถูกบันทึกในที่จัดเก็บสาธารณะของอุปกรณ์ของคุณภายใต้ Downloads/OneCodeForAI</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">ความช่วยเหลือของส่วน</string>
+
+    <string name="help_inclusions_title">การรวม</string>
+    <string name="help_inclusions_body">ไวท์ลิสต์ของนามสกุลและรูปแบบ glob ที่ประเมินก่อน .gitignore\n\nไวยากรณ์ที่รองรับ (เหมือนกับรูปแบบ .gitignore):\n- นามสกุล: kt, json, xml\n- ไวลด์การ์ด: *.log, src/*.kt\n- ไดเรกทอรี: build/\n\nไฟล์ใด ๆ ที่ตรงกับการรวมจะถูกส่งออกแม้ว่า .gitignore หรือการยกเว้นจะข้ามมัน\n\nการรวมมีลำดับความสำคัญเหนือการยกเว้นและเหนือ .gitignore ใช้เพื่อบังคับรวมไฟล์หรือนามสกุลที่ระบุ\n\nการยกเลิกการเลือกช่องการรวมจะปิดใช้งานรายการโดยไม่ลบ: กฎยังคงอยู่ในโปรไฟล์และจะถูกนำไปใช้อีกครั้งเมื่อคุณเลือกช่องอีกครั้ง ปุ่มล้างถัดจากเพิ่มจะล้างรายการด้วยการแตะครั้งเดียว</string>
+
+    <string name="help_exclusions_title">การยกเว้น</string>
+    <string name="help_exclusions_body">แบล็คลิสต์ของนามสกุลและรูปแบบ glob\n\nไวยากรณ์ที่รองรับ (เหมือนกับรูปแบบ .gitignore):\n- นามสกุล: log, tmp, pyc\n- ไวลด์การ์ด: *.log, src/*.bak\n- ไดเรกทอรี: build/\n\nไฟล์ใด ๆ ที่ตรงกับการยกเว้นจะถูกข้าม แม้ว่า .gitignore จะรวมมัน การรวมมีลำดับความสำคัญเหนือการยกเว้น\n\nเพื่อยกเว้นโฟลเดอร์เฉพาะโดยไม่ต้องเขียนรูปแบบ ให้ใช้ทรีไฟล์ด้านล่าง\n\nการยกเลิกการเลือกช่องการยกเว้นจะปิดใช้งานรายการโดยไม่ลบ ปุ่มล้างถัดจากเพิ่มจะล้างรายการด้วยการแตะครั้งเดียว</string>
+
+    <string name="help_stub_title">อ้างอิงเท่านั้น</string>
+    <string name="help_stub_body">รูปแบบสำหรับไฟล์ที่ควรแสดงรายการในดัมพ์แต่ไม่มีการอ่านเนื้อหา มีประโยชน์สำหรับไฟล์ล็อก โค้ดที่สร้างขึ้น และการกำหนดค่าในเครื่อง\n\nไฟล์อ้างอิงเท่านั้นจะปรากฏในทรีไดเรกทอรีพร้อมส่วนต่อท้าย [ref] และเครื่องหมายขนาด แต่ไม่มีเนื้อหา โมเดล AI จะรู้ว่าไฟล์มีอยู่และใหญ่แค่ไหน โดยไม่ได้รับเนื้อหา\n\nไวยากรณ์ที่รองรับ (เหมือนกับการรวมและการยกเว้น):\n- ชื่อไฟล์: package-lock.json, local.properties\n- ไวลด์การ์ด: *.lock\n\nรูปแบบอ้างอิงเท่านั้นมีลำดับความสำคัญเหนือการรวมและการยกเว้น การรวมมีลำดับความสำคัญเหนือการยกเว้น\n\nการยกเลิกการเลือกช่องอ้างอิงเท่านั้นจะปิดใช้งานรายการโดยไม่ลบ ปุ่มล้างถัดจากเพิ่มจะล้างรายการด้วยการแตะครั้งเดียว</string>
+
+    <string name="help_gitignore_title">กฎ Gitignore</string>
+    <string name="help_gitignore_body">กฎที่ตรวจพบในไฟล์ .gitignore ของโปรเจกต์\n\nรายการนี้อ่านอย่างเดียว - แก้ไข .gitignore โดยตรงเพื่อเปลี่ยน\n\nการรวม การยกเว้น และรูปแบบอ้างอิงเท่านั้นมีลำดับความสำคัญเหนือกฎเหล่านี้: การเพิ่มกฎที่ตรงกันจะบังคับไฟล์ให้อยู่ภายใน ภายนอก หรือในโหมดอ้างอิงเท่านั้นโดยไม่คำนึงถึง .gitignore กฎที่ถูกแทนที่จะถูกไฮไลต์เป็นสีเหลืองอำพัน กฎเชิงลบ (ที่ขึ้นต้นด้วย '!') จะแสดงด้วยพื้นหลังที่แตกต่างเพื่อให้สามารถแยกแยะได้\n\nการยกเลิกการเลือกช่อง Gitignore จะปิดใช้งานกฎ .gitignore โดยไม่ลบไฟล์</string>
+
+    <string name="help_binaries_title">การยกเว้นไบนารี</string>
+    <string name="help_binaries_body">ไฟล์ไบนารีถูกตรวจพบโดยรายการนามสกุลไบนารีที่รู้จักแบบตายตัว (รูปภาพ วิดีโอ เสียง ไฟล์เก็บถาวร ไบนารีที่คอมไพล์แล้ว ฟอนต์ ฐานข้อมูล) ไฟล์ที่มีนามสกุลเหล่านี้จะถูกข้ามเพื่อให้ดัมพ์ยังคงเน้นที่โค้ดต้นฉบับที่อ่านได้\n\nการตรวจจับอิงตามนามสกุลเท่านั้น หากต้องการข้ามรูปแบบไบนารีที่ไม่ธรรมดา ให้เพิ่มนามสกุลของมันในการยกเว้น หากต้องการบังคับรวม ให้เพิ่มในการรวม หรือเพื่อแสดงเป็นอ้างอิงเท่านั้น ให้เพิ่มในการอ้างอิงเท่านั้น\n\nการปิดใช้งานสวิตช์นี้จะรวมนามสกุลที่ระบุไว้ในการส่งออก ซึ่งไม่ค่อยมีประโยชน์สำหรับบริบทของ AI</string>
+
+    <string name="help_tree_title">ตัวอย่างทรีโปรเจกต์</string>
+    <string name="help_tree_body">แสดงทรีโปรเจกต์พร้อมทุกรายการที่ตัวกรองเลือก แต่ละรายการมีสามสถานะ:\n\n- รวม: เนื้อหาเต็มของไฟล์จะถูกเขียนลงในดัมพ์\n- อ้างอิงเท่านั้น: ชื่อ ขนาด และเครื่องหมาย [ref] ของไฟล์จะถูกเขียน แต่ไม่มีการอ่านเนื้อหา\n- ยกเว้น: ไฟล์จะไม่ถูกเขียนลงในดัมพ์\n\nคลิกแถวเพื่อหมุนเวียนสามสถานะ คลิกโฟลเดอร์เพื่อใช้สถานะถัดไปกับทรีย่อยทั้งหมด\n\nโฟลเดอร์ที่ถูกยกเว้นแบบตายตัว (เช่น .git, node_modules) และไฟล์ไบนารีจะถูกล็อกในขั้นต้น: มองเห็นได้แต่ปิดใช้งาน เปิดใช้งาน \"แสดงที่ล็อก\" เพื่อปลดล็อก การขยายโฟลเดอร์ที่ปลดล็อกจะสแกนเนื้อหาตามต้องการ\n\nการยกเลิกการเลือกช่องทรีไฟล์จะซ่อนทรีโดยไม่สูญเสียการแทนที่ด้วยตนเอง</string>
+
+    <string name="help_tree_locked_title">โหนดที่ล็อก</string>
+    <string name="help_tree_locked_body">โหนดที่ล็อกคือโฟลเดอร์ที่ถูกยกเว้นแบบตายตัว (เช่น .git, node_modules, build) และไฟล์ไบนารี พวกมันปรากฏในทรีแต่ไม่โต้ตอบจนกว่าคุณจะเปิดใช้งาน \"แสดงที่ล็อก\"\n\nทำไมล็อก: รายการเหล่านี้ถูกยกเว้นโดยค่าเริ่มต้นเพื่อให้ทรีรวดเร็วและเพื่อหลีกเลี่ยงการดัมพ์เนื้อหาของโฟลเดอร์การพึ่งพาโดยไม่ตั้งใจ การเปิดใช้งาน \"แสดงที่ล็อก\" จะปลดล็อกเพื่อให้คุณสามารถรวม สตับ หรือยกเว้นได้อย่างชัดเจน\n\nการล็อกเป็นแบบต่อเซสชัน ไม่ได้บันทึกไว้ในโปรเจกต์ เนื่องจากการปลดล็อก node_modules เกือบทุกครั้งเป็นการกระทำครั้งเดียว</string>
+
+    <string name="help_max_size_title">ขีดจำกัดขนาดต่อไฟล์</string>
+    <string name="help_max_size_body">เมื่อเปิดใช้งาน ไฟล์ที่มีขนาดใหญ่กว่าที่เลือกจะถูกข้าม สิ่งนี้ปกป้องดัมพ์จากไฟล์ขนาดใหญ่ไฟล์เดียว (เช่น แอสเซ็ตที่รวมไว้หรือ SQL ที่สร้างขึ้น) ที่จะครอบงำเอาต์พุต\n\nเมื่อปิดใช้งาน ทุกไฟล์ข้อความจะถูกรวมโดยไม่คำนึงถึงขนาด ซึ่งอาจสร้างดัมพ์ขนาดใหญ่มาก รวมกับการตั้งค่าขีดจำกัดขนาดการส่งออกรวมเพื่อให้การส่งออกมีขอบเขต\n\nการยกเลิกการเลือกช่องขนาดสูงสุดจะไม่ลบค่าปัจจุบัน: ตัวเลขยังคงอยู่ในฟิลด์และจะถูกนำไปใช้อีกครั้งเมื่อคุณเลือกช่องอีกครั้ง</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

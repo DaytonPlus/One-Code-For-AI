@@ -4,10 +4,10 @@
     <!-- APP IDENTITY                                                   -->
     <!-- ============================================================== -->
     <string name="app_name">CodeAssist OCFAI</string>
+    <string name="app_display_name">One Code For AI</string>
 
     <!-- ============================================================== -->
     <!-- COMMON                                                          -->
-    <!-- Shared labels used across multiple dialogs and screens.         -->
     <!-- ============================================================== -->
     <string name="close">Schließen</string>
     <string name="cancel">Abbrechen</string>
@@ -26,50 +26,77 @@
     <string name="section_presets">Exportprofil</string>
     <string name="save_preset">Profil speichern</string>
     <string name="delete_preset">Profil löschen</string>
-    <string name="delete_preset_message">Profil „%1$s“ löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="delete_preset_message">Profil \"%1$s\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
     <string name="custom_preset">Benutzerdefiniert</string>
     <string name="preset_name_hint">Profilname</string>
     <string name="preset_name_reserved">Dieser Name ist für ein integriertes Profil reserviert.</string>
-    <string name="preset_name_duplicate">Ein Profil namens „%1$s“ existiert bereits.</string>
+    <string name="preset_name_duplicate">Ein Profil namens \"%1$s\" existiert bereits.</string>
 
-    <!-- > Base filters -->
-    <string name="section_base_filters">Basisfilter</string>
+    <!-- > Section help: presets -->
+    <string name="help_presets_title">Exportprofil</string>
+    <string name="help_presets_body">Exportprofile sind wiederverwendbare Bündel von Filterregeln: Einschlüsse, Ausschlüsse, Nur-Referenz-Muster und die Basis-Schalter (Binärdateien, Gitignore, Größenlimit). Integrierte Profile decken gängige Projekttypen ab; speichere dein eigenes über den Dialog, sobald du eine passende Auswahl getroffen hast.\n\nDie Auswahl eines Profils scannt den Baum mit den Regeln dieses Profils erneut. Manuelle Anpassungen, die du im Baum unter einem anderen Profil vorgenommen hast, werden beim Profilwechsel verworfen, da sie zum Kontext des vorherigen Profils gehörten. Sie erscheinen wieder, wenn du zu diesem Profil zurückkehrst.</string>
+
+    <!-- > Base flags -->
     <string name="exclude_binaries">Binärdateien ausschließen</string>
-    <string name="respect_gitignore">.gitignore-Regeln respektieren</string>
+    <string name="respect_gitignore">.gitignore-Regeln beachten</string>
     <string name="max_size">Maximale Größe</string>
     <string name="kb_suffix"> KB</string>
 
-    <!-- > Inclusions, exclusions, .gitignore -->
+    <!-- > Section toggle labels -->
+    <!-- Short labels used as the checkbox of each rule-list section, and
+         as the section header for the General group (which has no
+         checkbox of its own — it contains the base flags rather than
+         a single toggleable rule list). -->
+    <string name="section_general">Allgemein</string>
     <string name="section_inclusions">Einschlüsse</string>
     <string name="section_exclusions">Ausschlüsse</string>
-    <string name="section_gitignore_rules">In .gitignore erkannte Regeln</string>
+    <string name="section_stub_patterns">Nur Referenz</string>
+    <string name="section_gitignore">Gitignore</string>
+    <string name="section_version_control">Versionskontrolle</string>
+    <string name="section_tree">Dateibaum</string>
+
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
+    <string name="section_gitignore_rules">Regeln aus .gitignore</string>
+
+    <!-- > Empty-state placeholders -->
     <string name="no_inclusions">Keine zusätzlichen Erweiterungen</string>
     <string name="no_exclusions">Keine benutzerdefinierten Ausschlüsse</string>
+    <string name="no_stub_patterns">Keine Nur-Referenz-Muster</string>
     <string name="no_gitignore_rules">Keine Regeln in .gitignore gefunden</string>
+
+    <!-- > Add / edit / delete tag dialogs -->
     <string name="add_inclusion_title">Einschluss hinzufügen</string>
     <string name="add_exclusion_title">Ausschluss hinzufügen</string>
-    <string name="edit_extension">Erweiterung bearbeiten</string>
+    <string name="add_stub_title">Nur-Referenz-Muster hinzufügen</string>
+    <string name="edit_extension">Muster bearbeiten</string>
     <string name="delete_rule">Regel löschen</string>
-    <string name="extension_hint">Z. B.: kt, json, *.test.kt</string>
+    <string name="extension_hint">z. B.: kt, json, *.test.kt</string>
     <string name="action_add">+ Hinzufügen</string>
+    <!-- Secondary action next to "+ Add" that empties the flow in one tap.
+         Shown on Inclusions, Exclusions and Reference only. Not shown on
+         Gitignore, whose flow is read-only. -->
+    <string name="action_clear">Leeren</string>
 
     <!-- > Version control (config dialog) -->
-    <string name="section_version_control">Versionskontrolle</string>
+    <string name="help_version_control_title">Versionskontrolle</string>
+    <string name="help_version_control_body">Wenn dieser Abschnitt aktiviert ist und das Projekt ein Git-Repository ist, kannst du einen Git-Snapshot anstelle des aktuellen Arbeitsbaums exportieren.\n\nWähle einen Branch, Tag oder Commit über das Suchsymbol neben dem Referenzfeld oder tippe einen beliebigen Ausdruck ein, den Git auflösen kann (HEAD~3, origin/main, v1.2.0). Der aufgelöste kurze Hash erscheint unter dem Feld, damit du das Ziel vor dem Generieren bestätigen kannst.\n\nDie Diff-Vorschau zeigt, was sich zwischen der ausgewählten Referenz und dem Arbeitsbaum ändern würde, ohne etwas zu verändern. Nützlich, um zu prüfen, was der Export enthalten wird.\n\nDu kannst Git vollständig auf der Einstellungsseite des Plugins deaktivieren; der Abschnitt zeigt dann einen Hinweis „global deaktiviert\". .gitignore-Regeln funktionieren in beiden Fällen weiter.\n\nDas Deaktivieren des Kontrollkästchens Versionskontrolle deaktiviert den gesamten Abschnitt, ohne die konfigurierte Referenz zu verlieren: Die Referenz bleibt im Profil und wird beim nächsten Aktivieren des Kontrollkästchens wieder angewendet.</string>
     <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
     <string name="no_branch">kein Branch</string>
     <string name="no_commit">kein Commit</string>
-    <string name="read_from_git">Aus Git-Referenz lesen</string>
-    <string name="git_refresh">Git-Info aktualisieren</string>
-    <string name="git_uncommitted_changes">Warnung: %1$d uncommittete Änderungen</string>
-    <string name="git_ref_hint">Z. B.: main, v1.0.0, abc1234</string>
+    <string name="read_from_git">Aus einer Git-Referenz lesen</string>
+    <string name="git_refresh">Git-Informationen aktualisieren</string>
+    <string name="git_uncommitted_changes">Warnung: %1$d nicht committete Änderungen</string>
+    <string name="git_ref_hint">z. B.: main, v1.0.0, abc1234</string>
     <string name="git_browse_ref">Referenzen durchsuchen</string>
-    <string name="git_preview_diff">Diff vs. Arbeitsbaum anzeigen</string>
+    <string name="git_preview_diff">Diff gegen Arbeitsbaum anzeigen</string>
     <string name="git_resolving">Auflösen…</string>
-    <string name="git_resolved_as">Aufgelöst: %1$s</string>
+    <string name="git_resolved_as">Aufgelöst zu: %1$s</string>
     <string name="git_ref_invalid">Ungültige Git-Referenz</string>
     <string name="git_ref_empty">Git-Referenz eingeben oder auswählen</string>
     <string name="git_not_repo">Dieser Ordner ist kein Git-Repository</string>
     <string name="git_open_parent_root">Zum Projektstamm wechseln: %1$s</string>
+    <string name="git_diff_error">Diff konnte nicht berechnet werden. Details in der IDE-Konsole.</string>
 
     <!-- > Git reference picker -->
     <string name="git_pick_ref_title">Git-Referenz auswählen</string>
@@ -91,31 +118,33 @@
     <string name="git_diff_content">Diff-Inhalt</string>
 
     <!-- > File tree -->
-    <string name="section_tree">Dateibaum</string>
     <string name="show_tree">Dateibaum anzeigen</string>
+    <string name="tree_show_locked">Gesperrte anzeigen</string>
+    <string name="tree_locked_hint">(gesperrt)</string>
+    <string name="tree_unlock_scanning">Teilbaum wird gescannt…</string>
     <string name="action_expand">Erweitern</string>
     <string name="action_collapse">Einklappen</string>
     <string name="action_reload">Neu laden</string>
     <string name="analyzing">Analysiere…</string>
     <string name="analyzing_files">Analysiere… %1$d Dateien</string>
     <string name="canceled_retry">Abgebrochen. Tippe auf einen Filter, um es erneut zu versuchen.</string>
-    <string name="tree_scan_error">Projektbaum kann nicht gescannt werden: %1$s</string>
+    <string name="tree_scan_error">Projektbaum konnte nicht gescannt werden: %1$s</string>
     <string name="no_tree_matches">Keine Dateien entsprechen den Filtern</string>
 
     <!-- > Generate button -->
     <string name="action_generate">Kontext generieren</string>
-    <string name="generate_description">Eine einzelne .txt-Datei wird generiert und in Download gespeichert.</string>
+    <string name="generate_description">Eine einzelne .txt-Datei wird generiert und in Downloads gespeichert.</string>
 
     <!-- ============================================================== -->
     <!-- INLINE PROGRESS / RESULT PANEL                                  -->
     <!-- ============================================================== -->
     <string name="generating_context">Kontext wird generiert…</string>
     <string name="preparing_export">Vorbereitung…</string>
-    <string name="processing_progress">Verarbeitung: %1$d/%2$d Dateien</string>
+    <string name="processing_progress">Verarbeite: %1$d/%2$d Dateien</string>
     <string name="generation_complete">Generierung abgeschlossen</string>
     <string name="generation_failed">Generierung fehlgeschlagen</string>
     <string name="generation_minimize_hint">Du kannst diesen Dialog minimieren. Die Generierung läuft im Hintergrund weiter.</string>
-    <string name="saved_to_downloads">Gespeichert in Download/OneCodeForAI: %1$s</string>
+    <string name="saved_to_downloads">Gespeichert unter Downloads/OneCodeForAI: %1$s</string>
     <string name="export_already_running">Ein Export läuft bereits.</string>
 
     <!-- > Result actions -->
@@ -128,6 +157,10 @@
     <plurals name="stats_files">
         <item quantity="one">%1$d Datei</item>
         <item quantity="other">%1$d Dateien</item>
+    </plurals>
+    <plurals name="stats_stub_files">
+        <item quantity="one">%1$d Ref</item>
+        <item quantity="other">%1$d Refs</item>
     </plurals>
     <string name="stats_tokens">~%1$s Tokens</string>
 
@@ -146,19 +179,19 @@
     <!-- ============================================================== -->
     <string name="error_file_write_failed">Schreiben der Datei fehlgeschlagen.</string>
     <string name="error_source_uri_unreadable">Quelldatei konnte nicht geöffnet werden.</string>
-    <string name="error_output_stream_unavailable">Das Ziel hat keinen Ausgabestrom bereitgestellt.</string>
+    <string name="error_output_stream_unavailable">Das Ziel hat keinen Ausgabestream bereitgestellt.</string>
     <string name="error_media_store_finalize">Zieldatei konnte nicht abgeschlossen werden.</string>
-    <string name="error_downloads_dir_create">Download-Verzeichnis kann nicht erstellt werden: %1$s</string>
-    <string name="error_project_root_not_dir">Projektstamm ist kein Ordner: %1$s</string>
+    <string name="error_downloads_dir_create">Download-Verzeichnis konnte nicht erstellt werden: %1$s</string>
+    <string name="error_project_root_not_dir">Projektstamm ist kein Verzeichnis: %1$s</string>
     <string name="error_git_repo_unreadable">Der ausgewählte Ordner ist kein lesbares Git-Repository.</string>
-    <string name="error_git_ref_unresolved">Git-Referenz „%1$s“ konnte nicht aufgelöst werden.</string>
-    <string name="error_git_export_no_ref">Git-Export ist aktiviert, aber es wurde keine Referenz ausgewählt.</string>
+    <string name="error_git_ref_unresolved">Git-Referenz \"%1$s\" konnte nicht aufgelöst werden.</string>
+    <string name="error_git_export_no_ref">Git-Export ist aktiviert, aber keine Referenz ausgewählt.</string>
     <string name="unknown_error">Unbekannter Fehler</string>
     <string name="error_storage_permission">Speicherberechtigung erforderlich. Erteile sie unter Einstellungen > Apps > One Code For AI > Berechtigungen.</string>
-    <string name="error_source_file_missing">Die generierte Datei ist nicht mehr verfügbar. Generiere den Kontext erneut.</string>
+    <string name="error_source_file_missing">Die generierte Datei ist nicht mehr verfügbar. Generiere den Kontext erneut, um sie neu zu erstellen.</string>
     <plurals name="notification_ready_title_partial">
-        <item quantity="one">Kontext bereit - %1$d Lesefehler</item>
-        <item quantity="other">Kontext bereit - %1$d Lesefehler</item>
+        <item quantity="one">Kontext bereit – %1$d Lesefehler</item>
+        <item quantity="other">Kontext bereit – %1$d Lesefehler</item>
     </plurals>
 
     <!-- ============================================================== -->
@@ -182,18 +215,25 @@
     <!-- SETTINGS PAGE                                                   -->
     <!-- ============================================================== -->
     <string name="settings_git_global">Git-Integration</string>
-    <string name="settings_git_global_desc">Erkennt Repositories und aktiviert alle Git-Funktionen. Deaktiviere dies, um auch innerhalb eines Repos den reinen Ordner-Modus zu erzwingen. .gitignore-Regeln gelten weiterhin.</string>
+    <string name="settings_git_global_desc">Erkennt Repositorys und aktiviert alle Git-Funktionen. Deaktiviere dies, um auch innerhalb eines Repositorys den einfachen Ordner-Modus zu erzwingen. .gitignore-Regeln gelten weiterhin.</string>
     <string name="settings_animations">Animationen</string>
-    <string name="settings_animations_desc">Überblend- und Skalierungsübergänge im Dialog, im Baum und im Profil-Auswahlfeld. Deaktiviere auf Geräten der Einstiegsklasse.</string>
-    <string name="settings_notifications">Generierungs-Benachrichtigungen</string>
-    <string name="settings_notifications_desc">Fortschritts-, Abschluss- und Fehlerbenachrichtigungen während des Exports. Deaktiviere, um die Benachrichtigungsleiste stumm zu schalten.</string>
-    <string name="settings_force_english">Englische Oberfläche erzwingen</string>
-    <string name="settings_force_english_desc">Erzwingt die englische Oberfläche des Plugins unabhängig von der IDE-Sprache. Neu geöffnete Dialoge und Bildschirme verwenden Englisch; bereits geöffnete Fenster behalten ihre aktuelle Sprache, bis sie erneut geöffnet werden.</string>
-    <string name="settings_total_export_limit">Gesamtes Exportlimit (KB)</string>
-    <string name="settings_total_export_limit_desc">Harte Obergrenze in Kilobyte für die Gesamtgröße eines einzelnen Dumps. Bei Erreichen stoppt der Export das Einbeziehen von Dateien und fügt einen Kürzungshinweis hinzu. Besonders nützlich, wenn das Dateigrößenlimit deaktiviert ist. Auf 0 setzen für kein Limit.</string>
+    <string name="settings_animations_desc">Überblend- und Skalierungsübergänge im Dialog, Baum und Preset-Spinner. Auf schwächeren Geräten deaktivieren.</string>
+    <string name="settings_notifications">Generierungsbenachrichtigungen</string>
+    <string name="settings_notifications_desc">Fortschritts-, Abschluss- und Fehlerbenachrichtigungen während des Exports. Deaktiviere dies, um die Benachrichtigungsleiste stumm zu schalten.</string>
+    <string name="settings_total_export_limit">Gesamtgrößenlimit des Exports (KB)</string>
+    <string name="settings_total_export_limit_desc">Harte Obergrenze in Kilobytes für die Gesamtgröße eines einzelnen Dumps. Wenn sie erreicht ist, hört der Export auf, Dateien einzuschließen, und hängt einen Kürzungshinweis an. Besonders nützlich, wenn das Größenlimit pro Datei deaktiviert ist. Setze 0 für kein Limit.</string>
+    <string name="settings_ui_language">Oberflächensprache</string>
+    <string name="settings_ui_language_desc">Sprache der Plugin-Oberfläche. „Auto\" folgt der IDE-Sprache. Nur neu geöffnete Dialoge und Bildschirme übernehmen die Änderung; bereits geöffnete Fenster behalten ihre aktuelle Sprache, bis sie erneut geöffnet werden.</string>
+    <string name="settings_ui_theme">Design</string>
+    <string name="settings_ui_theme_desc">Farbschema der Plugin-Oberfläche. „Dunkel\" ist Standard und bewahrt die ursprüngliche handabgestimmte Palette des Plugins. „System\" folgt dem Hell/Dunkel-Modus des Geräts, und „Hell\" verwendet immer die helle Palette. Nur neu geöffnete Dialoge und Bildschirme übernehmen die Änderung; bereits geöffnete Fenster behalten ihr aktuelles Design, bis sie erneut geöffnet werden.</string>
+    <string name="settings_ui_theme_system">System (Gerät folgen)</string>
+    <string name="settings_ui_theme_light">Hell</string>
+    <string name="settings_ui_theme_dark">Dunkel</string>
+    <string name="settings_parent_search_limit">Suchlimit für übergeordnete Ordner</string>
+    <string name="settings_parent_search_limit_desc">Wie viele übergeordnete Ordner das Plugin nach oben durchsucht, um .gitignore oder den CodeAssist-Projektstamm zu finden. Erhöhe diesen Wert für sehr tiefe Paketbäume. Setze 0, um den ausgewählten Ordner nie zu verlassen.</string>
 
     <!-- > Misc config messages -->
-    <string name="git_disabled_globally">Git ist in den CodeAssist-Einstellungen global deaktiviert. Aktiviere es dort, um Branches, Tags und Commits zu nutzen.</string>
+    <string name="git_disabled_globally">Git ist in den CodeAssist-Einstellungen global deaktiviert. Aktiviere es dort, um Branches, Tags und Commits zu verwenden.</string>
 
     <!-- ============================================================== -->
     <!-- INFO ACTIVITY                                                   -->
@@ -203,7 +243,7 @@
     <string name="info_title">INFO</string>
     <string name="info_subtitle">Plugin für CodeAssist</string>
     <string name="open_codeassist">CodeAssist öffnen</string>
-    <string name="footer_made_with">Mit ❤️ für die Community gemacht</string>
+    <string name="footer_made_with">Mit Liebe für die Community gemacht</string>
     <string name="creator_dev">Unabhängiger Entwickler</string>
     <string name="codeassist_not_installed">CodeAssist ist nicht installiert</string>
     <string name="codeassist_open_error">CodeAssist konnte nicht geöffnet werden</string>
@@ -212,52 +252,87 @@
     <!-- > What's New -->
     <string name="whats_new_title">NEUIGKEITEN</string>
     <string name="whats_new_version">Version %1$s</string>
-    <string name="whats_new_item_1">Neue native Einstellungsseite zum globalen Umschalten von Git, Animationen und Benachrichtigungen.</string>
-    <string name="whats_new_item_2">Git-Hauptschalter mit intelligenter .gitignore-Suche in übergeordneten Ordnern eingeführt.</string>
-    <string name="whats_new_item_3">Presets mit professionellen Android-Profilen und intelligenten Ausschlüssen überarbeitet.</string>
-    <string name="whats_new_item_4">Vollständige Glob-Muster-Unterstützung (*.log, build/, **/generated/**) und Verzeichnisfilterung hinzugefügt.</string>
-    <string name="whats_new_item_5">Kontext-Hilfe-Dialoge, natives IDE-Logging und Reflection-Fehlerbehebungen hinzugefügt.</string>
-    <string name="whats_new_item_6">Schalter „Englische Oberfläche erzwingen“ hinzugefügt, damit das Plugin die IDE-Sprache bei englischen Tutorials oder Dokumentationen ignorieren kann.</string>
-    <string name="whats_new_item_7">Globales Exportgrößenlimit hinzugefügt, um mehrere GB große Dumps bei deaktiviertem Dateilimit zu verhindern.</string>
-    <string name="whats_new_item_8">Kontext-Hilfe für Binärdatei-Ausschluss und Projektbaum hinzugefügt; alle Hilfe-Symbole verwenden jetzt eine kleinere visuelle Größe mit größerer Berührungsfläche.</string>
+    <string name="whats_new_item_1">Tree v2: Der Projektbaum ist jetzt die autoritative Quelle dafür, was in den Dump kommt. Jeder Eintrag kann direkt im Baum als Eingeschlossen, Nur-Referenz oder Ausgeschlossen markiert werden, und die Auswahl wird pro Projekt gespeichert.</string>
+    <string name="whats_new_item_2">Nur-Referenz-Einträge: Listet eine Datei im Dump mit Name und Größe, ohne ihren Inhalt zu lesen. Ideal für Lockfiles, generierten Code und maschinenlokale Konfiguration. Wird mit dem Suffix [ref] im Baumheader und dem Marker [content omitted: N B — reference only] im Body markiert.</string>
+    <string name="whats_new_item_3">Einheitliches Ordner-Zyklusverhalten: Ein Klick auf einen Ordner erzwingt den nächsten Zustand für alle nicht gesperrten Nachfahren jeder Tiefe, sodass der Ordner-Indikator nie mit seinen Kindern kollidiert. Das Markieren einer tiefen Datei aktualisiert jeden Vorfahren bis zur Wurzel, ohne seine Geschwister zu berühren.</string>
+    <string name="whats_new_item_4">Gesperrte anzeigen: Hart ausgeschlossene Ordner und Binärdateien erscheinen als gesperrte Knoten. Das Aktivieren des Schalters macht sie interaktiv und scannt ihren Inhalt bei Bedarf; das Deaktivieren sperrt alles wieder und verwirft, was während der Entsperrung eingeschlossen wurde.</string>
+    <string name="whats_new_item_5">Neuer Abschnitt „Allgemein\": „Binärdateien ausschließen\" und „Maximale Größe\" leben jetzt unter ihrem eigenen Großbuchstabentitel oben im Formular, statt unbenannt zwischen Preset-Spinner und Einschlüssen zu schweben.</string>
+    <string name="whats_new_item_6">Abschnittsschalter: Einschlüsse, Ausschlüsse, Nur Referenz, Gitignore, Versionskontrolle und Dateibaum folgen alle demselben Muster aus Kontrollkästchen + Großbuchstabentitel + Hilfe. Das Deaktivieren von Einschlüssen, Ausschlüssen oder Nur Referenz deaktiviert die Liste, ohne sie zu löschen, und ein Leeren-Button neben Hinzufügen leert die Liste mit einem Tipp.</string>
+    <string name="whats_new_item_7">Das dunkle Design ist jetzt Standard. Eine Neuinstallation öffnet mit der ursprünglichen handabgestimmten Palette des Plugins. Der Design-Selektor bietet weiterhin System und Hell, und bestehende Nutzer, die explizit ein Design gewählt haben, behalten ihre gespeicherte Auswahl.</string>
+    <string name="whats_new_item_8">Info-Bildschirm überarbeitet: Funktionen in vier Kategorien gruppiert, Symbole pro Zeile von etwa 25 auf 10 reduziert und ein Hero-Block mit einer Zeile aus Versions- und Status-Chips.</string>
+    <string name="whats_new_item_9">Projektstamm-Auflösung: dreistufige Heuristik (.gitignore-Suche, CodeAssist-Projektgrenze, Rückfall auf den ausgewählten Ordner), begrenzt durch die neue Einstellung „Suchlimit für übergeordnete Ordner\".</string>
+    <string name="whats_new_item_10">Das .platform-Verzeichnis des Plugins selbst ist jetzt hart aus dem Dump ausgeschlossen, zusammen mit .git, .gradle und .idea, sodass die projektspezifische Konfiguration niemals im Kontext des Modells landen kann. Die kontextuelle Hilfe ist jetzt in jedem Abschnitt verfügbar.</string>
 
     <!-- > Installation guide -->
     <string name="guide_header_title">Installationsanleitung</string>
     <string name="guide_header_subtitle">Folge diesen Schritten, um One Code For AI in deiner IDE zu aktivieren.</string>
     <string name="guide_step1_title">APK herunterladen</string>
-    <string name="guide_step1_desc">Lade die neueste .apk aus dem offiziellen Repository oder dem Vertriebskanal herunter.</string>
+    <string name="guide_step1_desc">Lade die neueste .apk aus dem offiziellen Repository oder dem Vertriebskanal.</string>
     <string name="guide_step2_title">App installieren</string>
-    <string name="guide_step2_desc">Öffne die APK auf deinem Gerät und akzeptiere bei Aufforderung die Installation aus unbekannten Quellen.</string>
+    <string name="guide_step2_desc">Öffne das APK auf deinem Gerät und akzeptiere die Installation aus unbekannten Quellen, falls dazu aufgefordert.</string>
     <string name="guide_step3_title">CodeAssist öffnen</string>
     <string name="guide_step3_desc">Starte nach der Installation die CodeAssist-App auf deinem Gerät.</string>
     <string name="guide_step4_title">Plugin aktivieren</string>
     <string name="guide_step4_desc">Gehe zu Einstellungen > Plugins > Installiert und aktiviere One Code For AI. Es wird automatisch geladen.</string>
     <string name="guide_step5_title">IDE neu starten</string>
-    <string name="guide_step5_desc">Schließe und öffne CodeAssist erneut, damit alle Komponenten korrekt geladen werden.</string>
+    <string name="guide_step5_desc">Schließe CodeAssist und öffne es erneut, damit alle Komponenten korrekt geladen werden.</string>
 
     <!-- > How to use -->
     <string name="integration_title">CodeAssist-Integration</string>
+    <string name="integration_subtitle">Exportiere ein Projekt als KI-bereiten Kontext in vier Schritten.</string>
     <string name="step_1_title">Projekt öffnen</string>
-    <string name="step_1_desc">Tippe in CodeAssist auf den Projekt-Dateibaum</string>
+    <string name="step_1_desc">Tippe in CodeAssist auf den Dateibaum des Projekts</string>
     <string name="step_2_title">Ordner lange drücken</string>
-    <string name="step_2_desc">Das Kontextmenü der Optionen öffnet sich</string>
+    <string name="step_2_desc">Das Kontextmenü mit Optionen öffnet sich</string>
     <string name="step_3_title">One Code For AI wählen</string>
     <string name="step_3_desc">Die Option zum Generieren des Dumps erscheint</string>
     <string name="step_4_title">Exportieren oder teilen</string>
-    <string name="step_4_desc">Speichere die .txt in Download oder sende sie an deine KI</string>
+    <string name="step_4_desc">Speichere die .txt in Downloads oder sende sie an deine KI</string>
 
     <!-- > Features -->
     <string name="features_title">Funktionen</string>
-    <string name="feature_1">Erweiterte Glob-Filter: Verwende Muster wie *.log, build/ oder **/generated/**</string>
-    <string name="feature_2">Git-Integration: Exportiere aus Branches, Tags, Commits oder sieh dir Diffs an</string>
+
+    <!-- Category headers -->
+    <string name="feature_cat_export">Export und Filterung</string>
+    <string name="feature_cat_git">Git-Integration</string>
+    <string name="feature_cat_customize">Anpassung</string>
+    <string name="feature_cat_privacy">Datenschutz</string>
+
+    <!-- Export and filtering -->
+    <string name="feature_export_1">Erweiterte Glob-Filter: *.log, build/ und Doppelstern-Pfad-Globs</string>
+    <string name="feature_export_2">Professionelle Presets: Android, Web, Python, Klartext</string>
+    <string name="feature_export_3">Interaktiver Baum mit Drei-Zustands-Steuerung (Eingeschlossen, Nur-Referenz, Ausgeschlossen)</string>
+    <string name="feature_export_4">Nur-Referenz-Modus für Lockfiles und generierten Code</string>
+    <string name="feature_export_5">Echtzeitfortschritt mit Hintergrundgenerierung</string>
+
+    <!-- Git integration -->
+    <string name="feature_git_1">Export aus Branches, Tags oder bestimmten Commits</string>
+    <string name="feature_git_2">Diffs vor dem Generieren anzeigen</string>
+    <string name="feature_git_3">Globaler Kill-Switch zum vollständigen Deaktivieren von Git</string>
+
+    <!-- Customization -->
+    <string name="feature_customize_1">Helles und dunkles Design, dunkel als Standard</string>
+    <string name="feature_customize_2">18 Sprachen, unabhängig von der IDE wählbar</string>
+    <string name="feature_customize_3">Kontextuelle Hilfe in jedem Abschnitt</string>
+    <string name="feature_customize_4">Konfigurierbare Limits pro Datei und insgesamt</string>
+
+    <!-- Privacy -->
+    <string name="feature_privacy_1">100% offline: keine Internetberechtigung, keine Telemetrie</string>
+    <string name="feature_privacy_2">Nur lokale Verarbeitung – keine Cloud, keine Uploads</string>
+
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current info screen groups the same
+         information under the four category strings above. -->
+    <string name="feature_1">Erweiterte Glob-Filter: Verwende Muster wie *.log, build/ oder verschachtelte generierte Verzeichnisse</string>
+    <string name="feature_2">Git-Integration: Export aus Branches, Tags, Commits oder Diff-Vorschau</string>
     <string name="feature_3">Professionelle Presets: Android (Kotlin, Source, Resources), Web, Python, Text</string>
-    <string name="feature_4">Kontext-Hilfe: Inline-Dialoge erklären Filter, Muster und .gitignore-Priorität</string>
-    <string name="feature_5">Globaler Git-Hauptschalter: Git vollständig deaktivieren, während der .gitignore-Fallback erhalten bleibt</string>
-    <string name="feature_6">Ausschlüsse im Projektbaum: Dateien und Ordner vor dem Export manuell markieren/demarkieren</string>
-    <string name="feature_7">Byte-genauer Fortschritt: Verfolge den Export in Echtzeit mit Hintergrundverarbeitung</string>
-    <string name="feature_8">Natives IDE-Logging: Debugging wird mit automatischer Aufteilung an die CodeAssist-Konsole weitergeleitet</string>
-    <string name="feature_9">Globale Einstellungsseite: Native Umschalter für Git, Animationen und Benachrichtigungen</string>
-    <string name="feature_10">100 % offline &amp; privat: Keine Telemetrie, keine Internetberechtigung, vollständig lokal</string>
+    <string name="feature_4">Kontextuelle Hilfe: Inline-Dialoge erklären Filter, Muster und .gitignore-Priorität</string>
+    <string name="feature_5">Globaler Git-Kill-Switch: Git vollständig deaktivieren und .gitignore-Fallback bewahren</string>
+    <string name="feature_6">Projektbaum-Ausschlüsse: Dateien und Ordner vor dem Export manuell an-/abwählen</string>
+    <string name="feature_7">Byte-genauer Fortschritt: Exportfortschritt in Echtzeit mit Hintergrundverarbeitung verfolgen</string>
+    <string name="feature_8">IDE-natives Logging: Debugs werden mit automatischem Chunking an die CodeAssist-Konsole geleitet</string>
+    <string name="feature_9">Globale Einstellungsseite: Native Schalter für Git, Animationen und Benachrichtigungen</string>
+    <string name="feature_10">100% offline und privat: keine Telemetrie, keine Internetberechtigung, vollständig lokal</string>
 
     <!-- > Links -->
     <string name="links_title">Links</string>
@@ -276,59 +351,66 @@
     <string name="tech_info_status">Status</string>
     <string name="tech_info_status_stable">Stabil</string>
 
-    <!-- > Help & FAQ -->
+    <!-- > Help and FAQ -->
     <string name="help_title">HILFE UND FAQ</string>
-    <string name="help_header_subtitle">Finde Antworten auf häufige Probleme und erfahre, wie du das Plugin optimal nutzt.</string>
+    <string name="help_header_subtitle">Finde Antworten auf häufige Probleme und lerne, das Plugin optimal zu nutzen.</string>
 
     <string name="help_q1">Wie deaktiviere ich die Git-Funktionalität vollständig?</string>
-    <string name="help_a1">Gehe zu den CodeAssist-Einstellungen, dann zu Plugins, und öffne die Einstellungen von One Code For AI. Dort findest du den Umschalter „Git-Integration“. Wenn er deaktiviert ist, behandelt das Plugin deinen Ordner wie normale Dateien.</string>
+    <string name="help_a1">Gehe zu den CodeAssist-Einstellungen, dann zu Plugins, und öffne die One Code For AI-Einstellungen. Dort findest du den Schalter „Git-Integration\". Wenn deaktiviert, behandelt das Plugin deinen Ordner als einfache Dateien.</string>
 
-    <string name="help_q2">Warum funktioniert .gitignore weiterhin, wenn Git deaktiviert ist?</string>
-    <string name="help_a2">Wenn Git deaktiviert ist, sucht das Plugin automatisch nach einer .gitignore-Datei im ausgewählten Ordner und dessen übergeordneten Ordnern (bis zu 5 Ebenen). So bleiben deine Filterregeln erhalten.</string>
+    <string name="help_q2">Warum funktioniert .gitignore noch, wenn Git deaktiviert ist?</string>
+    <string name="help_a2">Wenn Git deaktiviert ist, durchsucht das Plugin automatisch deinen ausgewählten Ordner und dessen übergeordnete Verzeichnisse nach einer .gitignore-Datei. Die Suche ist durch die Einstellung „Suchlimit für übergeordnete Ordner\" begrenzt, die standardmäßig 10 Ebenen beträgt und auf der Einstellungsseite erhöht werden kann.</string>
 
     <string name="help_q3">Was bedeuten die bernsteinfarbenen .gitignore-Regeln?</string>
-    <string name="help_a3">Eine Regel wird bernsteinfarben hervorgehoben, wenn einer deiner manuellen Einschluss- oder Ausschlussfilter sie aktiv überschreibt. Einschlüsse und Ausschlüsse haben immer Vorrang vor .gitignore.</string>
+    <string name="help_a3">Eine Regel wird bernsteinfarben hervorgehoben, wenn einer deiner manuellen Einschluss-, Ausschluss- oder Nur-Referenz-Filter sie aktiv überschreibt. Einschlüsse, Ausschlüsse und Nur-Referenz-Muster haben immer Vorrang vor .gitignore.</string>
 
     <string name="help_q4">Wie verwende ich Glob-Muster in Filtern?</string>
-    <string name="help_a4">Verwende die Standard-Glob-Syntax: *.log (jede Log-Datei), build/ (bestimmter Ordner), **/generated/** (jeder verschachtelte generierte Ordner). Tippe auf das „?“-Symbol neben den Filterabschnitten für eine Kurzanleitung.</string>
+    <string name="help_a4">Verwende die Standard-Glob-Syntax: *.log (jede Log-Datei), build/ (bestimmter Ordner) und Doppelstern-Pfad-Globs für jeden verschachtelten generierten Ordner. Tippe auf das „?\"-Symbol neben den Filterabschnitten für eine Kurzanleitung.</string>
 
-    <string name="help_q5">Was tun die neuen Android-Presets?</string>
-    <string name="help_a5">Android (Kotlin) exportiert alles. Android (source only) entfernt Tests und Dokumentation. Android (Resources) exportiert nur XMLs (Layouts/Themes). Sie schließen automatisch generierte Dateien wie R.java aus.</string>
+    <string name="help_q5">Was bewirken die neuen Android-Presets?</string>
+    <string name="help_a5">Android (Kotlin) exportiert alles. Android (nur Quellcode) entfernt Tests und Dokumentation. Android (Resources) exportiert nur XMLs (Layouts/Themes). Generierte Dateien wie R.java und local.properties werden standardmäßig als Nur-Referenz gelistet.</string>
 
-    <string name="help_q6">Wo finde ich die Einstellungen für Animationen und Benachrichtigungen?</string>
-    <string name="help_a6">Sie befinden sich in den nativen CodeAssist-Einstellungen für dieses Plugin. Das Deaktivieren von Animationen verbessert die Leistung auf Geräten der Einstiegsklasse. Das Deaktivieren von Benachrichtigungen schaltet Fortschritts- und Abschlussmeldungen stumm.</string>
+    <string name="help_q6">Wo sind die Einstellungen für Animationen und Benachrichtigungen?</string>
+    <string name="help_a6">Sie befinden sich in den nativen CodeAssist-Einstellungen für dieses Plugin. Das Deaktivieren von Animationen hilft der Leistung auf schwächeren Geräten. Das Deaktivieren von Benachrichtigungen schaltet Fortschritts- und Abschlussalarme stumm.</string>
 
     <string name="help_q7">Wie schließe ich einen ganzen Ordner einfach aus?</string>
-    <string name="help_a7">Öffne die Dateibaum-Vorschau im Konfigurationsdialog. Deaktiviere das Kontrollkästchen des Ordners, den du ausschließen möchtest. Das ist schneller und sicherer, als komplexe Ausschlussregeln zu schreiben.</string>
+    <string name="help_a7">Öffne die Dateibaum-Vorschau im Konfigurationsdialog. Klicke auf den Drei-Zustands-Indikator des Ordners, bis er in den ausgeschlossenen Zustand wechselt. Das ist schneller und sicherer als das Schreiben komplexer Ausschlussregeln.</string>
 
-    <string name="help_q8">Kann ich einen laufenden Export abbrechen?</string>
-    <string name="help_a8">Ja. Tippe im Dialog auf „Abbrechen“ oder schließe den Dialog einfach. Der Export läuft sicher im Hintergrund weiter und du kannst jederzeit zurückkehren, um den Fortschritt zu prüfen.</string>
+    <string name="help_q8">Kann ich einen Export abbrechen, während er läuft?</string>
+    <string name="help_a8">Ja. Du kannst im Dialog auf „Abbrechen\" tippen oder den Dialog einfach schließen. Der Export läuft sicher im Hintergrund weiter und du kannst jederzeit zurückkehren, um seinen Fortschritt zu prüfen.</string>
 
     <string name="help_q9">Wird mein Code auf einen Server hochgeladen?</string>
-    <string name="help_a9">Absolut nicht. Das Plugin benötigt keine Internetberechtigung. Alle Scans, Filterungen und Generierungen erfolgen zu 100 % lokal auf deinem Gerät.</string>
+    <string name="help_a9">Absolut nicht. Das Plugin benötigt keine Internetberechtigung. Das gesamte Scannen, Filtern und Generieren erfolgt zu 100 % lokal auf deinem Gerät.</string>
 
     <string name="help_q10">Wo werden die generierten Dateien gespeichert?</string>
-    <string name="help_a10">Exportierte Dateien werden im öffentlichen Speicher deines Geräts unter Download/OneCodeForAI gespeichert.</string>
+    <string name="help_a10">Exportierte Dateien werden im öffentlichen Speicher deines Geräts unter Downloads/OneCodeForAI gespeichert.</string>
 
     <!-- > Contextual help -->
     <string name="help_icon_description">Abschnittshilfe</string>
+
     <string name="help_inclusions_title">Einschlüsse</string>
-    <string name="help_inclusions_body">Whitelist von Erweiterungen und Glob-Mustern, ausgewertet vor .gitignore.\n\nUnterstützte Syntax (identisch zu .gitignore-Mustern):\n- Erweiterungen: kt, json, xml\n- Platzhalter: *.log, **/*.kt, src/*.kt\n- Verzeichnisse: build/, **/generated/**\n\nJede Datei, die einem Einschluss entspricht, wird exportiert, auch wenn .gitignore oder Ausschlüsse sie überspringen würden.\n\nEinschlüsse haben Vorrang vor Ausschlüssen und vor .gitignore. Verwende sie, um bestimmte Dateien oder Erweiterungen gezielt einzubeziehen.</string>
+    <string name="help_inclusions_body">Whitelist von Erweiterungen und Glob-Mustern, vor .gitignore ausgewertet.\n\nUnterstützte Syntax (wie .gitignore-Muster):\n- Erweiterungen: kt, json, xml\n- Platzhalter: *.log, src/*.kt\n- Verzeichnisse: build/\n\nJede Datei, die einem Einschluss entspricht, wird exportiert, auch wenn .gitignore oder Ausschlüsse sie überspringen würden.\n\nEinschlüsse haben Vorrang vor Ausschlüssen und vor .gitignore. Verwende sie, um bestimmte Dateien oder Erweiterungen zwangsweise einzuschließen.\n\nDas Deaktivieren des Kontrollkästchens Einschlüsse deaktiviert die Liste, ohne sie zu löschen: Die Regeln bleiben im Profil und werden beim nächsten Aktivieren wieder angewendet. Der Leeren-Button neben Hinzufügen leert die Liste mit einem Tipp.</string>
 
     <string name="help_exclusions_title">Ausschlüsse</string>
-    <string name="help_exclusions_body">Blacklist von Erweiterungen und Glob-Mustern.\n\nUnterstützte Syntax (identisch zu .gitignore-Mustern):\n- Erweiterungen: log, tmp, pyc\n- Platzhalter: *.log, **/*.test.kt, src/*.bak\n- Verzeichnisse: build/, **/generated/**\n\nJede Datei, die einem Ausschluss entspricht, wird übersprungen, auch wenn .gitignore sie einbeziehen würde. Einschlüsse haben Vorrang vor Ausschlüssen.\n\nUm einen bestimmten Ordner ohne Muster auszuschließen, verwende den Dateibaum unten.</string>
+    <string name="help_exclusions_body">Blacklist von Erweiterungen und Glob-Mustern.\n\nUnterstützte Syntax (wie .gitignore-Muster):\n- Erweiterungen: log, tmp, pyc\n- Platzhalter: *.log, src/*.bak\n- Verzeichnisse: build/\n\nJede Datei, die einem Ausschluss entspricht, wird übersprungen, auch wenn .gitignore sie einschließen würde. Einschlüsse haben Vorrang vor Ausschlüssen.\n\nUm einen bestimmten Ordner ohne Muster auszuschließen, verwende den Dateibaum unten.\n\nDas Deaktivieren des Kontrollkästchens Ausschlüsse deaktiviert die Liste, ohne sie zu löschen: Die Regeln bleiben im Profil und werden beim nächsten Aktivieren wieder angewendet. Der Leeren-Button neben Hinzufügen leert die Liste mit einem Tipp.</string>
 
-    <string name="help_gitignore_title">.gitignore-Regeln</string>
-    <string name="help_gitignore_body">Im .gitignore des Projekts erkannte Regeln.\n\nDiese Liste ist schreibgeschützt – bearbeite .gitignore direkt, um sie zu ändern.\n\nEinschlüsse und Ausschlüsse haben Vorrang vor diesen Regeln: Das Hinzufügen eines passenden Einschlusses oder Ausschlusses zwingt die Datei hinein oder hinaus, unabhängig von .gitignore. Überschriebene Regeln werden bernsteinfarben hervorgehoben. Negierte Regeln (die mit \'!\' beginnen) werden mit einem anderen Hintergrund angezeigt, damit sie von positiven Regeln unterschieden werden können.</string>
+    <string name="help_stub_title">Nur Referenz</string>
+    <string name="help_stub_body">Muster für Dateien, die im Dump gelistet, aber nicht gelesen werden. Nützlich für Lockfiles, generierten Code und lokale Konfiguration.\n\nEine Nur-Referenz-Datei erscheint im Verzeichnisbaum mit dem Suffix [ref] und einem Größenmarker, aber ohne Inhalt. Das KI-Modell erfährt, dass die Datei existiert und wie groß sie ist, ohne ihren Body zu erhalten.\n\nUnterstützte Syntax (wie Einschlüsse und Ausschlüsse):\n- Dateinamen: package-lock.json, local.properties\n- Platzhalter: *.lock\n\nNur-Referenz-Muster haben Vorrang vor Einschlüssen und Ausschlüssen. Einschlüsse haben Vorrang vor Ausschlüssen.\n\nDas Deaktivieren des Kontrollkästchens Nur Referenz deaktiviert die Liste, ohne sie zu löschen: Die Muster bleiben im Profil und werden beim nächsten Aktivieren wieder angewendet. Der Leeren-Button neben Hinzufügen leert die Liste mit einem Tipp.</string>
+
+    <string name="help_gitignore_title">Gitignore-Regeln</string>
+    <string name="help_gitignore_body">Im .gitignore des Projekts erkannte Regeln.\n\nDiese Liste ist schreibgeschützt – bearbeite .gitignore direkt, um sie zu ändern.\n\nEinschlüsse, Ausschlüsse und Nur-Referenz-Muster haben Vorrang vor diesen Regeln: Eine passende Regel erzwingt die Datei ein-, aus- oder in den Nur-Referenz-Modus unabhängig von .gitignore. Überschriebene Regeln werden bernsteinfarben hervorgehoben. Negierte Regeln (beginnend mit \'!\') werden mit einem anderen Hintergrund angezeigt, damit sie von positiven Regeln unterschieden werden können.\n\nDas Deaktivieren des Kontrollkästchens Gitignore deaktiviert die .gitignore-Regeln, ohne die Datei zu löschen: Die Regeln bleiben auf der Festplatte und werden beim nächsten Aktivieren wieder angewendet.</string>
 
     <string name="help_binaries_title">Binärdatei-Ausschluss</string>
-    <string name="help_binaries_body">Binärdateien werden anhand einer festen Liste bekannter binärer Erweiterungen erkannt (Bilder, Video, Audio, Archive, kompilierte Binärdateien, Schriftarten, Datenbanken). Dateien mit diesen Erweiterungen werden übersprungen, damit der Dump auf lesbaren Quellcode fokussiert bleibt.\n\nDie Erkennung erfolgt ausschließlich über die Erweiterung. Um ein ungewöhnliches Binärformat zu überspringen, füge seine Erweiterung zu den Ausschlüssen hinzu. Um es gezielt einzubeziehen, füge es zu den Einschlüssen hinzu.\n\nDas Deaktivieren dieses Schalters nimmt die aufgelisteten Erweiterungen in den Export auf, was für KI-Kontext selten sinnvoll ist.</string>
+    <string name="help_binaries_body">Binärdateien werden anhand einer festen Liste bekannter Binärerweiterungen erkannt (Bilder, Videos, Audio, Archive, kompilierte Binärdateien, Schriftarten, Datenbanken). Dateien mit diesen Erweiterungen werden übersprungen, damit der Dump auf lesbaren Quellcode fokussiert bleibt.\n\nDie Erkennung basiert nur auf der Erweiterung. Um ein seltenes Binärformat zu überspringen, füge seine Erweiterung zu Ausschlüsse hinzu. Um eines zwangsweise einzuschließen, füge es zu Einschlüsse hinzu, oder um es als Nur-Referenz zu listen, füge es zu Nur Referenz hinzu.\n\nDas Deaktivieren dieses Schalters schließt die gelisteten Erweiterungen in den Export ein, was für KI-Kontext selten nützlich ist.</string>
 
     <string name="help_tree_title">Projektbaum-Vorschau</string>
-    <string name="help_tree_body">Zeigt den Projektbaum mit jedem Eintrag, der den aktuellen Filtern entspricht. Deaktiviere das Kontrollkästchen einer beliebigen Datei oder eines Ordners, um sie ohne Ausschlussregel vom Export auszunehmen.\n\nDas Ausschließen eines Ordners schließt automatisch seine Kinder aus. Das erneute Einbeziehen eines einzelnen Kindes in einem ausgeschlossenen Ordner stellt nur diesen Eintrag wieder her – das spiegelt das Verhalten der .gitignore-Negation wider.\n\nVerwende das Kontrollkästchen in der Kopfzeile, um das gesamte Projekt mit einem Tippen ein- oder auszuschließen. Der Baum ist eine Vorschau: Er generiert keine Dateien neu, sondern spiegelt nur den aktuellen Einschlussstatus wider.</string>
+    <string name="help_tree_body">Zeigt den Projektbaum mit jedem vom Filter ausgewählten Eintrag. Jeder Eintrag hat drei Zustände:\n\n- Eingeschlossen: Der vollständige Dateiinhalt wird in den Dump geschrieben.\n- Nur Referenz: Name, Größe und [ref]-Marker werden geschrieben, aber der Inhalt wird nicht gelesen.\n- Ausgeschlossen: Die Datei wird nicht in den Dump geschrieben.\n\nKlicke auf eine Zeile, um zwischen den drei Zuständen zu wechseln. Klicke auf einen Ordner, um den nächsten Zustand auf seinen gesamten Teilbaum anzuwenden und Ordner und Kinder im selben Zustand zu halten.\n\nHart ausgeschlossene Ordner (wie .git, node_modules) und Binärdateien sind anfangs gesperrt: Sie sind sichtbar, aber deaktiviert. Aktiviere „Gesperrte anzeigen\", um sie zu entsperren und mit ihnen zu interagieren. Das Erweitern eines entsperrten Ordners scannt seinen Inhalt bei Bedarf und zeigt alle Kinder, auch die, die die Regeln ausschließen würden, damit du zu Build-Ausgaben und ähnlichen Ordnern navigieren kannst, die der erste Scan überspringt.\n\nDas Deaktivieren des Kontrollkästchens Dateibaum blendet den Baum aus, ohne deine manuellen Überschreibungen zu verlieren: Die Auswahl bleibt erhalten und wird beim nächsten Aktivieren wieder angewendet.</string>
 
-    <string name="help_max_size_title">Dateigrößenlimit</string>
-    <string name="help_max_size_body">Wenn aktiviert, werden Dateien, die größer als die ausgewählte Größe sind, übersprungen. Dies schützt den Dump davor, von einer einzigen riesigen Datei (z. B. einem eingebundenen Asset oder generiertem SQL) dominiert zu werden.\n\nWenn deaktiviert, wird jede Textdatei unabhängig von ihrer Größe einbezogen, was sehr große Dumps erzeugen kann. Kombiniere dies mit dem gesamten Exportlimit in den Einstellungen, um Exporte begrenzt zu halten.</string>
+    <string name="help_tree_locked_title">Gesperrte Knoten</string>
+    <string name="help_tree_locked_body">Gesperrte Knoten sind hart ausgeschlossene Ordner (wie .git, node_modules, build) und Binärdateien. Sie erscheinen im Baum, können aber nicht verwendet werden, bis du „Gesperrte anzeigen\" aktivierst.\n\nWarum gesperrt: Diese Einträge werden standardmäßig ausgeschlossen, um den Baum schnell zu halten und ein versehentliches Dumpen von Abhängigkeitsordnern zu vermeiden. Das Aktivieren von „Gesperrte anzeigen\" entsperrt sie, damit du sie explizit einschließen, als Referenz markieren oder ausschließen kannst.\n\nDie Sperrung gilt pro Sitzung. Sie wird nicht im Projekt gespeichert, da das Entsperren von node_modules fast immer eine einmalige Aktion ist.</string>
+
+    <string name="help_max_size_title">Größenlimit pro Datei</string>
+    <string name="help_max_size_body">Wenn aktiviert, werden Dateien, die größer als die gewählte Größe sind, übersprungen. Dies schützt den Dump davor, dass eine einzelne riesige Datei (z. B. ein gebündeltes Asset oder generiertes SQL) die Ausgabe dominiert.\n\nWenn deaktiviert, werden alle Textdateien unabhängig von der Größe eingeschlossen, was sehr große Dumps produzieren kann. Kombiniere es mit dem Gesamtgrößenlimit in den Einstellungen, um Exporte begrenzt zu halten.\n\nDas Deaktivieren des Kontrollkästchens Maximale Größe löscht nicht den aktuellen Wert: Die Zahl bleibt im Feld und wird beim nächsten Aktivieren wieder angewendet.</string>
 
     <!-- ============================================================== -->
     <!-- HOST INTEGRATION                                                -->

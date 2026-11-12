@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+    <string name="app_display_name">One Code For AI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">Tanca</string>
+    <string name="cancel">Cancel·la</string>
+    <string name="accept">D\'acord</string>
+    <string name="save">Desa</string>
+    <string name="delete">Elimina</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">GENERADOR DE CONTEXT  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Perfil d\'exportació</string>
+    <string name="save_preset">Desa el perfil</string>
+    <string name="delete_preset">Elimina el perfil</string>
+    <string name="delete_preset_message">Voleu eliminar el perfil \"%1$s\"? Aquesta acció no es pot desfer.</string>
+    <string name="custom_preset">Personalitzat</string>
+    <string name="preset_name_hint">Nom del perfil</string>
+    <string name="preset_name_reserved">Aquest nom està reservat per a un perfil integrat.</string>
+    <string name="preset_name_duplicate">Ja existeix un perfil anomenat \"%1$s\".</string>
+
+    <!-- > Section help: presets -->
+    <string name="help_presets_title">Perfil d\'exportació</string>
+    <string name="help_presets_body">Els perfils d\'exportació són conjunts reutilitzables de regles de filtratge: inclusions, exclusions, patrons de només-referència i els commutadors base (binaris, gitignore, límit de mida). Els perfils integrats cobreixen tipus de projecte comuns; desa el teu des del diàleg un cop hagis ajustat una selecció que t\'agradi.\n\nSeleccionar un perfil torna a escanejar l\'arbre amb les regles d\'aquest perfil. Qualsevol ajust manual que hagis fet a l\'arbre sota un altre perfil es descarta en canviar de perfil, perquè pertanyia al context del perfil anterior. Tornaran a aparèixer quan hi tornis.</string>
+
+    <!-- > Base flags -->
+    <string name="exclude_binaries">Exclou els fitxers binaris</string>
+    <string name="respect_gitignore">Respecta les regles de .gitignore</string>
+    <string name="max_size">Mida màxima</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Section toggle labels -->
+    <!-- Short labels used as the checkbox of each rule-list section, and
+         as the section header for the General group (which has no
+         checkbox of its own — it contains the base flags rather than
+         a single toggleable rule list). -->
+    <string name="section_general">General</string>
+    <string name="section_inclusions">Inclusions</string>
+    <string name="section_exclusions">Exclusions</string>
+    <string name="section_stub_patterns">Només referència</string>
+    <string name="section_gitignore">Gitignore</string>
+    <string name="section_version_control">Control de versions</string>
+    <string name="section_tree">Arbre de fitxers</string>
+
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
+    <string name="section_gitignore_rules">Regles detectades a .gitignore</string>
+
+    <!-- > Empty-state placeholders -->
+    <string name="no_inclusions">Sense extensions addicionals</string>
+    <string name="no_exclusions">Sense exclusions personalitzades</string>
+    <string name="no_stub_patterns">Sense patrons de només-referència</string>
+    <string name="no_gitignore_rules">No s\'han trobat regles a .gitignore</string>
+
+    <!-- > Add / edit / delete tag dialogs -->
+    <string name="add_inclusion_title">Afegeix una inclusió</string>
+    <string name="add_exclusion_title">Afegeix una exclusió</string>
+    <string name="add_stub_title">Afegeix un patró de només-referència</string>
+    <string name="edit_extension">Edita el patró</string>
+    <string name="delete_rule">Elimina la regla</string>
+    <string name="extension_hint">p. ex.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Afegeix</string>
+    <!-- Secondary action next to "+ Add" that empties the flow in one tap.
+         Shown on Inclusions, Exclusions and Reference only. Not shown on
+         Gitignore, whose flow is read-only. -->
+    <string name="action_clear">Buida</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="help_version_control_title">Control de versions</string>
+    <string name="help_version_control_body">Quan aquesta secció està activada i el projecte és un repositori Git, pots exportar una instantània Git en lloc de l\'arbre de treball actual.\n\nTria una branca, una etiqueta o un commit amb la icona de cerca al costat del camp de referència, o escriu qualsevol expressió que Git pugui resoldre (HEAD~3, origin/main, v1.2.0). El hash curt resolt apareix sota el camp perquè puguis confirmar l\'objectiu abans de generar.\n\nLa previsualització del diff mostra què canviaria entre la referència seleccionada i l\'arbre de treball, sense modificar res. Útil per comprovar què contindrà l\'exportació.\n\nPots desactivar Git completament des de la pàgina d\'ajustos del connector; la secció mostrarà llavors un avís de \"desactivat globalment\". Les regles de .gitignore continuen funcionant en qualsevol cas.\n\nDesmarcar la casella de Control de versions desactiva tota la secció sense perdre la referència configurada: la referència roman al perfil i es torna a aplicar la propera vegada que marquis la casella.</string>
+    <string name="git_info">Branca: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">sense branca</string>
+    <string name="no_commit">sense commit</string>
+    <string name="read_from_git">Llegeix des d\'una referència Git</string>
+    <string name="git_refresh">Actualitza la informació de Git</string>
+    <string name="git_uncommitted_changes">Avís: %1$d canvis sense confirmar</string>
+    <string name="git_ref_hint">p. ex.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Explora les referències</string>
+    <string name="git_preview_diff">Previsualitza el diff respecte a l\'arbre de treball</string>
+    <string name="git_resolving">S\'està resolent…</string>
+    <string name="git_resolved_as">Resolt com a: %1$s</string>
+    <string name="git_ref_invalid">Referència Git no vàlida</string>
+    <string name="git_ref_empty">Introdueix o selecciona una referència Git</string>
+    <string name="git_not_repo">Aquesta carpeta no és un repositori Git</string>
+    <string name="git_open_parent_root">Ves a l\'arrel del projecte: %1$s</string>
+    <string name="git_diff_error">No s\'ha pogut calcular el diff. Consulta la consola de l\'IDE per obtenir més detalls.</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Selecciona una referència Git</string>
+    <string name="git_tab_branches">Branques</string>
+    <string name="git_tab_tags">Etiquetes</string>
+    <string name="git_tab_commits">Commits</string>
+    <string name="git_local_branches">Branques locals</string>
+    <string name="git_remote_branches">Branques remotes</string>
+    <string name="git_no_branches">No s\'han trobat branques</string>
+    <string name="git_no_tags">No s\'han trobat etiquetes</string>
+    <string name="git_no_commits">No s\'han trobat commits</string>
+    <string name="git_current_marker">actual</string>
+    <string name="git_remote_marker">remota</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s respecte a l\'arbre de treball</string>
+    <string name="git_diff_stats">%1$d fitxers  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">No s\'han detectat canvis</string>
+    <string name="git_diff_content">Contingut del diff</string>
+
+    <!-- > File tree -->
+    <string name="show_tree">Mostra l\'arbre de fitxers</string>
+    <string name="tree_show_locked">Mostra els bloquejats</string>
+    <string name="tree_locked_hint">(bloquejat)</string>
+    <string name="tree_unlock_scanning">S\'està escanejant el subarbre…</string>
+    <string name="action_expand">Expandeix</string>
+    <string name="action_collapse">Replega</string>
+    <string name="action_reload">Recarrega</string>
+    <string name="analyzing">S\'està analitzant…</string>
+    <string name="analyzing_files">S\'està analitzant… %1$d fitxers</string>
+    <string name="canceled_retry">Cancel·lat. Toca un filtre per tornar-ho a provar.</string>
+    <string name="tree_scan_error">No s\'ha pogut escanejar l\'arbre del projecte: %1$s</string>
+    <string name="no_tree_matches">Cap fitxer coincideix amb els filtres</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Genera el context</string>
+    <string name="generate_description">Es generarà un únic fitxer .txt i es desarà a Baixades.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">S\'està generant el context…</string>
+    <string name="preparing_export">S\'està preparant…</string>
+    <string name="processing_progress">S\'està processant: %1$d/%2$d fitxers</string>
+    <string name="generation_complete">Generació completa</string>
+    <string name="generation_failed">La generació ha fallat</string>
+    <string name="generation_minimize_hint">Pots minimitzar aquest diàleg. La generació continua en segon pla.</string>
+    <string name="saved_to_downloads">Desat a Baixades/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">Ja hi ha una exportació en curs.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Desa</string>
+    <string name="action_share">Comparteix</string>
+    <string name="action_regenerate">Torna a generar</string>
+    <string name="action_edit_settings">Edita els ajustos</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d fitxer</item>
+        <item quantity="many">%1$d de fitxers</item>
+        <item quantity="other">%1$d fitxers</item>
+    </plurals>
+    <plurals name="stats_stub_files">
+        <item quantity="one">%1$d ref</item>
+        <item quantity="many">%1$d de refs</item>
+        <item quantity="other">%1$d refs</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s tokens</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Genera context TXT (Comparteix/Exporta)</string>
+    <string name="dialog_already_open">La finestra de configuració ja està oberta.</string>
+    <string name="no_folder_selected">No s\'ha seleccionat cap carpeta.</string>
+    <string name="select_valid_folder">Selecciona una carpeta vàlida.</string>
+    <string name="error_opening_dialog">Error: no s\'ha pogut obrir la finestra.</string>
+    <string name="opening_config">S\'està obrint la configuració…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Ha fallat l\'escriptura del fitxer.</string>
+    <string name="error_source_uri_unreadable">No s\'ha pogut obrir el fitxer d\'origen.</string>
+    <string name="error_output_stream_unavailable">La destinació no ha proporcionat un flux de sortida.</string>
+    <string name="error_media_store_finalize">No s\'ha pogut finalitzar el fitxer de destinació.</string>
+    <string name="error_downloads_dir_create">No s\'ha pogut crear el directori de Baixades: %1$s</string>
+    <string name="error_project_root_not_dir">L\'arrel del projecte no és un directori: %1$s</string>
+    <string name="error_git_repo_unreadable">La carpeta seleccionada no és un repositori Git llegible.</string>
+    <string name="error_git_ref_unresolved">No s\'ha pogut resoldre la referència Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">L\'exportació Git està activada però no s\'ha seleccionat cap referència.</string>
+    <string name="unknown_error">Error desconegut</string>
+    <string name="error_storage_permission">Cal permís d\'emmagatzematge. Concedeix-lo a Configuració > Aplicacions > One Code For AI > Permisos.</string>
+    <string name="error_source_file_missing">El fitxer generat ja no està disponible. Torna a generar el context per recrear-lo.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Context a punt - %1$d error de lectura</item>
+        <item quantity="many">Context a punt - %1$d d\'errors de lectura</item>
+        <item quantity="other">Context a punt - %1$d errors de lectura</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Comparteix el bolcat amb:</string>
+    <string name="share_error">Error en compartir: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Context a punt</string>
+    <string name="error_notification_title">Error d\'One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">Error d\'One Code</string>
+    <string name="notification_channel_actions">Resultats d\'One Code</string>
+    <string name="generating_dump">S\'està generant el bolcat de codi…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Integració amb Git</string>
+    <string name="settings_git_global_desc">Detecta repositoris i habilita totes les funcions de Git. Desactiva-ho per forçar el mode de carpeta simple fins i tot dins d\'un repositori. Les regles de .gitignore s\'apliquen igualment.</string>
+    <string name="settings_animations">Animacions</string>
+    <string name="settings_animations_desc">Transicions de fosa i escala al diàleg, a l\'arbre i al selector de perfils. Desactiva-ho en dispositius de gamma baixa.</string>
+    <string name="settings_notifications">Notificacions de generació</string>
+    <string name="settings_notifications_desc">Notificacions de progrés, compleció i error durant l\'exportació. Desactiva-ho per silenciar la safata de notificacions.</string>
+    <string name="settings_total_export_limit">Límit total de mida d\'exportació (KB)</string>
+    <string name="settings_total_export_limit_desc">Límit dur, en kilobytes, sobre la mida total d\'un sol bolcat. En assolir-lo, l\'exportació deixa d\'incloure fitxers i afegeix un avís de truncament. Especialment útil quan el límit de mida per fitxer està desactivat. Estableix 0 per no tenir límit.</string>
+    <string name="settings_ui_language">Idioma de la interfície</string>
+    <string name="settings_ui_language_desc">Idioma utilitzat per la interfície del connector. \"Auto\" segueix l\'idioma de l\'IDE. Només els diàlegs i les pantalles acabats d\'obrir recullen el canvi; les finestres ja obertes mantenen el seu idioma actual fins que es reobren.</string>
+    <string name="settings_ui_theme">Tema</string>
+    <string name="settings_ui_theme_desc">Esquema de colors utilitzat per la interfície del connector. \"Fosc\" és el predeterminat i conserva la paleta original del connector. \"Sistema\" segueix el mode clar/fosc del dispositiu, i \"Clar\" utilitza sempre la paleta clara. Només els diàlegs i les pantalles acabats d\'obrir recullen el canvi; les finestres ja obertes mantenen el seu tema actual fins que es reobren.</string>
+    <string name="settings_ui_theme_system">Sistema (segueix el dispositiu)</string>
+    <string name="settings_ui_theme_light">Clar</string>
+    <string name="settings_ui_theme_dark">Fosc</string>
+    <string name="settings_parent_search_limit">Límit de cerca a carpetes superiors</string>
+    <string name="settings_parent_search_limit_desc">Quantes carpetes superiors recorre el connector buscant .gitignore o l\'arrel del projecte CodeAssist. Augmenta aquest valor per a arbres de paquets molt profunds. Estableix 0 per no sortir mai de la carpeta seleccionada.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git està desactivat globalment als ajustos de CodeAssist. Activa\'l allà per utilitzar branques, etiquetes i commits.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFORMACIÓ</string>
+    <string name="info_subtitle">Connector per a CodeAssist</string>
+    <string name="open_codeassist">Obre CodeAssist</string>
+    <string name="footer_made_with">Fet amb estima per a la comunitat</string>
+    <string name="creator_dev">Desenvolupador independent</string>
+    <string name="codeassist_not_installed">CodeAssist no està instal·lat</string>
+    <string name="codeassist_open_error">No s\'ha pogut obrir CodeAssist</string>
+    <string name="no_app_for_link">No hi ha cap aplicació disponible per obrir enllaços</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">NOVETATS</string>
+    <string name="whats_new_version">Versió %1$s</string>
+    <string name="whats_new_item_1">Tree v2: l\'arbre del projecte és ara la font autoritària del que entra al bolcat. Cada entrada es pot marcar com a Inclosa, Només-referència o Exclosa directament des de l\'arbre, i la selecció es conserva per projecte.</string>
+    <string name="whats_new_item_2">Entrades de només-referència: llista un fitxer al bolcat pel nom i la mida sense llegir-ne el contingut. Ideal per a lockfiles, codi generat i configuració local. Es marca amb el sufix [ref] a la capçalera de l\'arbre i amb el marcador [content omitted: N B — reference only] al cos.</string>
+    <string name="whats_new_item_3">Cicle uniforme de carpetes: fer clic en una carpeta força el següent estat a tots els descendents no bloquejats a qualsevol profunditat, de manera que l\'indicador de la carpeta mai no es contradiu amb els seus fills. Marcar un fitxer profund actualitza tots els seus avantpassats fins a l\'arrel sense tocar-ne els germans.</string>
+    <string name="whats_new_item_4">Mostra els bloquejats: les carpetes excloses de manera dura i els fitxers binaris apareixen com a nodes bloquejats. Activar el commutador els fa interactius i n\'escaneja el contingut sota demanda; desactivar-lo torna a bloquejar-ho tot i descarta el que es va incloure mentre estaven desbloquejats.</string>
+    <string name="whats_new_item_5">Nova secció General: \"Exclou els fitxers binaris\" i \"Mida màxima\" ara viuen sota el seu propi títol en majúscules a la part superior del formulari, en lloc de flotar sense etiqueta entre el selector de perfils i les Inclusions.</string>
+    <string name="whats_new_item_6">Commutadors de secció: Inclusions, Exclusions, Només referència, Gitignore, Control de versions i Arbre de fitxers segueixen el mateix patró de casella + títol en majúscules + ajuda. Desmarcar Inclusions, Exclusions o Només referència desactiva la llista sense eliminar-la, i un botó Buida al costat d\'Afegeix buida la llista amb un sol toc.</string>
+    <string name="whats_new_item_7">El tema fosc és ara el predeterminat. Una instal·lació nova obre amb la paleta original del connector. El selector de tema encara ofereix Sistema i Clar, i els usuaris que van triar explícitament un tema conserven la seva elecció desada.</string>
+    <string name="whats_new_item_8">Pantalla d\'informació redissenyada: funcions agrupades en quatre categories, nombre d\'icones per fila reduït d\'unes 25 a 10, i un bloc hero amb una fila de xips de versió i estat.</string>
+    <string name="whats_new_item_9">Resolució de l\'arrel del projecte: heurística de tres passos (cerca de .gitignore, límit del projecte CodeAssist, retrocés a la carpeta seleccionada), limitada pel nou ajust \"Límit de cerca a carpetes superiors\".</string>
+    <string name="whats_new_item_10">El directori .platform del propi connector està ara exclòs de manera dura del bolcat, juntament amb .git, .gradle i .idea, de manera que la configuració per projecte no pot acabar mai al context del model. L\'ajuda contextual està ara disponible a totes les seccions.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Guia d\'instal·lació</string>
+    <string name="guide_header_subtitle">Segueix aquests passos per habilitar One Code For AI a l\'IDE.</string>
+    <string name="guide_step1_title">Descarrega l\'APK</string>
+    <string name="guide_step1_desc">Obtén l\'últim .apk del repositori oficial o del canal de distribució.</string>
+    <string name="guide_step2_title">Instal·la l\'aplicació</string>
+    <string name="guide_step2_desc">Obre l\'APK al teu dispositiu i accepta la instal·lació des de fonts desconegudes si se\'t demana.</string>
+    <string name="guide_step3_title">Obre CodeAssist</string>
+    <string name="guide_step3_desc">Un cop instal·lat, inicia l\'aplicació CodeAssist al teu dispositiu.</string>
+    <string name="guide_step4_title">Activa el connector</string>
+    <string name="guide_step4_desc">Ves a Configuració > Connectors > Instal·lats i activa One Code For AI. Es carregarà automàticament.</string>
+    <string name="guide_step5_title">Reinicia l\'IDE</string>
+    <string name="guide_step5_desc">Tanca i torna a obrir CodeAssist perquè tots els components es carreguin correctament.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">Integració amb CodeAssist</string>
+    <string name="integration_subtitle">Exporta un projecte com a context llest per a la IA en quatre passos.</string>
+    <string name="step_1_title">Obre un projecte</string>
+    <string name="step_1_desc">Toca l\'arbre de fitxers del projecte a CodeAssist</string>
+    <string name="step_2_title">Mantén premuda una carpeta</string>
+    <string name="step_2_desc">S\'obrirà el menú contextual d\'opcions</string>
+    <string name="step_3_title">Tria One Code For AI</string>
+    <string name="step_3_desc">Apareixerà l\'opció de generar el bolcat</string>
+    <string name="step_4_title">Exporta o comparteix</string>
+    <string name="step_4_desc">Desa el .txt a Baixades o envia\'l a la teva IA</string>
+
+    <!-- > Features -->
+    <string name="features_title">Funcions</string>
+
+    <!-- Category headers -->
+    <string name="feature_cat_export">Exportació i filtratge</string>
+    <string name="feature_cat_git">Integració amb Git</string>
+    <string name="feature_cat_customize">Personalització</string>
+    <string name="feature_cat_privacy">Privadesa</string>
+
+    <!-- Export and filtering -->
+    <string name="feature_export_1">Filtres glob avançats: *.log, build/ i globs de ruta amb doble asterisc</string>
+    <string name="feature_export_2">Presets professionals: Android, Web, Python, Text pla</string>
+    <string name="feature_export_3">Arbre interactiu amb control de tres estats (Inclòs, Només-referència, Exclòs)</string>
+    <string name="feature_export_4">Mode de només-referència per a lockfiles i codi generat</string>
+    <string name="feature_export_5">Progrés en temps real amb generació en segon pla</string>
+
+    <!-- Git integration -->
+    <string name="feature_git_1">Exporta des de branques, etiquetes o commits específics</string>
+    <string name="feature_git_2">Previsualitza els diffs abans de generar</string>
+    <string name="feature_git_3">Interruptor global per desactivar completament Git</string>
+
+    <!-- Customization -->
+    <string name="feature_customize_1">Temes clar i fosc, fosc per defecte</string>
+    <string name="feature_customize_2">18 idiomes, seleccionables independentment de l\'IDE</string>
+    <string name="feature_customize_3">Ajuda contextual a cada secció</string>
+    <string name="feature_customize_4">Límits per fitxer i totals d\'exportació configurables</string>
+
+    <!-- Privacy -->
+    <string name="feature_privacy_1">100% fora de línia: sense permís d\'internet, sense telemetria</string>
+    <string name="feature_privacy_2">Processament només local - sense núvol, sense pujades</string>
+
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current info screen groups the same
+         information under the four category strings above. -->
+    <string name="feature_1">Filtres glob avançats: utilitza patrons com *.log, build/ o directoris generats imbricats</string>
+    <string name="feature_2">Integració amb Git: exporta des de branques, etiquetes, commits o previsualitza diffs</string>
+    <string name="feature_3">Presets professionals: Android (Kotlin, Codi, Resources), Web, Python, Text</string>
+    <string name="feature_4">Ajuda contextual: diàlegs incrustats que expliquen filtres, patrons i prioritat de .gitignore</string>
+    <string name="feature_5">Interruptor global de Git: desactiva Git completament conservant el retrocés de .gitignore</string>
+    <string name="feature_6">Exclusions de l\'arbre del projecte: marca/desmarca manualment fitxers i carpetes abans d\'exportar</string>
+    <string name="feature_7">Progrés precís en bytes: segueix el progrés de l\'exportació en temps real amb processament en segon pla</string>
+    <string name="feature_8">Registre natiu de l\'IDE: els missatges de depuració van a la consola de CodeAssist amb divisió automàtica</string>
+    <string name="feature_9">Pàgina d\'ajustos global: commutadors natius per a Git, Animacions i Notificacions</string>
+    <string name="feature_10">100% fora de línia i privat: sense telemetria, sense permís d\'internet, totalment local</string>
+
+    <!-- > Links -->
+    <string name="links_title">Enllaços</string>
+    <string name="link_repository">Repositori de GitHub</string>
+    <string name="link_report_bug">Informa d\'un problema</string>
+    <string name="link_license">Llicència MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Informació tècnica</string>
+    <string name="tech_info_version">Versió</string>
+    <string name="tech_info_package">Paquet</string>
+    <string name="tech_info_min_sdk">SDK mínim</string>
+    <string name="tech_info_target_sdk">SDK objectiu</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Llenguatge</string>
+    <string name="tech_info_status">Estat</string>
+    <string name="tech_info_status_stable">Estable</string>
+
+    <!-- > Help and FAQ -->
+    <string name="help_title">AJUDA I PREGUNTES FREQÜENTS</string>
+    <string name="help_header_subtitle">Troba respostes a problemes comuns i aprèn a treure el màxim profit del connector.</string>
+
+    <string name="help_q1">Com desactivo completament la funcionalitat de Git?</string>
+    <string name="help_a1">Ves a Configuració de CodeAssist, després a Connectors, i obre els ajustos d\'One Code For AI. Allà trobaràs el commutador \"Integració amb Git\". Quan està desactivat, el connector tracta la teva carpeta com a fitxers simples.</string>
+
+    <string name="help_q2">Per què .gitignore encara funciona quan Git està desactivat?</string>
+    <string name="help_a2">Si Git està desactivat, el connector cerca automàticament a la teva carpeta seleccionada i als directoris pare un fitxer .gitignore. La cerca està limitada per l\'ajust \"Límit de cerca a carpetes superiors\", que per defecte és de 10 nivells i es pot augmentar des de la pàgina d\'ajustos.</string>
+
+    <string name="help_q3">Què signifiquen les regles de .gitignore en ambre?</string>
+    <string name="help_a3">Una regla es ressalta en ambre quan un dels teus filtres manuals d\'inclusió, exclusió o només-referència l\'està sobreescrivint activament. Les inclusions, exclusions i patrons de només-referència sempre tenen prioritat sobre .gitignore.</string>
+
+    <string name="help_q4">Com faig servir patrons glob als filtres?</string>
+    <string name="help_a4">Utilitza la sintaxi glob estàndard: *.log (qualsevol fitxer de registre), build/ (carpeta concreta) i globs de ruta amb doble asterisc per a qualsevol carpeta generada imbricada. Toca la icona \"?\" al costat de les seccions de filtres per a una guia ràpida.</string>
+
+    <string name="help_q5">Què fan els nous presets d\'Android?</string>
+    <string name="help_a5">Android (Kotlin) exporta tot. Android (només codi font) elimina proves i documentació. Android (Resources) exporta només XML (layouts/themes). Els fitxers generats com R.java i local.properties es llisten com a només-referència per defecte.</string>
+
+    <string name="help_q6">On són els ajustos d\'animacions i notificacions?</string>
+    <string name="help_a6">Són als ajustos natius de CodeAssist per a aquest connector. Desactivar les animacions ajuda al rendiment en dispositius de gamma baixa. Desactivar les notificacions silencia els avisos de progrés i compleció.</string>
+
+    <string name="help_q7">Com excloc tota una carpeta fàcilment?</string>
+    <string name="help_a7">Obre la previsualització de l\'arbre de fitxers al diàleg de configuració. Fes clic a l\'indicador de tres estats de la carpeta fins que passi a l\'estat exclòs. Això és més ràpid i segur que escriure regles d\'exclusió complexes.</string>
+
+    <string name="help_q8">Puc cancel·lar una exportació mentre s\'executa?</string>
+    <string name="help_a8">Sí. Pots tocar \"Cancel·la\" al diàleg, o simplement tancar el diàleg. L\'exportació s\'executa de manera segura en segon pla i pots tornar a comprovar-ne el progrés en qualsevol moment.</string>
+
+    <string name="help_q9">El meu codi es puja a un servidor?</string>
+    <string name="help_a9">Rotundament no. El connector no requereix permís d\'internet. Tot l\'escaneig, filtratge i generació es fan al 100% localment al teu dispositiu.</string>
+
+    <string name="help_q10">On es desen els fitxers generats?</string>
+    <string name="help_a10">Els fitxers exportats es desen a l\'emmagatzematge públic del teu dispositiu sota Baixades/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Ajuda de la secció</string>
+
+    <string name="help_inclusions_title">Inclusions</string>
+    <string name="help_inclusions_body">Llista blanca d\'extensions i patrons glob, avaluada abans de .gitignore.\n\nSintaxi admesa (igual que els patrons de .gitignore):\n- Extensions: kt, json, xml\n- Comodins: *.log, src/*.kt\n- Directoris: build/\n\nQualsevol fitxer que coincideixi amb una inclusió s\'exporta encara que .gitignore o les exclusions l\'ometin.\n\nLes inclusions tenen prioritat sobre les exclusions i sobre .gitignore. Utilitza-les per forçar la inclusió de fitxers o extensions concretes.\n\nDesmarcar la casella Inclusions desactiva la llista sense eliminar-la: les regles romanen al perfil i es tornen a aplicar la propera vegada que marquis la casella. El botó Buida al costat d\'Afegeix buida la llista amb un sol toc.</string>
+
+    <string name="help_exclusions_title">Exclusions</string>
+    <string name="help_exclusions_body">Llista negra d\'extensions i patrons glob.\n\nSintaxi admesa (igual que els patrons de .gitignore):\n- Extensions: log, tmp, pyc\n- Comodins: *.log, src/*.bak\n- Directoris: build/\n\nQualsevol fitxer que coincideixi amb una exclusió s\'omet, fins i tot si .gitignore l\'inclouria. Les inclusions tenen prioritat sobre les exclusions.\n\nPer excloure una carpeta concreta sense escriure un patró, utilitza l\'arbre de fitxers de sota.\n\nDesmarcar la casella Exclusions desactiva la llista sense eliminar-la: les regles romanen al perfil i es tornen a aplicar la propera vegada que marquis la casella. El botó Buida al costat d\'Afegeix buida la llista amb un sol toc.</string>
+
+    <string name="help_stub_title">Només referència</string>
+    <string name="help_stub_body">Patrons per a fitxers que s\'haurien de llistar al bolcat però el contingut dels quals no es llegeix. Útil per a lockfiles, codi generat i configuració local.\n\nUn fitxer de només-referència apareix a l\'arbre de directoris amb el sufix [ref] i un marcador de mida, però sense contingut. El model d\'IA aprèn que el fitxer existeix i quant ocupa, sense rebre\'n el cos.\n\nSintaxi admesa (igual que inclusions i exclusions):\n- Noms de fitxer: package-lock.json, local.properties\n- Comodins: *.lock\n\nEls patrons de només-referència tenen prioritat sobre les inclusions i les exclusions. Les inclusions tenen prioritat sobre les exclusions.\n\nDesmarcar la casella Només referència desactiva la llista sense eliminar-la: els patrons romanen al perfil i es tornen a aplicar la propera vegada que marquis la casella. El botó Buida al costat d\'Afegeix buida la llista amb un sol toc.</string>
+
+    <string name="help_gitignore_title">Regles de Gitignore</string>
+    <string name="help_gitignore_body">Regles detectades al fitxer .gitignore del projecte.\n\nAquesta llista és de només lectura: edita .gitignore directament per canviar-la.\n\nLes inclusions, exclusions i patrons de només-referència tenen prioritat sobre aquestes regles: afegir una regla coincident força el fitxer a dins, a fora o al mode de només-referència independentment de .gitignore. Les regles sobreescrites es ressalten en ambre. Les regles negades (que comencen per \'!\') es mostren amb un fons distint perquè es puguin distingir de les regles positives.\n\nDesmarcar la casella Gitignore desactiva les regles de .gitignore sense eliminar el fitxer: les regles romanen al disc i es tornen a aplicar la propera vegada que marquis la casella.</string>
+
+    <string name="help_binaries_title">Exclusió de binaris</string>
+    <string name="help_binaries_body">Els fitxers binaris es detecten mitjançant una llista fixa d\'extensions binàries conegudes (imatges, vídeo, àudio, arxius, binaris compilats, tipus de lletra, bases de dades). Els fitxers amb aquestes extensions s\'ometen perquè el bolcat es mantingui centrat en codi font llegible.\n\nLa detecció es basa únicament en l\'extensió. Per ometre un format binari poc comú, afegeix-ne l\'extensió a Exclusions. Per forçar-ne la inclusió, afegeix-la a Inclusions, o per llistar-la com a només-referència, afegeix-la a Només referència.\n\nDesactivar aquest commutador inclou les extensions llistades a l\'exportació, cosa que poques vegades és útil per al context d\'IA.</string>
+
+    <string name="help_tree_title">Previsualització de l\'arbre del projecte</string>
+    <string name="help_tree_body">Mostra l\'arbre del projecte amb cada entrada que els filtres han seleccionat. Cada entrada té tres estats:\n\n- Inclosa: el contingut complet del fitxer s\'escriu al bolcat.\n- Només referència: s\'escriuen el nom, la mida i el marcador [ref] del fitxer, però el contingut no es llegeix.\n- Exclosa: el fitxer no s\'escriu al bolcat.\n\nFes clic en una fila per recórrer els tres estats. Fes clic en una carpeta per aplicar el següent estat a tot el seu subarbre, mantenint la carpeta i els seus fills en el mateix estat.\n\nLes carpetes excloses de manera dura (com .git, node_modules) i els fitxers binaris estan inicialment bloquejats: són visibles però desactivats. Activa \"Mostra els bloquejats\" per desbloquejar-los i interactuar-hi. Expandir una carpeta desbloquejada n\'escaneja el contingut sota demanda i mostra tots els fills, incloent-hi els que les regles exclourien, de manera que puguis navegar fins a les sortides de compilació i carpetes similars que l\'escaneig inicial omet.\n\nDesmarcar la casella Arbre de fitxers amaga l\'arbre sense perdre les teves sobreescriptures manuals: la selecció es conserva i es torna a aplicar la propera vegada que marquis la casella.</string>
+
+    <string name="help_tree_locked_title">Nodes bloquejats</string>
+    <string name="help_tree_locked_body">Els nodes bloquejats són carpetes excloses de manera dura (com .git, node_modules, build) i fitxers binaris. Apareixen a l\'arbre però no s\'hi pot interactuar fins que activis \"Mostra els bloquejats\".\n\nPer què estan bloquejats: aquestes entrades s\'exclouen per defecte per mantenir l\'arbre ràpid i evitar bolcar accidentalment el contingut de carpetes de dependències. Activar \"Mostra els bloquejats\" els desbloqueja perquè puguis incloure\'ls, marcar-los com a referència o excloure\'ls explícitament.\n\nEl bloqueig és per sessió. No es desa al projecte, perquè desbloquejar node_modules és gairebé sempre una acció puntual.</string>
+
+    <string name="help_max_size_title">Límit de mida per fitxer</string>
+    <string name="help_max_size_body">Quan està activat, els fitxers més grans que la mida seleccionada s\'ometen. Això protegeix el bolcat que un únic fitxer enorme (per exemple, un recurs empaquetat o un SQL generat) domini la sortida.\n\nQuan està desactivat, tots els fitxers de text s\'inclouen independentment de la mida, cosa que pot produir bolcats molt grans. Combina\'l amb el límit total de mida d\'exportació als Ajustos per mantenir les exportacions acotades.\n\nDesmarcar la casella Mida màxima no elimina el valor actual: el número roman al camp i es torna a aplicar la propera vegada que marquis la casella.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

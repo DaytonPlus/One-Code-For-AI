@@ -14,11 +14,11 @@ import java.util.Locale
  * Background
  * ----------
  * CodeAssist can be localized independently of the system. The plugin's own
- * `Resources` are compiled with an English default and ~20 language variants
- * (`values-es/`, `values-fr/`, …), but every call to `getString` on a
- * `Context` derived from the host would fall back to the *host's* resources,
- * which do not contain the plugin's string IDs. This helper bridges that gap
- * by:
+ * `Resources` are compiled with an English default and 26 language variants
+ * (`values-es/`, `values-fr/`, …, `values-uk/`), but every call to
+ * `getString` on a `Context` derived from the host would fall back to the
+ * *host's* resources, which do not contain the plugin's string IDs. This
+ * helper bridges that gap by:
  *
  *  1. Detecting the language the user has configured for the plugin (or, when
  *     they have not forced one, the language the host IDE is actually using —
@@ -86,6 +86,24 @@ import java.util.Locale
  * a `SharedPreferences` read is an in-memory map lookup after the first load,
  * which is far cheaper than a cache miss, and checking it first guarantees
  * the override is never masked by a stale cached host locale.
+ *
+ * Right-to-left languages
+ * -----------------------
+ * Three of the bundled languages — Arabic (`ar`), Persian (`fa`) and Hebrew
+ * (`he`) — are written right-to-left. Android mirrors the framework widgets
+ * automatically from the locale set on the `Context` returned by
+ * [wrapContextWithIdeLocale], so this class has no RTL-specific code path.
+ * The plugin's own custom views (`FlowLayout`, `ProjectTreeView`) are
+ * documented as LTR-only; see their KDocs for the current limitations. Any
+ * user-visible mirroring regression in an RTL language should be
+ * investigated in those views, not here.
+ *
+ * Hebrew's legacy ISO-639 code is `iw`, which some OEM builds still report.
+ * On every Android version the plugin supports (`minSdk 26`), `Locale("he")`
+ * resolves to `values-he/` correctly, so the modern code is used throughout
+ * and the legacy `iw` alias is not needed. If a specific device is observed
+ * falling back to English for Hebrew, `Locale("iw", "")` is a safe substitute
+ * that resolves to the same `values-he/` folder on those devices.
  *
  * Android API floor
  * -----------------
@@ -220,6 +238,11 @@ object LanguageHelper {
      * the "follow the IDE" default), an activity created *after* the setting
      * is changed automatically starts in the newly selected language without
      * any extra plumbing here.
+     *
+     * For the three RTL locales (`ar`, `fa`, `he`), the `Configuration` that
+     * this method applies inherits Android's automatic `layoutDirection`
+     * resolution, so no extra mirroring step is needed. See the class-level
+     * *Right-to-left languages* note for the framework-side implications.
      */
     fun wrapContextWithIdeLocale(base: Context): Context {
         val locale = detectIdeLocale(base)
@@ -286,6 +309,27 @@ object LanguageHelper {
      *    `values-zh-rTW/`, this line must be updated to match, otherwise the
      *    Chinese selection silently falls back to English.
      *
+     * ### Languages added after 1.1.0 (i18n expansion pass)
+     *  - `bn` → `Locale("bn", "")` → `values-bn/` (Bengali).
+     *  - `ca` → `Locale("ca", "")` → `values-ca/` (Catalan).
+     *  - `fa` → `Locale("fa", "")` → `values-fa/` (Persian, RTL).
+     *  - `he` → `Locale("he", "")` → `values-he/` (Hebrew, RTL). Modern
+     *    ISO-639 code; the legacy `iw` alias is not used. See the class-level
+     *    *Right-to-left languages* note for the fallback reasoning.
+     *  - `nl` → `Locale("nl", "")` → `values-nl/` (Dutch).
+     *  - `sv` → `Locale("sv", "")` → `values-sv/` (Swedish).
+     *  - `th` → `Locale("th", "")` → `values-th/` (Thai).
+     *  - `uk` → `Locale("uk", "")` → `values-uk/` (Ukrainian).
+     *
+     * These branches are **appended after** the pre-1.1.0 entries rather
+     * than inserted in the middle, so the relative order of the `when`
+     * cases — and therefore the persisted value of any caller that happens
+     * to iterate this expression — stays stable across releases. The
+     * `localeForLanguageCode` mapping itself is not indexed by the dropdown
+     * selection (see the `LANGUAGE_OPTIONS` KDoc in `OneCodeForAISettingsPage`
+     * for that separate, index-sensitive list), so the ordering within this
+     * `when` is a readability concern rather than a compatibility one.
+     *
      * ### Why the deprecated constructors
      * `Locale(String)` and `Locale(String, String)` are marked deprecated in
      * Java 19, but they are the most reliable way to produce a `Locale`
@@ -302,6 +346,7 @@ object LanguageHelper {
         // Follow the IDE: signal "no forced language".
         PluginSettings.LANGUAGE_AUTO -> null
 
+        // --- Pre-1.1.0 languages ---
         "en" -> Locale.ENGLISH
         "es" -> Locale("es", "")
         "fr" -> Locale.FRENCH
@@ -314,13 +359,25 @@ object LanguageHelper {
         "ro" -> Locale("ro", "")
         "el" -> Locale("el", "")
         "tr" -> Locale("tr", "")
-        "ar" -> Locale("ar", "")
+        "ar" -> Locale("ar", "")     // RTL
         "hi" -> Locale("hi", "")
         "in" -> Locale("in", "ID")   // values-in/ (legacy ISO-639 code)
         "vi" -> Locale("vi", "")
         "ja" -> Locale.JAPANESE
         "ko" -> Locale.KOREAN
         "zh" -> Locale("zh", "CH")   // values-zh-rCH/
+
+        // --- Languages added after 1.1.0 (i18n expansion pass) ---
+        // Appended after the pre-1.1.0 block so the mapping stays easy to
+        // audit against the release that introduced each language.
+        "bn" -> Locale("bn", "")     // values-bn/ (Bengali)
+        "ca" -> Locale("ca", "")     // values-ca/ (Catalan)
+        "fa" -> Locale("fa", "")     // values-fa/ (Persian, RTL)
+        "he" -> Locale("he", "")     // values-he/ (Hebrew, RTL)
+        "nl" -> Locale("nl", "")     // values-nl/ (Dutch)
+        "sv" -> Locale("sv", "")     // values-sv/ (Swedish)
+        "th" -> Locale("th", "")     // values-th/ (Thai)
+        "uk" -> Locale("uk", "")     // values-uk/ (Ukrainian)
 
         // Unknown code: treat as "auto" (fall through to host detection).
         // This is the safest failure mode for a corrupted preference.

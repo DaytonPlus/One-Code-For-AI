@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+    <string name="app_display_name">One Code For AI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">Stäng</string>
+    <string name="cancel">Avbryt</string>
+    <string name="accept">OK</string>
+    <string name="save">Spara</string>
+    <string name="delete">Ta bort</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">KONTEXTGENERATOR  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">Exportprofil</string>
+    <string name="save_preset">Spara profil</string>
+    <string name="delete_preset">Ta bort profil</string>
+    <string name="delete_preset_message">Ta bort profilen \"%1$s\"? Åtgärden kan inte ångras.</string>
+    <string name="custom_preset">Anpassad</string>
+    <string name="preset_name_hint">Profilnamn</string>
+    <string name="preset_name_reserved">Namnet är reserverat för en inbyggd profil.</string>
+    <string name="preset_name_duplicate">En profil med namnet \"%1$s\" finns redan.</string>
+
+    <!-- > Section help: presets -->
+    <string name="help_presets_title">Exportprofil</string>
+    <string name="help_presets_body">Exportprofiler är återanvändbara paket av filterregler: inkluderingar, exkluderingar, endast-referens-mönster och grundläggande reglage (binära filer, gitignore, storleksgräns). Inbyggda profiler täcker vanliga projekttyper; spara en egen från dialogrutan när du har justerat ett urval du gillar.\n\nAtt välja en profil skannar trädet på nytt med profilens regler. Eventuella manuella justeringar du gjort i trädet under en annan profil kastas när du byter profil, eftersom de hörde till föregående profils kontext. De dyker upp igen när du byter tillbaka till den profilen.</string>
+
+    <!-- > Base flags -->
+    <string name="exclude_binaries">Uteslut binära filer</string>
+    <string name="respect_gitignore">Respektera .gitignore-regler</string>
+    <string name="max_size">Maximal storlek</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Section toggle labels -->
+    <string name="section_general">Allmänt</string>
+    <string name="section_inclusions">Inkluderingar</string>
+    <string name="section_exclusions">Exkluderingar</string>
+    <string name="section_stub_patterns">Endast referens</string>
+    <string name="section_gitignore">Gitignore</string>
+    <string name="section_version_control">Versionskontroll</string>
+    <string name="section_tree">Filtträd</string>
+
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
+    <string name="section_gitignore_rules">Regler som hittats i .gitignore</string>
+
+    <!-- > Empty-state placeholders -->
+    <string name="no_inclusions">Inga ytterligare filändelser</string>
+    <string name="no_exclusions">Inga anpassade exkluderingar</string>
+    <string name="no_stub_patterns">Inga endast-referens-mönster</string>
+    <string name="no_gitignore_rules">Inga regler hittades i .gitignore</string>
+
+    <!-- > Add / edit / delete tag dialogs -->
+    <string name="add_inclusion_title">Lägg till inkludering</string>
+    <string name="add_exclusion_title">Lägg till exkludering</string>
+    <string name="add_stub_title">Lägg till endast-referens-mönster</string>
+    <string name="edit_extension">Redigera mönster</string>
+    <string name="delete_rule">Ta bort regel</string>
+    <string name="extension_hint">t.ex.: kt, json, *.test.kt</string>
+    <string name="action_add">+ Lägg till</string>
+    <string name="action_clear">Rensa</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="help_version_control_title">Versionskontroll</string>
+    <string name="help_version_control_body">När detta avsnitt är aktiverat och projektet är ett Git-arkiv kan du exportera en Git-ögonblicksbild i stället för det aktuella arbetsträdet.\n\nVälj en gren, tagg eller commit via sökikonen bredvid referensfältet, eller skriv ett uttryck som Git kan lösa upp (HEAD~3, origin/main, v1.2.0). Den upplösta korta hashen visas under fältet för bekräftelse.\n\nDifförhandsgranskning visar vad som skulle ändras mellan den valda referensen och arbetsträdet, utan att ändra något.\n\nDu kan stänga av Git helt från inställningssidan för tillägget; avsnittet visar då meddelandet \"globalt inaktiverat\". .gitignore-regler fortsätter att gälla oavsett.\n\nOm du avmarkerar kryssrutan Versionskontroll inaktiveras hela avsnittet utan att den konfigurerade referensen försvinner: referensen finns kvar i profilen och tillämpas igen nästa gång du markerar kryssrutan.</string>
+    <string name="git_info">Gren: %1$s  |  Commit: %2$s</string>
+    <string name="no_branch">ingen gren</string>
+    <string name="no_commit">ingen commit</string>
+    <string name="read_from_git">Läs från en Git-referens</string>
+    <string name="git_refresh">Uppdatera Git-information</string>
+    <string name="git_uncommitted_changes">Varning: %1$d ej incheckade ändringar</string>
+    <string name="git_ref_hint">t.ex.: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">Bläddra bland referenser</string>
+    <string name="git_preview_diff">Förhandsgranska diff mot arbetsträdet</string>
+    <string name="git_resolving">Löser upp…</string>
+    <string name="git_resolved_as">Upplöst: %1$s</string>
+    <string name="git_ref_invalid">Ogiltig Git-referens</string>
+    <string name="git_ref_empty">Ange eller välj en Git-referens</string>
+    <string name="git_not_repo">Den här mappen är inte ett Git-arkiv</string>
+    <string name="git_open_parent_root">Gå till projektroten: %1$s</string>
+    <string name="git_diff_error">Kunde inte beräkna diffen. Kontrollera IDE-konsolen.</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">Välj en Git-referens</string>
+    <string name="git_tab_branches">Grenar</string>
+    <string name="git_tab_tags">Taggar</string>
+    <string name="git_tab_commits">Commits</string>
+    <string name="git_local_branches">Lokala grenar</string>
+    <string name="git_remote_branches">Fjärrgrenar</string>
+    <string name="git_no_branches">Inga grenar hittades</string>
+    <string name="git_no_tags">Inga taggar hittades</string>
+    <string name="git_no_commits">Inga commits hittades</string>
+    <string name="git_current_marker">aktuell</string>
+    <string name="git_remote_marker">fjärr</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">Diff: %1$s mot arbetsträdet</string>
+    <string name="git_diff_stats">%1$d filer  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">Inga ändringar upptäckta</string>
+    <string name="git_diff_content">Diffinnehåll</string>
+
+    <!-- > File tree -->
+    <string name="show_tree">Visa filtträd</string>
+    <string name="tree_show_locked">Visa låsta</string>
+    <string name="tree_locked_hint">(låst)</string>
+    <string name="tree_unlock_scanning">Skannar subträd…</string>
+    <string name="action_expand">Expandera</string>
+    <string name="action_collapse">Fäll ihop</string>
+    <string name="action_reload">Ladda om</string>
+    <string name="analyzing">Analyserar…</string>
+    <string name="analyzing_files">Analyserar… %1$d filer</string>
+    <string name="canceled_retry">Avbrutet. Tryck på ett filter för att försöka igen.</string>
+    <string name="tree_scan_error">Kunde inte skanna projektträdet: %1$s</string>
+    <string name="no_tree_matches">Inga filer matchar filtren</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">Generera kontext</string>
+    <string name="generate_description">En enda .txt-fil genereras och sparas i Nedladdningar.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">Genererar kontext…</string>
+    <string name="preparing_export">Förbereder…</string>
+    <string name="processing_progress">Bearbetar: %1$d/%2$d filer</string>
+    <string name="generation_complete">Generering klar</string>
+    <string name="generation_failed">Genereringen misslyckades</string>
+    <string name="generation_minimize_hint">Du kan minimera den här dialogrutan. Genereringen fortsätter i bakgrunden.</string>
+    <string name="saved_to_downloads">Sparat i Nedladdningar/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">En export pågår redan.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">Spara</string>
+    <string name="action_share">Dela</string>
+    <string name="action_regenerate">Generera igen</string>
+    <string name="action_edit_settings">Redigera inställningar</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">%1$d fil</item>
+        <item quantity="other">%1$d filer</item>
+    </plurals>
+    <plurals name="stats_stub_files">
+        <item quantity="one">%1$d ref</item>
+        <item quantity="other">%1$d ref</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s tokens</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">Generera kontext-TXT (Dela/Exportera)</string>
+    <string name="dialog_already_open">Konfigurationsfönstret är redan öppet.</string>
+    <string name="no_folder_selected">Ingen mapp vald.</string>
+    <string name="select_valid_folder">Välj en giltig mapp.</string>
+    <string name="error_opening_dialog">Fel: kunde inte öppna fönstret.</string>
+    <string name="opening_config">Öppnar konfigurationen…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">Filskrivning misslyckades.</string>
+    <string name="error_source_uri_unreadable">Kunde inte öppna källfilen.</string>
+    <string name="error_output_stream_unavailable">Målet tillhandahöll ingen utström.</string>
+    <string name="error_media_store_finalize">Kunde inte slutföra målfilen.</string>
+    <string name="error_downloads_dir_create">Kunde inte skapa mappen Nedladdningar: %1$s</string>
+    <string name="error_project_root_not_dir">Projektroten är inte en mapp: %1$s</string>
+    <string name="error_git_repo_unreadable">Den valda mappen är inte ett läsbart Git-arkiv.</string>
+    <string name="error_git_ref_unresolved">Git-referensen \"%1$s\" kunde inte lösas upp.</string>
+    <string name="error_git_export_no_ref">Git-export är aktiverat men ingen referens har valts.</string>
+    <string name="unknown_error">Okänt fel</string>
+    <string name="error_storage_permission">Lagringsbehörighet krävs. Bevilja den under Inställningar > Appar > One Code For AI > Behörigheter.</string>
+    <string name="error_source_file_missing">Den genererade filen är inte längre tillgänglig. Generera kontexten igen för att återskapa den.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">Kontext klar - %1$d läsfel</item>
+        <item quantity="other">Kontext klar - %1$d läsfel</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">Dela dump med:</string>
+    <string name="share_error">Delningsfel: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">Kontext klar</string>
+    <string name="error_notification_title">One Code-fel</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Err</string>
+    <string name="notification_channel_actions">One Code-resultat</string>
+    <string name="generating_dump">Genererar kodutdrag…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">Git-integration</string>
+    <string name="settings_git_global_desc">Upptäcker arkiv och aktiverar alla Git-funktioner. Stäng av för att tvinga fram vanligt mappläge även i ett arkiv. .gitignore-regler gäller fortfarande.</string>
+    <string name="settings_animations">Animationer</string>
+    <string name="settings_animations_desc">Tona in och skala i dialogrutan, trädet och profilväljaren. Stäng av på enheter med lägre prestanda.</string>
+    <string name="settings_notifications">Genereringsaviseringar</string>
+    <string name="settings_notifications_desc">Aviseringar om förlopp, slutförande och fel under exporten. Stäng av för att tysta aviseringsfältet.</string>
+    <string name="settings_total_export_limit">Total exportstorleksgräns (KB)</string>
+    <string name="settings_total_export_limit_desc">Hård gräns, i kilobyte, för den totala storleken på en enskild dump. När gränsen nås slutar exporten ta med filer och lägger till en trunkeringsnotis. Mest användbar när filgränsen är avstängd. Sätt till 0 för ingen gräns.</string>
+    <string name="settings_ui_language">Gränssnittsspråk</string>
+    <string name="settings_ui_language_desc">Språk som tilläggets gränssnitt använder. \"Auto\" följer IDE:ns språk. Endast nyligen öppnade dialogrutor och skärmar tar upp ändringen; redan öppna fönster behåller sitt nuvarande språk tills de öppnas igen.</string>
+    <string name="settings_ui_theme">Tema</string>
+    <string name="settings_ui_theme_desc">Färgschema för tilläggets gränssnitt. \"Mörkt\" är standard och behåller tilläggets ursprungliga palett. \"System\" följer enhetens ljusa/mörka läge, och \"Ljust\" använder alltid den ljusa paletten. Endast nyligen öppnade dialogrutor och skärmar tar upp ändringen; redan öppna fönster behåller sitt nuvarande tema tills de öppnas igen.</string>
+    <string name="settings_ui_theme_system">System (följ enheten)</string>
+    <string name="settings_ui_theme_light">Ljust</string>
+    <string name="settings_ui_theme_dark">Mörkt</string>
+    <string name="settings_parent_search_limit">Gräns för sökning i överordnade mappar</string>
+    <string name="settings_parent_search_limit_desc">Hur många överordnade mappar tillägget går uppåt i jakt på .gitignore eller CodeAssist-projektroten. Öka för mycket djupa paketträd. Sätt till 0 för att aldrig lämna den valda mappen.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git är globalt inaktiverat i CodeAssist-inställningarna. Aktivera det där för att använda grenar, taggar och commits.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">Tillägg för CodeAssist</string>
+    <string name="open_codeassist">Öppna CodeAssist</string>
+    <string name="footer_made_with">Skapat med kärlek för communityn</string>
+    <string name="creator_dev">Oberoende utvecklare</string>
+    <string name="codeassist_not_installed">CodeAssist är inte installerat</string>
+    <string name="codeassist_open_error">Kunde inte öppna CodeAssist</string>
+    <string name="no_app_for_link">Ingen app tillgänglig för att öppna länkar</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">NYHETER</string>
+    <string name="whats_new_version">Version %1$s</string>
+    <string name="whats_new_item_1">Träd v2: projektträdet är nu den auktoritativa källan för vad som hamnar i dumpen. Varje post kan ställas in som Inkluderad, Endast referens eller Exkluderad direkt från trädet, och urvalet bevaras per projekt.</string>
+    <string name="whats_new_item_2">Endast-referens-poster: listar en fil i dumpen med namn och storlek utan att läsa innehållet. Ideal för lås filer, genererad kod och maskinlokal konfiguration. Markeras med suffixet [ref] i trädets rubrik och en markör [content omitted: N B — reference only] i brödtexten.</string>
+    <string name="whats_new_item_3">Enhetlig mappväxling: att klicka på en mapp tvingar nästa tillstånd på varje olåst ättling på varje djup, så att mappindikatorn aldrig går emot sina barn. Att markera en djup fil uppdaterar varje förfader upp till roten utan att röra dess syskon.</string>
+    <string name="whats_new_item_4">Visa låsta: hårt exkluderade mappar och binära filer visas som låsta noder. Att aktivera reglaget gör dem interaktiva och skannar deras innehåll på begäran; att inaktivera låser allt igen och kastar det som inkluderats medan det var upplåst.</string>
+    <string name="whats_new_item_5">Ny sektion Allmänt: \"Uteslut binära filer\" och \"Maximal storlek\" finns nu under sin egen versalrubrik högst upp i formuläret.</string>
+    <string name="whats_new_item_6">Sektionsreglage: Inkluderingar, Exkluderingar, Endast referens, Gitignore, Versionskontroll och Filtträd följer alla samma mönster kryssruta + versalrubrik + hjälp. Om du avmarkerar Inkluderingar/Exkluderingar/Endast referens inaktiveras listan utan att raderas, och en Rensa-knapp bredvid Lägg till tömmer flödet med en tryckning.</string>
+    <string name="whats_new_item_7">Det mörka temat är nu standard. En nyinstallation öppnas i tilläggets ursprungliga palett. Temaväljaren erbjuder fortfarande System och Ljust, och befintliga användare som uttryckligen valt ett tema behåller sitt sparade val.</string>
+    <string name="whats_new_item_8">Informationsskärmen omdesignad: funktioner grupperade i fyra kategorier, antal ikoner per rad reducerat från ~25 till 10, och ett hero-block med version och statuschip-rad.</string>
+    <string name="whats_new_item_9">Upplösning av projektrot: trestegsheuristik (.gitignore-sökning, CodeAssist-projektgräns, fallback till vald mapp), begränsad av den nya inställningen \"Gräns för sökning i överordnade mappar\".</string>
+    <string name="whats_new_item_10">Tilläggets egen .platform-mapp är nu hårt exkluderad från dumpen, tillsammans med .git, .gradle och .idea, så att per-projekt-konfigurationen aldrig hamnar i modellens kontext. Kontextuell hjälp finns nu på varje sektion.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">Installationsguide</string>
+    <string name="guide_header_subtitle">Följ dessa steg för att aktivera One Code For AI i din IDE.</string>
+    <string name="guide_step1_title">Ladda ner APK:n</string>
+    <string name="guide_step1_desc">Hämta den senaste .apk-filen från det officiella arkivet eller distributionskanalen.</string>
+    <string name="guide_step2_title">Installera appen</string>
+    <string name="guide_step2_desc">Öppna APK:n på din enhet och acceptera installation från okända källor om du blir tillfrågad.</string>
+    <string name="guide_step3_title">Öppna CodeAssist</string>
+    <string name="guide_step3_desc">Starta CodeAssist-appen på din enhet när den är installerad.</string>
+    <string name="guide_step4_title">Aktivera tillägget</string>
+    <string name="guide_step4_desc">Gå till Inställningar > Tillägg > Installerade och aktivera One Code For AI. Det laddas automatiskt.</string>
+    <string name="guide_step5_title">Starta om IDE:n</string>
+    <string name="guide_step5_desc">Stäng och öppna CodeAssist igen så att alla komponenter laddas korrekt.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">CodeAssist-integration</string>
+    <string name="integration_subtitle">Exportera ett projekt som AI-redo kontext i fyra steg.</string>
+    <string name="step_1_title">Öppna ett projekt</string>
+    <string name="step_1_desc">Tryck på projektets filtträd i CodeAssist</string>
+    <string name="step_2_title">Håll in en mapp</string>
+    <string name="step_2_desc">Alternativmenyn öppnas</string>
+    <string name="step_3_title">Välj One Code For AI</string>
+    <string name="step_3_desc">Alternativet att generera dumpen visas</string>
+    <string name="step_4_title">Exportera eller dela</string>
+    <string name="step_4_desc">Spara .txt i Nedladdningar eller skicka den till din AI</string>
+
+    <!-- > Features -->
+    <string name="features_title">Funktioner</string>
+
+    <!-- Category headers -->
+    <string name="feature_cat_export">Export och filtrering</string>
+    <string name="feature_cat_git">Git-integration</string>
+    <string name="feature_cat_customize">Anpassning</string>
+    <string name="feature_cat_privacy">Integritet</string>
+
+    <!-- Export and filtering -->
+    <string name="feature_export_1">Avancerade glob-filter: *.log, build/ och sökvägsglobs med dubbel asterisk</string>
+    <string name="feature_export_2">Professionella förval: Android, Web, Python, Oformaterad text</string>
+    <string name="feature_export_3">Interaktivt träd med trelägesstyrning (Inkluderad, Endast referens, Exkluderad)</string>
+    <string name="feature_export_4">Endast-referens-läge för lås filer och genererad kod</string>
+    <string name="feature_export_5">Realtidsförlopp med generering i bakgrunden</string>
+
+    <!-- Git integration -->
+    <string name="feature_git_1">Exportera från grenar, taggar eller specifika commits</string>
+    <string name="feature_git_2">Förhandsgranska diffar före generering</string>
+    <string name="feature_git_3">Global nödstopp för att helt inaktivera Git</string>
+
+    <!-- Customization -->
+    <string name="feature_customize_1">Ljusa och mörka teman, mörkt som standard</string>
+    <string name="feature_customize_2">19 språk, valbara oberoende av IDE:n</string>
+    <string name="feature_customize_3">Kontextuell hjälp på varje sektion</string>
+    <string name="feature_customize_4">Konfigurerbara gränser per fil och för den totala exporten</string>
+
+    <!-- Privacy -->
+    <string name="feature_privacy_1">100% offline: ingen internetbehörighet, ingen telemetri</string>
+    <string name="feature_privacy_2">Endast lokal bearbetning - ingen molnlagring, inga uppladdningar</string>
+
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current info screen groups the same
+         information under the four category strings above. -->
+    <string name="feature_1">Avancerade Glob-filter: använd mönster som *.log, build/ eller nästlade genererade mappar</string>
+    <string name="feature_2">Git-integration: exportera från grenar, taggar, commits eller förhandsgranska diffar</string>
+    <string name="feature_3">Professionella förval: Android (Kotlin, Källkod, Resurser), Web, Python, Text</string>
+    <string name="feature_4">Kontextuell hjälp: inline-dialogrutor förklarar filter, mönster och .gitignore-prioritet</string>
+    <string name="feature_5">Global Git-nödstopp: inaktivera Git helt med bibehållen .gitignore-fallback</string>
+    <string name="feature_6">Projektträdsexkluderingar: markera/avmarkera filer och mappar manuellt före exporten</string>
+    <string name="feature_7">Byte-exakt förlopp: följ exporten i realtid med bakgrundsbearbetning</string>
+    <string name="feature_8">IDE-inbyggd loggning: felsökning dirigeras till CodeAssist-konsolen med automatisk chunkning</string>
+    <string name="feature_9">Global inställningssida: inbyggda reglage för Git, Animationer och Aviseringar</string>
+    <string name="feature_10">100% offline och privat: ingen telemetri, ingen internetbehörighet, helt lokalt</string>
+
+    <!-- > Links -->
+    <string name="links_title">Länkar</string>
+    <string name="link_repository">GitHub-arkiv</string>
+    <string name="link_report_bug">Rapportera problem</string>
+    <string name="link_license">MIT-licens</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">Teknisk information</string>
+    <string name="tech_info_version">Version</string>
+    <string name="tech_info_package">Paket</string>
+    <string name="tech_info_min_sdk">Min SDK</string>
+    <string name="tech_info_target_sdk">Target SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">Språk</string>
+    <string name="tech_info_status">Status</string>
+    <string name="tech_info_status_stable">Stabil</string>
+
+    <!-- > Help and FAQ -->
+    <string name="help_title">HJÄLP OCH VANLIGA FRÅGOR</string>
+    <string name="help_header_subtitle">Hitta svar på vanliga problem och lär dig få ut det mesta av tillägget.</string>
+
+    <string name="help_q1">Hur inaktiverar jag Git-funktionaliteten helt?</string>
+    <string name="help_a1">Gå till CodeAssist-inställningar, sedan Tillägg, och öppna inställningarna för One Code For AI. Där hittar du reglaget \"Git-integration\". När det är inaktiverat behandlar tillägget din mapp som vanliga filer.</string>
+
+    <string name="help_q2">Varför fungerar .gitignore fortfarande när Git är inaktiverat?</string>
+    <string name="help_a2">Om Git är inaktiverat söker tillägget automatiskt i din valda mapp och dess överordnade kataloger efter en .gitignore-fil. Sökningen begränsas av inställningen \"Gräns för sökning i överordnade mappar\", som är 10 nivåer som standard och kan höjas från inställningssidan.</string>
+
+    <string name="help_q3">Vad betyder de bärnstensfärgade .gitignore-reglerna?</string>
+    <string name="help_a3">En regel markeras i bärnstensfärg när ett av dina manuella inkluderings-, exkluderings- eller endast-referens-filter aktivt åsidosätter den. Inkluderingar, exkluderingar och endast-referens-mönster har alltid prioritet över .gitignore.</string>
+
+    <string name="help_q4">Hur använder jag glob-mönster i filter?</string>
+    <string name="help_a4">Använd standard glob-syntax: *.log (valfri loggfil), build/ (specifik mapp) och sökvägsglobs med dubbel asterisk för valfri nästlad genererad mapp. Tryck på \"?\"-ikonen bredvid filteravsnitten för en snabbguide.</string>
+
+    <string name="help_q5">Vad gör de nya Android-förvalen?</string>
+    <string name="help_a5">Android (Kotlin) exporterar allt. Android (endast källkod) tar bort tester och dokumentation. Android (Resurser) exporterar endast XML:er (layouter/teman). Genererade filer som R.java och local.properties listas som endast referens som standard.</string>
+
+    <string name="help_q6">Var finns inställningarna för animationer och aviseringar?</string>
+    <string name="help_a6">De finns i de inbyggda CodeAssist-inställningarna för det här tillägget. Att inaktivera animationer hjälper prestandan på enheter med lägre prestanda. Att inaktivera aviseringar tystar förlopps- och slutförandevarningar.</string>
+
+    <string name="help_q7">Hur utesluter jag en hel mapp enkelt?</string>
+    <string name="help_a7">Öppna filtträdets förhandsgranskning i konfigurationsdialogrutan. Tryck på mappens trelägesindikator tills den växlar till det exkluderade läget. Det är snabbare och säkrare än att skriva komplexa exkluderingsregler.</string>
+
+    <string name="help_q8">Kan jag avbryta en export medan den körs?</string>
+    <string name="help_a8">Ja. Du kan trycka på \"Avbryt\" i dialogrutan, eller bara stänga dialogrutan. Exporten körs säkert i bakgrunden och du kan komma tillbaka för att kontrollera förloppet när som helst.</string>
+
+    <string name="help_q9">Laddas min kod upp till en server?</string>
+    <string name="help_a9">Absolut inte. Tillägget kräver ingen internetbehörighet. All skanning, filtrering och generering sker 100% lokalt på din enhet.</string>
+
+    <string name="help_q10">Var sparas de genererade filerna?</string>
+    <string name="help_a10">Exporterade filer sparas i enhetens offentliga lagring under Nedladdningar/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">Sektionshjälp</string>
+
+    <string name="help_inclusions_title">Inkluderingar</string>
+    <string name="help_inclusions_body">Vitlista över filändelser och glob-mönster, utvärderad före .gitignore.\n\nSyntax som stöds (samma som .gitignore-mönster):\n- Filändelser: kt, json, xml\n- Jokertecken: *.log, src/*.kt\n- Kataloger: build/\n\nVarje fil som matchar en inkludering exporteras även om .gitignore eller exkluderingar skulle hoppa över den.\n\nInkluderingar har prioritet över exkluderingar och över .gitignore. Använd dem för att tvinga in specifika filer eller filändelser.\n\nOm du avmarkerar kryssrutan Inkluderingar inaktiveras listan utan att raderas: reglerna finns kvar i profilen och tillämpas igen nästa gång du markerar kryssrutan. Rensa-knappen bredvid Lägg till tömmer listan med en tryckning.</string>
+
+    <string name="help_exclusions_title">Exkluderingar</string>
+    <string name="help_exclusions_body">Svartlista över filändelser och glob-mönster.\n\nSyntax som stöds (samma som .gitignore-mönster):\n- Filändelser: log, tmp, pyc\n- Jokertecken: *.log, src/*.bak\n- Kataloger: build/\n\nVarje fil som matchar en exkludering hoppas över, även om .gitignore skulle inkludera den. Inkluderingar har prioritet över exkluderingar.\n\nFör att utesluta en specifik mapp utan att skriva ett mönster, använd filtträdet nedan.\n\nOm du avmarkerar kryssrutan Exkluderingar inaktiveras listan utan att raderas. Rensa-knappen bredvid Lägg till tömmer listan med en tryckning.</string>
+
+    <string name="help_stub_title">Endast referens</string>
+    <string name="help_stub_body">Mönster för filer som ska listas i dumpen men vars innehåll inte läses. Användbart för lås filer, genererad kod och lokal konfiguration.\n\nEn endast-referens-fil visas i katalogträdet med suffixet [ref] och en storleksmarkör, men utan innehåll. AI-modellen får veta att filen finns och hur stor den är, utan att ta emot dess brödtext.\n\nSyntax som stöds (samma som inkluderingar och exkluderingar):\n- Filnamn: package-lock.json, local.properties\n- Jokertecken: *.lock\n\nEndast-referens-mönster har prioritet över inkluderingar och exkluderingar. Inkluderingar har prioritet över exkluderingar.\n\nOm du avmarkerar kryssrutan Endast referens inaktiveras listan utan att raderas. Rensa-knappen bredvid Lägg till tömmer listan med en tryckning.</string>
+
+    <string name="help_gitignore_title">Gitignore-regler</string>
+    <string name="help_gitignore_body">Regler som hittats i projektets .gitignore-fil.\n\nDen här listan är skrivskyddad - redigera .gitignore direkt för att ändra den.\n\nInkluderingar, exkluderingar och endast-referens-mönster har prioritet över dessa regler: att lägga till en matchande regel tvingar filen in, ut eller i endast-referens-läge oavsett .gitignore. Åsidosatta regler markeras i bärnstensfärg. Negativa regler (som börjar med '!') visas med en distinkt bakgrund så att de kan särskiljas.\n\nOm du avmarkerar kryssrutan Gitignore inaktiveras .gitignore-reglerna utan att ta bort filen.</string>
+
+    <string name="help_binaries_title">Binär exkludering</string>
+    <string name="help_binaries_body">Binära filer upptäcks via en fast lista med kända binära filändelser (bilder, video, ljud, arkiv, kompilerade binärfiler, teckensnitt, databaser). Filer med dessa filändelser hoppas över så att dumpen förblir fokuserad på läsbar källkod.\n\nUpptäckten är enbart filändelsebaserad. För att hoppa över ett ovanligt binärt format lägger du till dess filändelse i Exkluderingar. För att tvinga in det lägger du till det i Inkluderingar, eller för att lista det som endast referens lägger du till det i Endast referens.\n\nOm du inaktiverar det här reglaget inkluderas de listade filändelserna i exporten, vilket sällan är användbart för AI-kontext.</string>
+
+    <string name="help_tree_title">Förhandsgranskning av projektträdet</string>
+    <string name="help_tree_body">Visar projektträdet med varje post som filtren har valt. Varje post har tre lägen:\n\n- Inkluderad: filens fullständiga innehåll skrivs till dumpen.\n- Endast referens: filens namn, storlek och [ref]-markör skrivs, men innehållet läses inte.\n- Exkluderad: filen skrivs inte till dumpen.\n\nKlicka på en rad för att växla mellan de tre lägena. Klicka på en mapp för att tillämpa nästa läge på hela dess subträd.\n\nHårt exkluderade mappar (som .git, node_modules) och binära filer är initialt låsta: synliga men inaktiverade. Aktivera \"Visa låsta\" för att låsa upp dem. Om du expanderar en upplåst mapp skannas dess innehåll på begäran.\n\nOm du avmarkerar kryssrutan Filtträd döljs trädet utan att dina manuella åsidosättningar försvinner.</string>
+
+    <string name="help_tree_locked_title">Låsta noder</string>
+    <string name="help_tree_locked_body">Låsta noder är hårt exkluderade mappar (som .git, node_modules, build) och binära filer. De visas i trädet men är inte interaktiva förrän du aktiverar \"Visa låsta\".\n\nVarför låsta: dessa poster är exkluderade som standard för att hålla trädet snabbt och för att undvika att av misstag dumpa innehållet i beroendemappar. Om du aktiverar \"Visa låsta\" låses de upp så att du kan inkludera, stubba eller exkludera dem explicit.\n\nLåsning sker per session. Den sparas inte i projektet, eftersom upplåsning av node_modules nästan alltid är en engångsåtgärd.</string>
+
+    <string name="help_max_size_title">Storleksgräns per fil</string>
+    <string name="help_max_size_body">När aktiverat hoppas filer större än den valda storleken över. Detta skyddar dumpen från en enda enorm fil (t.ex. en buntad tillgång eller genererad SQL) som skulle dominera utdata.\n\nNär inaktiverat inkluderas varje textfil oavsett storlek, vilket kan ge mycket stora dumpar. Kombinera med den totala exportstorleksgränsen i Inställningar för att hålla exporten begränsad.\n\nOm du avmarkerar kryssrutan Maximal storlek raderas inte det aktuella värdet: siffran finns kvar i fältet och tillämpas igen nästa gång du markerar kryssrutan.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>

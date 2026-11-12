@@ -1,0 +1,421 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================== -->
+    <!-- APP IDENTITY                                                   -->
+    <!-- ============================================================== -->
+    <string name="app_name">CodeAssist OCFAI</string>
+    <string name="app_display_name">One Code For AI</string>
+
+    <!-- ============================================================== -->
+    <!-- COMMON                                                          -->
+    <!-- ============================================================== -->
+    <string name="close">סגור</string>
+    <string name="cancel">ביטול</string>
+    <string name="accept">אישור</string>
+    <string name="save">שמור</string>
+    <string name="delete">מחק</string>
+
+    <!-- ============================================================== -->
+    <!-- CONFIGURATION DIALOG                                            -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="dialog_subtitle">מחולל הקשר  |  %1$s</string>
+
+    <!-- > Profiles -->
+    <string name="section_presets">פרופיל ייצוא</string>
+    <string name="save_preset">שמור פרופיל</string>
+    <string name="delete_preset">מחק פרופיל</string>
+    <string name="delete_preset_message">למחוק את הפרופיל \"%1$s\"? לא ניתן לבטל פעולה זו.</string>
+    <string name="custom_preset">מותאם אישית</string>
+    <string name="preset_name_hint">שם הפרופיל</string>
+    <string name="preset_name_reserved">השם הזה שמור לפרופיל מובנה.</string>
+    <string name="preset_name_duplicate">כבר קיים פרופיל בשם \"%1$s\".</string>
+
+    <!-- > Section help: presets -->
+    <string name="help_presets_title">פרופיל ייצוא</string>
+    <string name="help_presets_body">פרופילי ייצוא הם אוספים לשימוש חוזר של כללי סינון: הכללות, החרגות, תבניות הפניה-בלבד ומתגי הבסיס (קבצים בינאריים, gitignore, מגבלת גודל). פרופילים מובנים מכסים סוגי פרויקטים נפוצים; שמור פרופיל משלך מהדיאלוג לאחר שכווננת בחירה שמתאימה לך.\n\nבחירת פרופיל סורקת מחדש את העץ עם כללי אותו פרופיל. התאמות ידניות כלשהן שביצעת בעץ תחת פרופיל אחר נזרקות בעת החלפת פרופיל, כיוון שהן השתייכו להקשר של הפרופיל הקודם. הן יופיעו שוב כשתחזור לאותו פרופיל.</string>
+
+    <!-- > Base flags -->
+    <string name="exclude_binaries">החרג קבצים בינאריים</string>
+    <string name="respect_gitignore">כבד את כללי .gitignore</string>
+    <string name="max_size">גודל מקסימלי</string>
+    <string name="kb_suffix"> KB</string>
+
+    <!-- > Section toggle labels -->
+    <string name="section_general">כללי</string>
+    <string name="section_inclusions">הכללות</string>
+    <string name="section_exclusions">החרגות</string>
+    <string name="section_stub_patterns">הפניה בלבד</string>
+    <string name="section_gitignore">Gitignore</string>
+    <string name="section_version_control">בקרת גרסאות</string>
+    <string name="section_tree">עץ קבצים</string>
+
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
+    <string name="section_gitignore_rules">כללים שזוהו ב-.gitignore</string>
+
+    <!-- > Empty-state placeholders -->
+    <string name="no_inclusions">אין סיומות נוספות</string>
+    <string name="no_exclusions">אין החרגות מותאמות אישית</string>
+    <string name="no_stub_patterns">אין תבניות הפניה-בלבד</string>
+    <string name="no_gitignore_rules">לא נמצאו כללים ב-.gitignore</string>
+
+    <!-- > Add / edit / delete tag dialogs -->
+    <string name="add_inclusion_title">הוסף הכללה</string>
+    <string name="add_exclusion_title">הוסף החרגה</string>
+    <string name="add_stub_title">הוסף תבנית הפניה-בלבד</string>
+    <string name="edit_extension">ערוך תבנית</string>
+    <string name="delete_rule">מחק כלל</string>
+    <string name="extension_hint">למשל: kt, json, *.test.kt</string>
+    <string name="action_add">+ הוסף</string>
+    <string name="action_clear">נקה</string>
+
+    <!-- > Version control (config dialog) -->
+    <string name="help_version_control_title">בקרת גרסאות</string>
+    <string name="help_version_control_body">כשמקטע זה מופעל והפרויקט הוא מאגר Git, ניתן לייצא תמונת מצב של Git במקום עץ העבודה הנוכחי.\n\nבחר ענף, תג או קומיט באמצעות סמל החיפוש שליד שדה ההפניה, או הקלד כל ביטוי ש-Git יכול לפתור (HEAD~3, origin/main, v1.2.0). ה-hash הקצר שנפתר מוצג מתחת לשדה לאימות.\n\nתצוגה מקדימה של ההבדלים מציגה מה ישתנה בין ההפניה הנבחרת לעץ העבודה, בלי לשנות דבר.\n\nניתן להשבית את Git לחלוטין מדף ההגדרות של התוסף; המקטע יציג אז הודעת \"מושבת גלובלית\". כללי .gitignore ממשיכים לפעול בכל מקרה.\n\nביטול הסימון של תיבת בקרת גרסאות משבית את כל המקטע בלי לאבד את ההפניה המוגדרת: ההפניה נשארת בפרופיל ותוחל מחדש בפעם הבאה שתסמן את התיבה.</string>
+    <string name="git_info">ענף: %1$s  |  קומיט: %2$s</string>
+    <string name="no_branch">אין ענף</string>
+    <string name="no_commit">אין קומיט</string>
+    <string name="read_from_git">קרא מהפנית Git</string>
+    <string name="git_refresh">רענן מידע Git</string>
+    <string name="git_uncommitted_changes">אזהרה: %1$d שינויים לא מקומטים</string>
+    <string name="git_ref_hint">למשל: main, v1.0.0, abc1234</string>
+    <string name="git_browse_ref">עיין בהפניות</string>
+    <string name="git_preview_diff">תצוגה מקדימה של ההבדלים מול עץ העבודה</string>
+    <string name="git_resolving">פותר…</string>
+    <string name="git_resolved_as">נפתר: %1$s</string>
+    <string name="git_ref_invalid">הפנית Git לא חוקית</string>
+    <string name="git_ref_empty">הזן או בחר הפנית Git</string>
+    <string name="git_not_repo">התיקייה הזו אינה מאגר Git</string>
+    <string name="git_open_parent_root">עבור לשורש הפרויקט: %1$s</string>
+    <string name="git_diff_error">לא ניתן לחשב את ההבדלים. בדוק את קונסולת ה-IDE.</string>
+
+    <!-- > Git reference picker -->
+    <string name="git_pick_ref_title">בחר הפנית Git</string>
+    <string name="git_tab_branches">ענפים</string>
+    <string name="git_tab_tags">תגים</string>
+    <string name="git_tab_commits">קומיטים</string>
+    <string name="git_local_branches">ענפים מקומיים</string>
+    <string name="git_remote_branches">ענפים מרוחקים</string>
+    <string name="git_no_branches">לא נמצאו ענפים</string>
+    <string name="git_no_tags">לא נמצאו תגים</string>
+    <string name="git_no_commits">לא נמצאו קומיטים</string>
+    <string name="git_current_marker">נוכחי</string>
+    <string name="git_remote_marker">מרוחק</string>
+
+    <!-- > Git diff preview -->
+    <string name="git_diff_title">הבדלים: %1$s מול עץ העבודה</string>
+    <string name="git_diff_stats">%1$d קבצים  |  +%2$d  -%3$d</string>
+    <string name="git_diff_no_changes">לא זוהו שינויים</string>
+    <string name="git_diff_content">תוכן ההבדלים</string>
+
+    <!-- > File tree -->
+    <string name="show_tree">הצג עץ קבצים</string>
+    <string name="tree_show_locked">הצג נעולים</string>
+    <string name="tree_locked_hint">(נעול)</string>
+    <string name="tree_unlock_scanning">סורק תת-עץ…</string>
+    <string name="action_expand">הרחב</string>
+    <string name="action_collapse">כווץ</string>
+    <string name="action_reload">טען מחדש</string>
+    <string name="analyzing">מנתח…</string>
+    <string name="analyzing_files">מנתח… %1$d קבצים</string>
+    <string name="canceled_retry">בוטל. הקש על מסנן כדי לנסות שוב.</string>
+    <string name="tree_scan_error">לא ניתן לסרוק את עץ הפרויקט: %1$s</string>
+    <string name="no_tree_matches">אין קבצים שמתאימים למסננים</string>
+
+    <!-- > Generate button -->
+    <string name="action_generate">צור הקשר</string>
+    <string name="generate_description">קובץ .txt יחיד ייווצר ויישמר ב-Downloads.</string>
+
+    <!-- ============================================================== -->
+    <!-- INLINE PROGRESS / RESULT PANEL                                  -->
+    <!-- ============================================================== -->
+    <string name="generating_context">יוצר הקשר…</string>
+    <string name="preparing_export">מכין…</string>
+    <string name="processing_progress">מעבד: %1$d מתוך %2$d קבצים</string>
+    <string name="generation_complete">היצירה הושלמה</string>
+    <string name="generation_failed">היצירה נכשלה</string>
+    <string name="generation_minimize_hint">ניתן למזער את הדיאלוג הזה. היצירה ממשיכה ברקע.</string>
+    <string name="saved_to_downloads">נשמר ב-Downloads/OneCodeForAI: %1$s</string>
+    <string name="export_already_running">ייצוא כבר מתבצע.</string>
+
+    <!-- > Result actions -->
+    <string name="action_save">שמור</string>
+    <string name="action_share">שתף</string>
+    <string name="action_regenerate">צור מחדש</string>
+    <string name="action_edit_settings">ערוך הגדרות</string>
+
+    <!-- > Result statistics -->
+    <plurals name="stats_files">
+        <item quantity="one">קובץ %1$d</item>
+        <item quantity="two">%1$d קבצים</item>
+        <item quantity="many">%1$d קבצים</item>
+        <item quantity="other">%1$d קבצים</item>
+    </plurals>
+    <plurals name="stats_stub_files">
+        <item quantity="one">הפניה %1$d</item>
+        <item quantity="two">%1$d הפניות</item>
+        <item quantity="many">%1$d הפניות</item>
+        <item quantity="other">%1$d הפניות</item>
+    </plurals>
+    <string name="stats_tokens">~%1$s טוקנים</string>
+
+    <!-- ============================================================== -->
+    <!-- PLUGIN ENTRY POINT (CONTEXT MENU)                               -->
+    <!-- ============================================================== -->
+    <string name="action_label">צור הקשר TXT (שתף/ייצא)</string>
+    <string name="dialog_already_open">חלון התצורה כבר פתוח.</string>
+    <string name="no_folder_selected">לא נבחרה תיקייה.</string>
+    <string name="select_valid_folder">בחר תיקייה חוקית.</string>
+    <string name="error_opening_dialog">שגיאה: לא ניתן לפתוח את החלון.</string>
+    <string name="opening_config">פותח תצורה…</string>
+
+    <!-- ============================================================== -->
+    <!-- EXPORT ERRORS                                                   -->
+    <!-- ============================================================== -->
+    <string name="error_file_write_failed">כתיבת הקובץ נכשלה.</string>
+    <string name="error_source_uri_unreadable">לא ניתן לפתוח את קובץ המקור.</string>
+    <string name="error_output_stream_unavailable">היעד לא סיפק זרם פלט.</string>
+    <string name="error_media_store_finalize">לא ניתן לסיים את קובץ היעד.</string>
+    <string name="error_downloads_dir_create">לא ניתן ליצור את תיקיית Downloads: %1$s</string>
+    <string name="error_project_root_not_dir">שורש הפרויקט אינו תיקייה: %1$s</string>
+    <string name="error_git_repo_unreadable">התיקייה שנבחרה אינה מאגר Git קריא.</string>
+    <string name="error_git_ref_unresolved">לא ניתן לפתור את הפנית Git \"%1$s\".</string>
+    <string name="error_git_export_no_ref">ייצוא Git מופעל אך לא נבחרה הפניה.</string>
+    <string name="unknown_error">שגיאה לא ידועה</string>
+    <string name="error_storage_permission">נדרשת הרשאת אחסון. הענק אותה בהגדרות > אפליקציות > One Code For AI > הרשאות.</string>
+    <string name="error_source_file_missing">הקובץ שנוצר אינו זמין עוד. צור את ההקשר שוב כדי לשחזר אותו.</string>
+    <plurals name="notification_ready_title_partial">
+        <item quantity="one">ההקשר מוכן - שגיאת קריאה %1$d</item>
+        <item quantity="two">ההקשר מוכן - %1$d שגיאות קריאה</item>
+        <item quantity="many">ההקשר מוכן - %1$d שגיאות קריאה</item>
+        <item quantity="other">ההקשר מוכן - %1$d שגיאות קריאה</item>
+    </plurals>
+
+    <!-- ============================================================== -->
+    <!-- SHARING                                                         -->
+    <!-- ============================================================== -->
+    <string name="share_with">שתף את הדאמפ עם:</string>
+    <string name="share_error">שגיאת שיתוף: %1$s</string>
+
+    <!-- ============================================================== -->
+    <!-- NOTIFICATIONS                                                   -->
+    <!-- ============================================================== -->
+    <string name="notification_progress_title">One Code For AI</string>
+    <string name="notification_ready_title">ההקשר מוכן</string>
+    <string name="error_notification_title">שגיאת One Code</string>
+    <string name="notification_channel">One Code</string>
+    <string name="notification_channel_err">One Code Err</string>
+    <string name="notification_channel_actions">תוצאות One Code</string>
+    <string name="generating_dump">יוצר דאמפ קוד…</string>
+
+    <!-- ============================================================== -->
+    <!-- SETTINGS PAGE                                                   -->
+    <!-- ============================================================== -->
+    <string name="settings_git_global">שילוב Git</string>
+    <string name="settings_git_global_desc">מזהה מאגרים ומפעיל את כל תכונות Git. השבת כדי לכפות מצב תיקייה רגילה אפילו בתוך מאגר. כללי .gitignore עדיין חלים.</string>
+    <string name="settings_animations">אנימציות</string>
+    <string name="settings_animations_desc">מעברי דהייה והגדלה בדיאלוג, בעץ ובבורר הפרופילים. השבת במכשירים חלשים.</string>
+    <string name="settings_notifications">התראות יצירה</string>
+    <string name="settings_notifications_desc">התראות התקדמות, השלמה ושגיאה במהלך הייצוא. השבת כדי להשתיק את מגש ההתראות.</string>
+    <string name="settings_total_export_limit">מגבלת גודל ייצוא כוללת (KB)</string>
+    <string name="settings_total_export_limit_desc">תקרה קשיחה, בקילובייט, על הגודל הכולל של דאמפ יחיד. עם ההגעה אליה, הייצוא מפסיק לכלול קבצים ומוסיף הודעת קיצוץ. שימושי ביותר כשמגבלת הקובץ הבודד מושבתת. הגדר 0 ללא הגבלה.</string>
+    <string name="settings_ui_language">שפת ממשק</string>
+    <string name="settings_ui_language_desc">השפה שבה משתמש ממשק התוסף. \"אוטומטי\" עוקב אחר שפת ה-IDE. רק דיאלוגים ומסכים שנפתחו לאחרונה מאמצים את השינוי; חלונות פתוחים שומרים על השפה הנוכחית שלהם עד לפתיחה מחדש.</string>
+    <string name="settings_ui_theme">ערכת נושא</string>
+    <string name="settings_ui_theme_desc">ערכת הצבעים של ממשק התוסף. \"כהה\" היא ברירת המחדל ושומרת על הפלטה המקורית של התוסף. \"מערכת\" עוקבת אחר מצב בהיר/כהה של המכשיר, ו\"בהיר\" תמיד משתמש בפלטה הבהירה. רק דיאלוגים ומסכים שנפתחו לאחרונה מאמצים את השינוי.</string>
+    <string name="settings_ui_theme_system">מערכת (עקוב אחר המכשיר)</string>
+    <string name="settings_ui_theme_light">בהיר</string>
+    <string name="settings_ui_theme_dark">כהה</string>
+    <string name="settings_parent_search_limit">מגבלת חיפוש בתיקיות אב</string>
+    <string name="settings_parent_search_limit_desc">כמה תיקיות אב התוסף עולה בחיפוש אחר .gitignore או שורש פרויקט CodeAssist. הגדל עבור עצי חבילות עמוקים במיוחד. הגדר 0 כדי שלעולם לא לצאת מהתיקייה הנבחרת.</string>
+
+    <!-- > Misc config messages -->
+    <string name="git_disabled_globally">Git מושבת גלובלית בהגדרות CodeAssist. הפעל אותו שם כדי להשתמש בענפים, תגים וקומיטים.</string>
+
+    <!-- ============================================================== -->
+    <!-- INFO ACTIVITY                                                   -->
+    <!-- ============================================================== -->
+
+    <!-- > Header -->
+    <string name="info_title">INFO</string>
+    <string name="info_subtitle">תוסף ל-CodeAssist</string>
+    <string name="open_codeassist">פתח את CodeAssist</string>
+    <string name="footer_made_with">נוצר באהבה עבור הקהילה</string>
+    <string name="creator_dev">מפתח עצמאי</string>
+    <string name="codeassist_not_installed">CodeAssist אינו מותקן</string>
+    <string name="codeassist_open_error">לא ניתן לפתוח את CodeAssist</string>
+    <string name="no_app_for_link">אין אפליקציה זמינה לפתיחת קישורים</string>
+
+    <!-- > What's New -->
+    <string name="whats_new_title">מה חדש</string>
+    <string name="whats_new_version">גרסה %1$s</string>
+    <string name="whats_new_item_1">עץ v2: עץ הפרויקט הוא כעת המקור המוסמך למה שנכנס לדאמפ. כל רשומה יכולה להיות מוגדרת ככלול, הפניה-בלבד או מוחרג ישירות מהעץ, והבחירה נשמרת לכל פרויקט.</string>
+    <string name="whats_new_item_2">רשומות הפניה-בלבד: מפרטות קובץ בדאמפ לפי שם וגודל בלי לקרוא את תוכנו. אידיאלי עבור קובצי נעילה, קוד שנוצר ותצורה מקומית של המכונה. מסומנות בסיומת [ref] בכותרת העץ ובסמן [content omitted: N B — reference only] בגוף.</string>
+    <string name="whats_new_item_3">מחזור תיקיות אחיד: לחיצה על תיקייה כופה את המצב הבא על כל צאצא לא נעול בכל עומק, כך שמחוון התיקייה אינו סותר את ילדיו לעולם. סימון קובץ עמוק מעדכן כל אב עד השורש בלי לגעת באחיו.</string>
+    <string name="whats_new_item_4">הצג נעולים: תיקיות מוחרגות קשות וקבצים בינאריים מופיעים כצמתים נעולים. הפעלת המתג הופכת אותם לאינטראקטיביים וסורקת את תוכנם לפי דרישה; השבתה נועלת הכל מחדש וזורקת את מה שנכלל בזמן השחרור.</string>
+    <string name="whats_new_item_5">מקטע כללי חדש: \"החרג קבצים בינאריים\" ו\"גודל מקסימלי\" נמצאים כעת תחת כותרת משלהם באותיות גדולות בראש הטופס.</string>
+    <string name="whats_new_item_6">מתגי מקטעים: הכללות, החרגות, הפניה בלבד, Gitignore, בקרת גרסאות ועץ קבצים עוקבים אחר אותה תבנית תיבת סימון + כותרת באותיות גדולות + עזרה. ביטול הסימון של הכללות/החרגות/הפניה בלבד משבית את הרשימה בלי למחוק אותה, וכפתור ניקוי שליד הוסף מרוקן את הזרימה בהקשה אחת.</string>
+    <string name="whats_new_item_7">ערכת הנושא הכהה היא כעת ברירת המחדל. התקנה חדשה נפתחת בפלטה המקורית של התוסף. בורר ערכת הנושא עדיין מציע מערכת ובהיר, ומשתמשים קיימים שבחרו במפורש ערכת נושא שומרים על הבחירה השמורה שלהם.</string>
+    <string name="whats_new_item_8">מסך המידע עוצב מחדש: תכונות מקובצות בארבע קטגוריות, מספר סמלים בכל שורה ירד מ-~25 ל-10, ובלוק גיבור עם גרסה ושורת צ'יפים של סטטוס.</string>
+    <string name="whats_new_item_9">פתרון שורש הפרויקט: היוריסטיקה תלת-שלבית (חיפוש .gitignore, גבול פרויקט CodeAssist, נפילה לתיקייה הנבחרת), מוגבלת בהגדרה החדשה \"מגבלת חיפוש בתיקיות אב\".</string>
+    <string name="whats_new_item_10">תיקיית .platform של התוסף עצמו מוחרגת כעת קשות מהדאמפ, יחד עם .git, .gradle ו-.idea, כך שהתצורה לכל פרויקט לא תיכנס להקשר של המודל לעולם. עזרה בהקשר זמינה כעת בכל מקטע.</string>
+
+    <!-- > Installation guide -->
+    <string name="guide_header_title">מדריך התקנה</string>
+    <string name="guide_header_subtitle">בצע את השלבים הבאים כדי להפעיל את One Code For AI ב-IDE שלך.</string>
+    <string name="guide_step1_title">הורד את ה-APK</string>
+    <string name="guide_step1_desc">קבל את ה-.apk העדכני ביותר מהמאגר הרשמי או מערוץ ההפצה.</string>
+    <string name="guide_step2_title">התקן את האפליקציה</string>
+    <string name="guide_step2_desc">פתח את ה-APK במכשיר שלך וקבל את ההתקנה ממקורות לא ידועים אם תתבקש.</string>
+    <string name="guide_step3_title">פתח את CodeAssist</string>
+    <string name="guide_step3_desc">לאחר ההתקנה, הפעל את אפליקציית CodeAssist במכשיר שלך.</string>
+    <string name="guide_step4_title">הפעל את התוסף</string>
+    <string name="guide_step4_desc">עבור אל הגדרות > תוספים > מותקנים והפעל את One Code For AI. הוא ייטען אוטומטית.</string>
+    <string name="guide_step5_title">הפעל מחדש את ה-IDE</string>
+    <string name="guide_step5_desc">סגור ופתח מחדש את CodeAssist כדי שכל הרכיבים ייטענו כראוי.</string>
+
+    <!-- > How to use -->
+    <string name="integration_title">שילוב עם CodeAssist</string>
+    <string name="integration_subtitle">ייצא פרויקט כהקשר מוכן ל-AI בארבעה שלבים.</string>
+    <string name="step_1_title">פתח פרויקט</string>
+    <string name="step_1_desc">הקש על עץ הקבצים של הפרויקט ב-CodeAssist</string>
+    <string name="step_2_title">לחץ לחיצה ארוכה על תיקייה</string>
+    <string name="step_2_desc">תפתח תפריט ההקשר עם האפשרויות</string>
+    <string name="step_3_title">בחר One Code For AI</string>
+    <string name="step_3_desc">תופיע האפשרות ליצירת הדאמפ</string>
+    <string name="step_4_title">ייצא או שתף</string>
+    <string name="step_4_desc">שמור את ה-.txt ב-Downloads או שלח ל-AI שלך</string>
+
+    <!-- > Features -->
+    <string name="features_title">תכונות</string>
+
+    <!-- Category headers -->
+    <string name="feature_cat_export">ייצוא וסינון</string>
+    <string name="feature_cat_git">שילוב Git</string>
+    <string name="feature_cat_customize">התאמה אישית</string>
+    <string name="feature_cat_privacy">פרטיות</string>
+
+    <!-- Export and filtering -->
+    <string name="feature_export_1">מסנני glob מתקדמים: *.log, build/ ו-glob של נתיב עם כוכבית כפולה</string>
+    <string name="feature_export_2">פריסטים מקצועיים: Android, Web, Python, טקסט פשוט</string>
+    <string name="feature_export_3">עץ אינטראקטיבי עם שליטה תלת-מצבית (כלול, הפניה-בלבד, מוחרג)</string>
+    <string name="feature_export_4">מצב הפניה-בלבד לקובצי נעילה ולקוד שנוצר</string>
+    <string name="feature_export_5">התקדמות בזמן אמת עם יצירה ברקע</string>
+
+    <!-- Git integration -->
+    <string name="feature_git_1">ייצוא מענפים, תגים או קומיטים ספציפיים</string>
+    <string name="feature_git_2">תצוגה מקדימה של הבדלים לפני יצירה</string>
+    <string name="feature_git_3">מתג כיבוי גלובלי להשבית את Git לחלוטין</string>
+
+    <!-- Customization -->
+    <string name="feature_customize_1">ערכות נושא בהירות וכהה, כהה כברירת מחדל</string>
+    <string name="feature_customize_2">19 שפות, ניתנות לבחירה בנפרד מה-IDE</string>
+    <string name="feature_customize_3">עזרה בהקשר בכל מקטע</string>
+    <string name="feature_customize_4">מגבלות ניתנות לתצורה לכל קובץ ולסך הייצוא</string>
+
+    <!-- Privacy -->
+    <string name="feature_privacy_1">100% לא מקוון: ללא הרשאת אינטרנט, ללא טלמטריה</string>
+    <string name="feature_privacy_2">עיבוד מקומי בלבד - ללא ענן, ללא העלאות</string>
+
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current info screen groups the same
+         information under the four category strings above. -->
+    <string name="feature_1">מסנני Glob מתקדמים: השתמש בתבניות כגון *.log, build/ או תיקיות שנוצרו מקוננות</string>
+    <string name="feature_2">שילוב Git: ייצא מענפים, תגים, קומיטים או תצוגה מקדימה של הבדלים</string>
+    <string name="feature_3">פריסטים מקצועיים: Android (Kotlin, מקור, משאבים), Web, Python, טקסט</string>
+    <string name="feature_4">עזרה בהקשר: דיאלוגים מוטמעים מסבירים מסננים, תבניות ועדיפות .gitignore</string>
+    <string name="feature_5">מתג כיבוי Git גלובלי: השבת את Git לחלוטין תוך שמירה על גיבוי .gitignore</string>
+    <string name="feature_6">החרגות עץ הפרויקט: סמן/בטל סימון ידני של קבצים ותיקיות לפני הייצוא</string>
+    <string name="feature_7">התקדמות מדויקת בבייטים: עקוב אחר הייצוא בזמן אמת עם עיבוד ברקע</string>
+    <string name="feature_8">רישום מקורי ב-IDE: ניתוב ניפוי באגים לקונסולת CodeAssist עם חלוקה אוטומטית</string>
+    <string name="feature_9">דף הגדרות גלובליות: מתגים מקוריים עבור Git, אנימציות והתראות</string>
+    <string name="feature_10">100% לא מקוון ופרטי: ללא טלמטריה, ללא הרשאת אינטרנט, מקומי לחלוטין</string>
+
+    <!-- > Links -->
+    <string name="links_title">קישורים</string>
+    <string name="link_repository">מאגר GitHub</string>
+    <string name="link_report_bug">דווח על בעיה</string>
+    <string name="link_license">רישיון MIT</string>
+
+    <!-- > Technical information -->
+    <string name="tech_info_title">מידע טכני</string>
+    <string name="tech_info_version">גרסה</string>
+    <string name="tech_info_package">חבילה</string>
+    <string name="tech_info_min_sdk">Min SDK</string>
+    <string name="tech_info_target_sdk">Target SDK</string>
+    <string name="tech_info_apk">APK</string>
+    <string name="tech_info_language">שפה</string>
+    <string name="tech_info_status">סטטוס</string>
+    <string name="tech_info_status_stable">יציב</string>
+
+    <!-- > Help and FAQ -->
+    <string name="help_title">עזרה ושאלות נפוצות</string>
+    <string name="help_header_subtitle">מצא תשובות לבעיות נפוצות ולמד להפיק את המרב מהתוסף.</string>
+
+    <string name="help_q1">איך מנטרלים את פונקציונליות Git לחלוטין?</string>
+    <string name="help_a1">עבור אל הגדרות CodeAssist, אחר כך תוספים, ופתח את ההגדרות של One Code For AI. שם תמצא את המתג \"שילוב Git\". כשמושבת, התוסף מתייחס לתיקייה שלך כקבצים רגילים.</string>
+
+    <string name="help_q2">למה .gitignore עדיין עובד כש-Git מושבת?</string>
+    <string name="help_a2">אם Git מושבת, התוסף מחפש אוטומטית קובץ .gitignore בתיקייה שנבחרה ובתיקיות האב שלה. החיפוש מוגבל בהגדרה \"מגבלת חיפוש בתיקיות אב\", שברירת המחדל שלה היא 10 רמות וניתנת להגדלה מדף ההגדרות.</string>
+
+    <string name="help_q3">מה המשמעות של כללי .gitignore בענבר?</string>
+    <string name="help_a3">כלל מודגש בצבע ענבר כשאחד מהמסננים הידניים שלך - הכללה, החרגה או הפניה-בלבד - עוקף אותו באופן פעיל. הכללות, החרגות ותבניות הפניה-בלבד תמיד מקבלות עדיפות על פני .gitignore.</string>
+
+    <string name="help_q4">איך משתמשים בתבניות glob במסננים?</string>
+    <string name="help_a4">השתמש בתחביר glob תקני: *.log (כל קובץ יומן), build/ (תיקייה ספציפית) ו-glob של נתיב עם כוכבית כפולה לכל תיקייה שנוצרה מקוננת. הקש על סמל \"?\" שליד מקטעי המסננים למדריך מהיר.</string>
+
+    <string name="help_q5">מה עושים הפריסטים החדשים של Android?</string>
+    <string name="help_a5">Android (Kotlin) מייצא הכל. Android (מקור בלבד) מסיר בדיקות ותיעוד. Android (משאבים) מייצא רק XML (פריסות/ערכות נושא). קבצים שנוצרו כמו R.java ו-local.properties מפורטים כברירת מחדל כהפניה-בלבד.</string>
+
+    <string name="help_q6">איפה ההגדרות של אנימציות והתראות?</string>
+    <string name="help_a6">הן נמצאות בהגדרות CodeAssist המקוריות של התוסף הזה. השבתת אנימציות עוזרת לביצועים במכשירים חלשים. השבתת התראות משתיקה התראות התקדמות והשלמה.</string>
+
+    <string name="help_q7">איך מחריגים תיקייה שלמה בקלות?</string>
+    <string name="help_a7">פתח את תצוגת עץ הקבצים בדיאלוג התצורה. הקש על המחוון התלת-מצבי של התיקייה עד שיעבור למצב המוחרג. זה מהיר ובטוח יותר מאשר כתיבת כללי החרגה מורכבים.</string>
+
+    <string name="help_q8">האם אני יכול לבטל ייצוא בזמן שהוא רץ?</string>
+    <string name="help_a8">כן. באפשרותך להקיש על \"ביטול\" בדיאלוג, או פשוט לסגור את הדיאלוג. הייצוא ממשיך לרוץ בבטחה ברקע ותוכל לחזור לבדוק את התקדמותו בכל רגע.</string>
+
+    <string name="help_q9">האם הקוד שלי מועלה לשרת?</string>
+    <string name="help_a9">ממש לא. התוסף אינו דורש הרשאת אינטרנט. כל הסריקה, הסינון והיצירה מתבצעים 100% באופן מקומי במכשיר שלך.</string>
+
+    <string name="help_q10">איפה נשמרים הקבצים שנוצרו?</string>
+    <string name="help_a10">קבצים מיוצאים נשמרים באחסון הציבורי של המכשיר שלך תחת Downloads/OneCodeForAI.</string>
+
+    <!-- > Contextual help -->
+    <string name="help_icon_description">עזרת מקטע</string>
+
+    <string name="help_inclusions_title">הכללות</string>
+    <string name="help_inclusions_body">רשימה לבנה של סיומות ותבניות glob, מוערכת לפני .gitignore.\n\nתחביר נתמך (זהה לתבניות .gitignore):\n- סיומות: kt, json, xml\n- תווי כל: *.log, src/*.kt\n- תיקיות: build/\n\nכל קובץ שמתאים להכללה מיוצא גם אם .gitignore או החרגות היו מדלגים עליו.\n\nהכללות מקבלות עדיפות על פני החרגות ועל פני .gitignore. השתמש בהן כדי לכפות הכללה של קבצים או סיומות ספציפיות.\n\nביטול הסימון של תיבת הכללות משבית את הרשימה בלי למחוק אותה: הכללים נשארים בפרופיל ומוחלים מחדש בפעם הבאה שתסמן את התיבה. כפתור ניקוי שליד הוסף מרוקן את הרשימה בהקשה אחת.</string>
+
+    <string name="help_exclusions_title">החרגות</string>
+    <string name="help_exclusions_body">רשימה שחורה של סיומות ותבניות glob.\n\nתחביר נתמך (זהה לתבניות .gitignore):\n- סיומות: log, tmp, pyc\n- תווי כל: *.log, src/*.bak\n- תיקיות: build/\n\nכל קובץ שמתאים להחרגה מדולג, גם אם .gitignore היה כולל אותו. הכללות מקבלות עדיפות על פני החרגות.\n\nכדי להחריג תיקייה ספציפית בלי לכתוב תבנית, השתמש בעץ הקבצים שלמטה.\n\nביטול הסימון של תיבת החרגות משבית את הרשימה בלי למחוק אותה. כפתור ניקוי שליד הוסף מרוקן את הרשימה בהקשה אחת.</string>
+
+    <string name="help_stub_title">הפניה בלבד</string>
+    <string name="help_stub_body">תבניות לקבצים שצריכים להופיע בדאמפ אך תוכנם אינו נקרא. שימושי לקובצי נעילה, לקוד שנוצר ולקונפיגורציה מקומית.\n\nקובץ הפניה-בלבד מופיע בעץ התיקיות עם סיומת [ref] וסמן גודל, אך בלי תוכן. מודל ה-AI לומד שהקובץ קיים וכמה הוא גדול, בלי לקבל את גופו.\n\nתחביר נתמך (זהה להכללות והחרגות):\n- שמות קבצים: package-lock.json, local.properties\n- תווי כל: *.lock\n\nתבניות הפניה-בלבד מקבלות עדיפות על פני הכללות והחרגות. הכללות מקבלות עדיפות על פני החרגות.\n\nביטול הסימון של תיבת הפניה בלבד משבית את הרשימה בלי למחוק אותה. כפתור ניקוי שליד הוסף מרוקן את הרשימה בהקשה אחת.</string>
+
+    <string name="help_gitignore_title">כללי Gitignore</string>
+    <string name="help_gitignore_body">כללים שזוהו בקובץ .gitignore של הפרויקט.\n\nהרשימה הזו לקריאה בלבד - כדי לשנותה, ערוך את .gitignore ישירות.\n\nהכללות, החרגות ותבניות הפניה-בלבד מקבלות עדיפות על פני כללים אלה: הוספת כלל תואם כופה את הקובץ פנימה, החוצה או למצב הפניה-בלבד ללא תלות ב-.gitignore. כללים שנעקפו מודגשים בצבע ענבר. כללים שליליים (שמתחילים ב-'!') מוצגים עם רקע מובחן כדי שניתן יהיה להבחין בינם.\n\nביטול הסימון של תיבת Gitignore משבית את כללי .gitignore בלי למחוק את הקובץ.</string>
+
+    <string name="help_binaries_title">החרגת בינאריים</string>
+    <string name="help_binaries_body">קבצים בינאריים מזוהים לפי רשימה קבועה של סיומות בינאריות מוכרות (תמונות, וידאו, אודיו, ארכיונים, בינאריים מהודרים, גופנים, מסדי נתונים). קבצים עם הסיומות האלה מדולגים כדי שהדאמפ יישאר ממוקד בקוד מקור קריא.\n\nהזיהוי מבוסס על סיומת בלבד. כדי לדלג על פורמט בינארי לא שגרתי, הוסף את הסיומת שלו להחרגות. כדי לכפות הכללה, הוסף להכללות, או כדי לפרט כהפניה-בלבד, הוסף להפניה בלבד.\n\nהשבתת המתג הזה כוללת את הסיומות המפורטות בייצוא, שזה לעיתים רחוקות שימושי להקשר AI.</string>
+
+    <string name="help_tree_title">תצוגה מקדימה של עץ הפרויקט</string>
+    <string name="help_tree_body">מציג את עץ הפרויקט עם כל רשומה שהמסננים בחרו. לכל רשומה שלושה מצבים:\n\n- כלול: התוכן המלא של הקובץ נכתב לדאמפ.\n- הפניה בלבד: השם, הגודל וסמן ה-[ref] של הקובץ נכתבים, אך התוכן אינו נקרא.\n- מוחרג: הקובץ אינו נכתב לדאמפ.\n\nלחץ על שורה כדי למחזר בין שלושת המצבים. לחץ על תיקייה כדי להחיל את המצב הבא על כל תת-העץ שלה.\n\nתיקיות מוחרגות קשות (כמו .git, node_modules) וקבצים בינאריים נעולים בהתחלה: נראים אך מושבתים. הפעל \"הצג נעולים\" כדי לשחרר אותם. הרחבת תיקייה משוחררת סורקת את תוכנה לפי דרישה.\n\nביטול הסימון של תיבת עץ קבצים מסתיר את העץ בלי לאבד את העקיפות הידניות שלך.</string>
+
+    <string name="help_tree_locked_title">צמתים נעולים</string>
+    <string name="help_tree_locked_body">צמתים נעולים הם תיקיות מוחרגות קשות (כמו .git, node_modules, build) וקבצים בינאריים. הם מופיעים בעץ אך אינם אינטראקטיביים עד שתפעיל את \"הצג נעולים\".\n\nלמה נעולים: רשומות אלה מוחרגות כברירת מחדל כדי לשמור על עץ מהיר וכדי למנוע דאמפ מקרי של תוכן תיקיות תלויות. הפעלת \"הצג נעולים\" משחררת אותם כדי שתוכל לכלול, לסמן כ-stub או להחריג אותם במפורש.\n\nהנעילה היא לפי הפעלה. היא אינה נשמרת בפרויקט, כיוון ששחרור node_modules הוא כמעט תמיד פעולה חד-פעמית.</string>
+
+    <string name="help_max_size_title">מגבלת גודל לכל קובץ</string>
+    <string name="help_max_size_body">כשמופעל, קבצים גדולים מהגודל הנבחר מדולגים. זה מגן על הדאמפ מפני קובץ ענק בודד (למשל נכס ארוז או SQL שנוצר) שישלוט בפלט.\n\nכשמושבת, כל קובץ טקסט נכלל ללא תלות בגודלו, מה שיכול לייצר דאמפים עצומים. שלב עם מגבלת גודל הייצוא הכוללת בהגדרות כדי לשמור על הייצוא מוגבל.\n\nביטול הסימון של תיבת גודל מקסימלי אינו מוחק את הערך הנוכחי: המספר נשאר בשדה ומוחל מחדש בפעם הבאה שתסמן את התיבה.</string>
+
+    <!-- ============================================================== -->
+    <!-- HOST INTEGRATION                                                -->
+    <!-- Package name of the host IDE launched by the "Open CodeAssist"  -->
+    <!-- row in the Info screen. Override here for forks or rebranded     -->
+    <!-- hosts without touching the activity code.                        -->
+    <!-- ============================================================== -->
+    <string name="host_ide_package">com.tyron.code</string>
+</resources>
