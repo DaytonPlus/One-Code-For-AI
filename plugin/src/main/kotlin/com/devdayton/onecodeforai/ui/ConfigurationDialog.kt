@@ -72,16 +72,15 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  *
  * The dialog deliberately shows a lightweight skeleton first, then swaps
  * to the real form once the slow inputs are ready — that way it appears
- * instantly even on devices where JGit class-loading, `.gitignore`
- * parsing, or the project's `config.json` read take a few hundred
- * milliseconds:
+ * instantly even on devices where JGit class-loading, .gitignore parsing,
+ * or the project's config.json read take a few hundred milliseconds:
  *
- *  1. [show] displays the skeleton screen and requests the legacy storage
+ *  1. show displays the skeleton screen and requests the legacy storage
  *     permission (API 26-28 only) so the system prompt has time to appear
  *     while the UI is still loading.
- *  2. `.gitignore` rules and the project's [TreeConfigStore] config are
- *     read on a background thread.
- *  3. [buildFullUI] is invoked on the main thread once that data is
+ *  2. .gitignore rules and the project's TreeConfigStore config are read
+ *     on a background thread.
+ *  3. buildFullUI is invoked on the main thread once that data is
  *     available.
  *  4. The Git section (JGit access) is rendered with its own loading
  *     placeholder and resolved asynchronously, so the dialog is never
@@ -90,26 +89,25 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  * ### Tree v2: the tree is the export source of truth
  *
  * This dialog is where the export's inclusion decisions actually live.
- * Before Tree v2 the dialog held a [FilterConfig] and the tree was a
+ * Before Tree v2 the dialog held a FilterConfig and the tree was a
  * preview. Now the dialog:
  *
- *  - builds a [FilterConfig] from the preset's rules and its own UI
+ *  - builds a FilterConfig from the preset's rules and its own UI
  *    controls (binaries, gitignore, per-file size, inclusions,
  *    exclusions, stub patterns),
- *  - loads the project's persisted [TreeOverrides] from
- *    [TreeConfigStore.load],
- *  - asks [ProjectTreeView.scanAsync] to build the tree using those
+ *  - loads the project's persisted TreeOverrides from TreeConfigStore,
+ *  - asks ProjectTreeView.scanAsync to build the tree using those
  *    inputs,
  *  - lets the user adjust individual nodes (INCLUDE / STUB / EXCLUDE
  *    cycle, plus the LOCKED unlock toggle for hard-excluded folders),
  *  - and, on Generate, takes a snapshot of the tree's states via
- *    [ProjectTreeView.currentStates] and forwards it to the
- *    [ExportCoordinator].
+ *    ProjectTreeView.currentStates and forwards it to the
+ *    ExportCoordinator.
  *
  * ### Tree config persistence
  *
  * The project's tree state is stored under
- * `.platform/plugins/com.devdayton.onecodeforai/config.json`. Only two
+ * .platform/plugins/com.devdayton.onecodeforai/config.json. Only two
  * events write it:
  *
  *  - Generate (before the export launches), which saves only the diff
@@ -123,17 +121,33 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  *
  * The tree section has three visual states, managed by [TreeUiState]:
  *
- *  - LOADING: the spinner is visible and the tree is hidden. Entered by
- *    [startTreeScan] before the scan is dispatched.
- *  - TREE: the spinner is hidden and the tree is visible. Entered by the
- *    scan's `onComplete` and by collapsing the tree section.
- *  - ERROR: the spinner is visible with an error / cancel message and
- *    the tree is hidden. Entered by the scan's `onError` and by the
- *    Cancel button.
+ *  - LOADING: the spinner and the Cancel button are visible, the tree is
+ *    hidden. Entered by startTreeScan before the scan is dispatched.
+ *  - TREE: the spinner, the cancel button and the error message are
+ *    hidden, the tree is visible. Entered by the scan's onComplete and
+ *    by collapsing the tree section.
+ *  - ERROR: the spinner and Cancel button are hidden, the message text
+ *    is visible, the tree is hidden. Entered by the scan's onError and
+ *    by the Cancel button.
  *
  * The state machine is the single writer of the loading panel's
- * visibility, so the "Analizando…" spinner can never end up orphaned when
+ * visibility, so the "Analyzing…" spinner can never end up orphaned when
  * the underlying scan is cancelled, superseded or fails.
+ *
+ * ### Gitignore section
+ *
+ * The "Respect .gitignore rules" checkbox used to live in the base
+ * filters panel, separated from the rules it actually controls. It now
+ * lives inside the .gitignore section itself, directly under the section
+ * title and above the flow of chips, so the causal relationship is
+ * obvious to the user.
+ *
+ * When the checkbox is toggled off, the flow of chips is cleared in
+ * place — no dialog reload, no tree re-scan — and the section collapses
+ * to just the title and the checkbox. When it is toggled back on, the
+ * chips are repopulated from the gitignoreTags cache that was read once
+ * when the dialog opened. No additional file I/O is performed because
+ * the .gitignore file has not changed.
  *
  * @param activity          Host activity used to build the dialog.
  * @param projectRoot       Root of the project being exported.
@@ -166,14 +180,14 @@ class ConfigurationDialog(
 
     /**
      * Cached snapshot of the tree's states, kept up to date by the
-     * [ProjectTreeView.onStatesChanged] callback. Read on Generate to
-     * hand the map to [ExportCoordinator].
+     * ProjectTreeView.onStatesChanged callback. Read on Generate to hand
+     * the map to ExportCoordinator.
      */
     private var currentStatesCache: Map<String, NodeState> = emptyMap()
 
     // [PERF] Distinguishes "UI built" from "still loading", so the dismiss
-    // handler can safely skip readUIValues() when the user closes the
-    // dialog while the initial data is still being loaded.
+    // handler can safely skip readUIValues when the user closes the dialog
+    // while the initial data is still being loaded.
     private var uiBuilt = false
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -219,7 +233,9 @@ class ConfigurationDialog(
     private lateinit var treeWrapper: FrameLayout
     private lateinit var treeView: ProjectTreeView
     private lateinit var treeLoadingPanel: LinearLayout
+    private lateinit var treeLoadingProgress: ProgressBar
     private lateinit var treeLoadingText: TextView
+    private lateinit var treeLoadingCancelButton: Button
     private lateinit var treeViewContainer: View
 
     // ---- Inline progress / result ----
@@ -249,11 +265,12 @@ class ConfigurationDialog(
 
     /**
      * Visual state of the tree section. Managed exclusively through
-     * [setTreeUiState] so the loading panel, the tree container and the
-     * Cancel button can never end up in an inconsistent combination.
+     * [setTreeUiState] so the loading panel, the tree container, the
+     * spinner, the cancel button and the message text can never end up in
+     * an inconsistent combination.
      *
-     * See the class-level "Tree loading panel" note for the full
-     * contract of each state.
+     * See the class-level "Tree loading panel" note for the full contract
+     * of each state.
      */
     private enum class TreeUiState { LOADING, TREE, ERROR }
 
@@ -264,13 +281,12 @@ class ConfigurationDialog(
     /**
      * Picks the initial spinner position from the last-saved preset name.
      *
-     * `lastStatePreset` is the string that was stored in
-     * `TreeConfigStore.load(projectRoot)?.presetName`. That value comes
-     * from the spinner's selected item at the moment the user pressed
-     * Generate, so it is already the localized custom label. The two
-     * literal values ("Personalizado" and "Custom") are kept for
-     * backward compatibility with profiles saved by earlier plugin
-     * versions.
+     * lastStatePreset is the string that was stored in
+     * TreeConfigStore.load(projectRoot)?.presetName. That value comes from
+     * the spinner's selected item at the moment the user pressed Generate,
+     * so it is already the localized custom label. The two literal values
+     * ("Personalizado" and "Custom") are kept for backward compatibility
+     * with profiles saved by earlier plugin versions.
      */
     private fun resolveInitialPresetIndex(lastStatePreset: String?): Int {
         val customLabel = customPresetLabel()
@@ -291,16 +307,28 @@ class ConfigurationDialog(
      * Opens the dialog. See the class-level "Opening flow" note for the
      * reasoning behind the skeleton-first approach.
      *
+     * ### Theme resolution
+     *
+     * CodeAssistTheme.applyTheme(activity) is called before any view is
+     * built, so every color used by the skeleton, the full form, the
+     * loading panel and the progress / result panel comes from the
+     * palette the user has selected in Settings. Already-open windows
+     * keep their palette until reopened, which matches the settings
+     * page's description of the theme selector.
+     *
      * ### Tree v2: no last-state fallback
      *
-     * The project's [TreeConfigStore] config is the only source of the
+     * The project's TreeConfigStore config is the only source of the
      * initial config and preset. The previous "last state" pair that
-     * `PresetManager` used to persist has been removed in Tree v2: the
-     * preset is now stored per project in `config.json` alongside the
-     * tree overrides, so a fresh install or a project that has never
-     * generated falls back to [initialConfig] and the "Custom" preset.
+     * PresetManager used to persist has been removed in Tree v2: the
+     * preset is now stored per project in config.json alongside the tree
+     * overrides, so a fresh install or a project that has never generated
+     * falls back to initialConfig and the "Custom" preset.
      */
     fun show() {
+        // Resolve the palette for this dialog's lifetime. Called before
+        // any view is built so all colors come from the correct theme.
+        CodeAssistTheme.applyTheme(activity)
         requestLegacyStoragePermissionIfNeeded()
 
         val dialog = Dialog(activity).apply {
@@ -327,8 +355,8 @@ class ConfigurationDialog(
     }
 
     /**
-     * Requests `WRITE_EXTERNAL_STORAGE` on the API range that still needs
-     * it (26-28). No-op on API 29+.
+     * Requests WRITE_EXTERNAL_STORAGE on the API range that still needs it
+     * (26-28). No-op on API 29+.
      */
     private fun requestLegacyStoragePermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
@@ -346,7 +374,7 @@ class ConfigurationDialog(
     }
 
     /**
-     * Skeleton shown while `.gitignore` + project config are read on the
+     * Skeleton shown while .gitignore + project config are read on the
      * background thread.
      */
     private fun buildLoadingView(): View {
@@ -482,18 +510,29 @@ class ConfigurationDialog(
      *
      * ### Preset resolution (Tree v2)
      *
-     * The project's [TreeConfigStore] is consulted first. If it has a
-     * saved config, its `presetName` determines which preset the spinner
-     * should land on:
+     * The project's TreeConfigStore is consulted first. If it has a saved
+     * config, its presetName determines which preset the spinner should
+     * land on:
      *
-     *  - The named preset still exists in [PresetManager] -> use its rules.
+     *  - The named preset still exists in PresetManager -> use its rules.
      *  - The named preset was deleted or is "Custom" -> use the saved
-     *    `filterConfig` from the config.
-     *  - No config exists -> use [initialConfig] and the "Custom" preset.
+     *    filterConfig from the config.
+     *  - No config exists -> use initialConfig and the "Custom" preset.
      *
      * The tree overrides from the config are then loaded into
-     * [currentOverrides] so [ProjectTreeView.scanAsync] can apply them
-     * while scanning.
+     * currentOverrides so ProjectTreeView.scanAsync can apply them while
+     * scanning.
+     *
+     * ### Gitignore section layout
+     *
+     * The .gitignore section is laid out as:
+     *
+     *   [TITLE]  (?)          <- sectionTitleWithHelp
+     *   [ ] Respect .gitignore rules
+     *   [chips flow]           <- populated only when the checkbox is on
+     *
+     * The checkbox controls exactly the flow below it, which is why it
+     * lives here instead of in the base filters panel.
      */
     private fun buildFullUI(
         dialog: Dialog,
@@ -568,7 +607,13 @@ class ConfigurationDialog(
 
         // ============ FORM ============
 
-        configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_presets)))
+        // Presets section — with its own help icon so the reusable-profile
+        // concept is discoverable without leaving the dialog.
+        configContainer.addView(sectionTitleWithHelp(
+            R.string.section_presets,
+            R.string.help_presets_title,
+            R.string.help_presets_body
+        ))
         val presetRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
         }
@@ -603,20 +648,16 @@ class ConfigurationDialog(
         presetRow.addView(btnDeletePreset)
         configContainer.addView(presetRow)
 
+        // Base filters section. The "Respect .gitignore rules" checkbox
+        // no longer lives here: it was moved inside the .gitignore section
+        // below, where it can visually control the flow it governs.
         configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_base_filters)))
         val basePanel = panel()
         cbBinaries = activity.checkBox(activity.pluginString(R.string.exclude_binaries)).apply {
             isChecked = currentConfig.excludeBinaries
             setOnCheckedChangeListener { _, _ -> if (!isUpdatingUI) markAsCustom() }
         }
-        cbGitignore = activity.checkBox(activity.pluginString(R.string.respect_gitignore)).apply {
-            isChecked = currentConfig.respectGitignore
-            setOnCheckedChangeListener { _, _ ->
-                if (!isUpdatingUI) { markAsCustom(); updateTagsUI(animate = true) }
-            }
-        }
         basePanel.addView(rowWithHelp(cbBinaries, R.string.help_binaries_title, R.string.help_binaries_body))
-        basePanel.addView(cbGitignore)
 
         val sizeRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -684,23 +725,51 @@ class ConfigurationDialog(
         flowStubPatterns = createFlow()
         configContainer.addView(flowStubPatterns)
 
+        // --- .gitignore section ---
+        // Layout: [TITLE (?)] [checkbox] [chips flow].
+        // The checkbox controls exactly the flow below it, which is why
+        // it was moved here from the base filters panel.
         gitignoreSection = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         gitignoreSection.addView(sectionTitleWithHelp(
             R.string.section_gitignore_rules,
             R.string.help_gitignore_title,
             R.string.help_gitignore_body
         ))
+        cbGitignore = activity.checkBox(activity.pluginString(R.string.respect_gitignore)).apply {
+            isChecked = currentConfig.respectGitignore
+            setOnCheckedChangeListener { _, checked ->
+                if (isUpdatingUI) return@setOnCheckedChangeListener
+                markAsCustom()
+                // Rebuild only the flow in place: no dialog reload, no
+                // tree re-scan. When unchecked, the chips disappear and
+                // the section collapses to title + checkbox. When checked
+                // again, the chips reappear from the cached rules, which
+                // is why the .gitignore file does not need to be re-read.
+                updateGitignoreFlowOnly(checked)
+            }
+        }
+        gitignoreSection.addView(cbGitignore)
         flowGitignore = createFlow()
         gitignoreSection.addView(flowGitignore)
         configContainer.addView(gitignoreSection)
 
+        // Version control section — with its own help icon so the branch /
+        // tag / commit export flow and the ref picker are discoverable.
         if (gitEnabledGlobally) {
-            configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_version_control)))
+            configContainer.addView(sectionTitleWithHelp(
+                R.string.section_version_control,
+                R.string.help_version_control_title,
+                R.string.help_version_control_body
+            ))
             layoutGitBox = panel()
             configContainer.addView(layoutGitBox)
             setupGitUIAsync()
         } else {
-            configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_version_control)))
+            configContainer.addView(sectionTitleWithHelp(
+                R.string.section_version_control,
+                R.string.help_version_control_title,
+                R.string.help_version_control_body
+            ))
             layoutGitBox = panel()
             configContainer.addView(layoutGitBox)
             layoutGitBox.addView(activity.textView(
@@ -723,6 +792,14 @@ class ConfigurationDialog(
         }
         treeTogglePanel.addView(cbShowTree)
         configContainer.addView(treeTogglePanel)
+
+        // The checkbox starts checked but the listener was wired after
+        // isChecked = true, so it never fired. Mark the section as visible
+        // so the deferred startTreeScan() at the end of this method
+        // actually runs; otherwise the loading spinner shown by
+        // buildTreeLoadingPanel would be left orphaned with nothing to
+        // cancel or complete it.
+        treeVisible = true
 
         treeActionsRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -848,7 +925,8 @@ class ConfigurationDialog(
 
         // Kick off the initial tree scan. Deferred until the form has been
         // laid out so the loading placeholder has a measured height and the
-        // scan can report progress into the right views.
+        // scan can report progress into the right views. treeVisible was
+        // set to true earlier so this actually runs.
         if (treeVisible) {
             treeWrapper.post { startTreeScan() }
         }
@@ -859,10 +937,31 @@ class ConfigurationDialog(
     // ==================================================================
 
     /**
-     * Creates an inline help icon ("?") with a moderate visual footprint
-     * and a touch-friendly hit area.
+     * Creates an inline help icon ("?") inside a 40 dp touch frame.
+     *
+     * The frame is what guarantees the minimum tap target; the icon
+     * itself is 18 dp and sits inside the frame according to iconGravity:
+     *
+     *  - Gravity.CENTER (default): extra space on both sides of the
+     *    icon. Good for help icons that sit at the end of a row where
+     *    the row's own padding already provides breathing room.
+     *  - Gravity.END or Gravity.CENTER_VERTICAL: extra space only on the
+     *    start of the icon. Use this for icons inside section titles or
+     *    panels, so the icon sits flush with the section's right edge
+     *    instead of inheriting the frame's extra padding on top of the
+     *    section's own.
+     *  - Gravity.START or Gravity.CENTER_VERTICAL: extra space only on
+     *    the end of the icon. Rare, but available for parity.
+     *
+     * FIT_CENTER is always applied to the ImageView's scaleType so the
+     * 24 dp vector scales down inside the 18 dp icon bounds; using
+     * CENTER would crop it.
      */
-    private fun helpIcon(helpTitleRes: Int, helpBodyRes: Int): View {
+    private fun helpIcon(
+        helpTitleRes: Int,
+        helpBodyRes: Int,
+        iconGravity: Int = Gravity.CENTER
+    ): View {
         val touchSize = CodeAssistTheme.dp(activity, 40)
         val iconSize = CodeAssistTheme.dp(activity, 18)
 
@@ -880,14 +979,24 @@ class ConfigurationDialog(
                 setImageDrawable(activity.loadPluginDrawable(R.drawable.ic_tech_help))
                 setColorFilter(CodeAssistTheme.ACCENT)
                 scaleType = ImageView.ScaleType.FIT_CENTER
-                layoutParams = FrameLayout.LayoutParams(iconSize, iconSize, Gravity.CENTER)
+                layoutParams = FrameLayout.LayoutParams(iconSize, iconSize, iconGravity)
             }
         )
         return container
     }
 
     /**
-     * Wraps a [CheckBox] in a horizontal row with a trailing help icon.
+     * Wraps a CheckBox in a horizontal row with a trailing help icon.
+     *
+     * Used for checkboxes that benefit from an inline "?" affordance
+     * (binary exclusion today, potentially others in the future). The
+     * checkbox is given weight = 1 so its touch target fills the
+     * remaining width, and the help icon sits at the far right without
+     * overlapping the checkbox's own hit area — that isolation is what
+     * prevents a tap on the "?" from also toggling the value. The icon
+     * uses Gravity.END so it sits flush with the panel's right edge
+     * rather than inheriting the frame's extra padding on top of the
+     * panel's own.
      */
     private fun rowWithHelp(cb: CheckBox, helpTitleRes: Int, helpBodyRes: Int): LinearLayout {
         val row = LinearLayout(activity).apply {
@@ -896,7 +1005,7 @@ class ConfigurationDialog(
         }
         cb.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         row.addView(cb)
-        row.addView(helpIcon(helpTitleRes, helpBodyRes))
+        row.addView(helpIcon(helpTitleRes, helpBodyRes, Gravity.END or Gravity.CENTER_VERTICAL))
         return row
     }
 
@@ -910,7 +1019,17 @@ class ConfigurationDialog(
             .styleDialog()
     }
 
-    /** Creates a section title with an inline help icon attached to the right side. */
+    /**
+     * Creates a section title with an inline help icon attached to the
+     * right side.
+     *
+     * The icon uses Gravity.END so it sits flush with the section's right
+     * edge. The extra touch area lives on the start of the icon only, so
+     * the cumulative padding (root + section + icon frame) does not push
+     * the icon visually away from the edge — this is the fix for the
+     * "help icon has too much right margin when inside a section"
+     * observation.
+     */
     private fun sectionTitleWithHelp(titleRes: Int, helpTitleRes: Int, helpBodyRes: Int): LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -921,7 +1040,7 @@ class ConfigurationDialog(
         ).apply {
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
-        addView(helpIcon(helpTitleRes, helpBodyRes))
+        addView(helpIcon(helpTitleRes, helpBodyRes, Gravity.END or Gravity.CENTER_VERTICAL))
     }
 
     // ==================================================================
@@ -1094,7 +1213,7 @@ class ConfigurationDialog(
      * Renders the snapshot published by [ExportStateHolder].
      *
      * The guard that skips snapshots belonging to another project exists
-     * because [ExportStateHolder] is a process-wide singleton.
+     * because ExportStateHolder is a process-wide singleton.
      */
     private fun applyState(snapshot: ExportStateHolder.Snapshot) {
         if (!::configContainer.isInitialized || !::progressContainer.isInitialized) return
@@ -1183,8 +1302,8 @@ class ConfigurationDialog(
 
     /**
      * Error state. The three action chips remain visible for layout
-     * stability, but "Share" and "Save" early-return when
-     * [ExportStateHolder.Snapshot.uri] is null.
+     * stability, but "Share" and "Save" early-return when the snapshot's
+     * uri is null.
      */
     private fun showErrorInline(snapshot: ExportStateHolder.Snapshot) {
         configContainer.visibility = View.GONE
@@ -1368,8 +1487,13 @@ class ConfigurationDialog(
 
     /**
      * Sets the tree section's visual state in a single place, so the
-     * loading panel, the tree view and the cancel button can never end up
-     * in an inconsistent combination.
+     * loading panel, the tree view, the progress spinner, the cancel
+     * button and the message text can never end up in an inconsistent
+     * combination.
+     *
+     * In LOADING the spinner and Cancel button are both visible; in
+     * ERROR only the message is actionable, so the spinner and Cancel are
+     * hidden; in TREE the whole loading panel is hidden.
      */
     private fun setTreeUiState(state: TreeUiState) {
         if (!::treeLoadingPanel.isInitialized || !::treeViewContainer.isInitialized) return
@@ -1378,6 +1502,12 @@ class ConfigurationDialog(
                 treeLoadingPanel.visibility = View.VISIBLE
                 treeViewContainer.visibility = View.GONE
                 treeLoadingText.text = activity.pluginString(R.string.analyzing)
+                if (::treeLoadingProgress.isInitialized) {
+                    treeLoadingProgress.visibility = View.VISIBLE
+                }
+                if (::treeLoadingCancelButton.isInitialized) {
+                    treeLoadingCancelButton.visibility = View.VISIBLE
+                }
             }
             TreeUiState.TREE -> {
                 treeLoadingPanel.visibility = View.GONE
@@ -1386,6 +1516,12 @@ class ConfigurationDialog(
             TreeUiState.ERROR -> {
                 treeLoadingPanel.visibility = View.VISIBLE
                 treeViewContainer.visibility = View.GONE
+                if (::treeLoadingProgress.isInitialized) {
+                    treeLoadingProgress.visibility = View.GONE
+                }
+                if (::treeLoadingCancelButton.isInitialized) {
+                    treeLoadingCancelButton.visibility = View.GONE
+                }
             }
         }
     }
@@ -1432,13 +1568,14 @@ class ConfigurationDialog(
                 activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
             )
         }
-        panel.addView(ProgressBar(activity).apply {
+        treeLoadingProgress = ProgressBar(activity).apply {
             isIndeterminate = true
             indeterminateTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
             layoutParams = LinearLayout.LayoutParams(
                 CodeAssistTheme.dp(activity, 34), CodeAssistTheme.dp(activity, 34)
             )
-        })
+        }
+        panel.addView(treeLoadingProgress)
         treeLoadingText = activity.textView(
             activity.pluginString(R.string.analyzing), 12f, CodeAssistTheme.TEXT_SECONDARY
         ).apply {
@@ -1449,7 +1586,7 @@ class ConfigurationDialog(
             )
         }
         panel.addView(treeLoadingText)
-        panel.addView(Button(activity).apply {
+        treeLoadingCancelButton = Button(activity).apply {
             text = activity.pluginString(R.string.cancel)
             textSize = 12f
             isAllCaps = false
@@ -1474,7 +1611,8 @@ class ConfigurationDialog(
                 topMargin = CodeAssistTheme.dp(activity, 12)
                 gravity = Gravity.CENTER_HORIZONTAL
             }
-        })
+        }
+        panel.addView(treeLoadingCancelButton)
         return panel
     }
 
@@ -1484,23 +1622,22 @@ class ConfigurationDialog(
      *
      * ### Cancellation safety
      *
-     * `ProjectTreeView.scanAsync` cancels any previous scan silently: the
+     * ProjectTreeView.scanAsync cancels any previous scan silently: the
      * previous worker sees a stale token and returns without calling
-     * `onComplete` / `onError`. That means the loading panel this method
+     * onComplete / onError. That means the loading panel this method
      * shows can only be hidden by the callbacks of the scan it just
      * launched, which is exactly what we want — a superseded scan must
      * not flip the UI back to a tree that no longer matches the current
-     * filters. The [setTreeUiState] call below is what guarantees the
-     * panel is shown before the scan is dispatched, so there is never a
-     * window in which the scan is running but the panel is hidden.
+     * filters. The setTreeUiState call below is what guarantees the panel
+     * is shown before the scan is dispatched, so there is never a window
+     * in which the scan is running but the panel is hidden.
      *
      * ### Why it returns early
      *
-     * The early return on `!treeVisible` is intentional: the tree section
-     * is hidden, so there is nothing to show a spinner over. Tapping
-     * Reload while the section is collapsed should not start a scan that
-     * has nowhere to render. [reloadTree] expands the section first if
-     * needed.
+     * The early return on !treeVisible is intentional: the tree section is
+     * hidden, so there is nothing to show a spinner over. Tapping Reload
+     * while the section is collapsed should not start a scan that has
+     * nowhere to render. reloadTree expands the section first if needed.
      */
     private fun startTreeScan() {
         if (!treeVisible || !::treeView.isInitialized) return
@@ -1539,10 +1676,10 @@ class ConfigurationDialog(
     /**
      * Renders the Git section without blocking the dialog.
      *
-     * JGit class-loading and `Repository.status()` are measurable costs on
-     * a cold process, so a placeholder spinner is shown first and the
-     * real content is swapped in from `OneCode-git-info` on the main
-     * thread once the background probe finishes.
+     * JGit class-loading and Repository.status are measurable costs on a
+     * cold process, so a placeholder spinner is shown first and the real
+     * content is swapped in on the main thread once the background probe
+     * finishes.
      */
     private fun setupGitUIAsync() {
         val loading = LinearLayout(activity).apply {
@@ -1707,7 +1844,7 @@ class ConfigurationDialog(
 
     /**
      * Debounces ref resolution so every keystroke in the ref field does
-     * not spin up a JGit `Repository.resolve` call.
+     * not spin up a JGit Repository.resolve call.
      */
     private fun scheduleResolve() {
         pendingResolve?.let { resolveHandler.removeCallbacks(it) }
@@ -1718,7 +1855,7 @@ class ConfigurationDialog(
 
     /**
      * Resolves the ref field's current text to a short commit hash on a
-     * background thread and writes the result back to [tvResolvedRef].
+     * background thread and writes the result back to tvResolvedRef.
      */
     private fun updateResolvedRef() {
         if (!::tvResolvedRef.isInitialized || !::etGitRef.isInitialized) return
@@ -1861,7 +1998,14 @@ class ConfigurationDialog(
         minimumHeight = CodeAssistTheme.dp(activity, 16)
     }
 
-    /** Creates a section header with an inline add action and help icon. */
+    /**
+     * Creates a section header with an inline add action and help icon.
+     *
+     * The help icon uses Gravity.END for the same reason as
+     * sectionTitleWithHelp: the icon should sit flush with the section's
+     * right edge rather than inheriting the frame's extra padding on top
+     * of the section's own.
+     */
     private fun tagSectionHeader(
         title: String,
         helpTitleRes: Int,
@@ -1880,7 +2024,7 @@ class ConfigurationDialog(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply { marginStart = CodeAssistTheme.dp(activity, 8) }
         })
-        addView(helpIcon(helpTitleRes, helpBodyRes))
+        addView(helpIcon(helpTitleRes, helpBodyRes, Gravity.END or Gravity.CENTER_VERTICAL))
     }
 
     /** Applies a FilterConfig to the UI components without triggering "mark as custom" events. */
@@ -1944,10 +2088,10 @@ class ConfigurationDialog(
      * Reads the current values from the UI controls and updates the
      * internal configuration state.
      *
-     * The Git ref is not validated here. `GitUtils.refExists` performs
+     * The Git ref is not validated here. GitUtils.refExists performs
      * synchronous disk I/O against the repository, and this method is
-     * called from many UI paths, so resolving the ref on every call was
-     * a measurable source of UI jank on Git-enabled projects.
+     * called from many UI paths, so resolving the ref on every call was a
+     * measurable source of UI jank on Git-enabled projects.
      */
     private fun readUIValues() {
         if (!::etMaxSize.isInitialized || !::cbBinaries.isInitialized ||
@@ -1993,13 +2137,20 @@ class ConfigurationDialog(
     /**
      * Rebuilds the flow layouts (inclusions, exclusions, stub patterns,
      * gitignore) based on the current configuration.
+     *
+     * ### Gitignore flow
+     *
+     * The .gitignore flow is delegated to [updateGitignoreFlowOnly], which
+     * populates it only when the "Respect .gitignore rules" checkbox is
+     * on. That is what makes the checkbox toggle cheap: the flow is
+     * cleared and repopulated in place, without touching any other part
+     * of the dialog.
      */
     private fun updateTagsUI(animate: Boolean = false) {
         if (!::flowInclusions.isInitialized) return
         flowInclusions.removeAllViews()
         flowExclusions.removeAllViews()
         flowStubPatterns.removeAllViews()
-        flowGitignore.removeAllViews()
         tagViews.clear()
 
         if (currentConfig.inclusions.isEmpty()) addEmptyLabel(flowInclusions, activity.pluginString(R.string.no_inclusions))
@@ -2011,30 +2162,11 @@ class ConfigurationDialog(
         if (currentConfig.stubPatterns.isEmpty()) addEmptyLabel(flowStubPatterns, activity.pluginString(R.string.no_stub_patterns))
         else currentConfig.stubPatterns.forEach { addTagToFlow(flowStubPatterns, it, TagKind.STUB) }
 
-        gitignoreSection.visibility = if (currentConfig.respectGitignore) View.VISIBLE else View.GONE
-        if (currentConfig.respectGitignore) {
-            if (gitignoreTags.isEmpty()) {
-                addEmptyLabel(flowGitignore, activity.pluginString(R.string.no_gitignore_rules))
-            } else {
-                gitignoreTags.forEach { rawTag ->
-                    val isNegation = rawTag.startsWith("!")
-                    val cleanTag = if (isNegation) rawTag.removePrefix("!") else rawTag
-                    val overridden = !isNegation && isGitignoreRuleOverridden(cleanTag)
-                    val bg = when {
-                        isNegation -> CodeAssistTheme.SURFACE_RAISED
-                        overridden -> CodeAssistTheme.TAG_CONFLICT
-                        else -> CodeAssistTheme.TAG_EXCLUDE
-                    }
-                    val fg = when {
-                        isNegation -> CodeAssistTheme.TEXT_SECONDARY
-                        overridden -> CodeAssistTheme.TAG_CONFLICT_TEXT
-                        else -> CodeAssistTheme.TAG_EXCLUDE_TEXT
-                    }
-                    val displayText = if (isNegation) "!$cleanTag" else cleanTag
-                    flowGitignore.addView(createTagView(displayText, bg, fg, null))
-                }
-            }
-        }
+        // The .gitignore section is never hidden as a whole: the title and
+        // the checkbox are always visible, and only the flow's content is
+        // controlled by the checkbox. updateGitignoreFlowOnly handles that
+        // without touching the rest of the dialog.
+        updateGitignoreFlowOnly(currentConfig.respectGitignore)
 
         if (animate && animationsEnabled) {
             val all = listOf(flowInclusions, flowExclusions, flowStubPatterns, flowGitignore)
@@ -2049,6 +2181,48 @@ class ConfigurationDialog(
                     i++
                 }
             }
+        }
+    }
+
+    /**
+     * Rebuilds only the .gitignore flow when the "Respect .gitignore
+     * rules" checkbox is toggled, without tearing down the rest of the
+     * dialog.
+     *
+     * When [enabled] is false, the flow is cleared and the section is
+     * collapsed to just the title and the checkbox: the user has
+     * explicitly told the plugin to ignore those rules, so showing them
+     * would be misleading.
+     *
+     * When [enabled] is true, the flow is repopulated from the cached
+     * [gitignoreTags] list. The list was read once when the dialog
+     * opened; it is not re-read here, because the .gitignore file itself
+     * has not changed and a second file read would be wasted I/O.
+     */
+    private fun updateGitignoreFlowOnly(enabled: Boolean) {
+        if (!::flowGitignore.isInitialized) return
+        flowGitignore.removeAllViews()
+        if (!enabled) return
+        if (gitignoreTags.isEmpty()) {
+            addEmptyLabel(flowGitignore, activity.pluginString(R.string.no_gitignore_rules))
+            return
+        }
+        gitignoreTags.forEach { rawTag ->
+            val isNegation = rawTag.startsWith("!")
+            val cleanTag = if (isNegation) rawTag.removePrefix("!") else rawTag
+            val overridden = !isNegation && isGitignoreRuleOverridden(cleanTag)
+            val bg = when {
+                isNegation -> CodeAssistTheme.SURFACE_RAISED
+                overridden -> CodeAssistTheme.TAG_CONFLICT
+                else -> CodeAssistTheme.TAG_EXCLUDE
+            }
+            val fg = when {
+                isNegation -> CodeAssistTheme.TEXT_SECONDARY
+                overridden -> CodeAssistTheme.TAG_CONFLICT_TEXT
+                else -> CodeAssistTheme.TAG_EXCLUDE_TEXT
+            }
+            val displayText = if (isNegation) "!$cleanTag" else cleanTag
+            flowGitignore.addView(createTagView(displayText, bg, fg, null))
         }
     }
 
@@ -2127,7 +2301,7 @@ class ConfigurationDialog(
 
     /**
      * Minimal glob matcher that mirrors the wildcard support of
-     * [FileFilter].
+     * FileFilter.
      */
     private fun globMatchTag(pattern: String, value: String): Boolean {
         if (!pattern.contains('*') && !pattern.contains('?')) return false
@@ -2365,9 +2539,9 @@ class ConfigurationDialog(
 
     private companion object {
         /**
-         * Request code for `WRITE_EXTERNAL_STORAGE` on API 26-28.
-         * Distinctive value (hex 0x0C0DE = "code") so it cannot collide
-         * with a request code the host CodeAssist app might use.
+         * Request code for WRITE_EXTERNAL_STORAGE on API 26-28. Distinctive
+         * value (hex 0x0C0DE = "code") so it cannot collide with a request
+         * code the host CodeAssist app might use.
          */
         const val REQUEST_STORAGE_PERMISSION = 0x0C0DE
     }

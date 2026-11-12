@@ -38,7 +38,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * PluginSettings.isGitEnabled. When this switch is disabled:
  *
  * 1. Repository detection via JGit is entirely bypassed to save resources.
- * 2. The selected folder is treated as the project root.
+ * 2. The selected folder is treated as the project root, after the parent
+ *    search heuristic has had a chance to find a .gitignore or the
+ *    CodeAssist project boundary.
  * 3. The plugin attempts to locate an ancestor .gitignore file to maintain
  *    filtering integrity without requiring a full Git repository.
  *
@@ -46,21 +48,52 @@ import java.util.concurrent.atomic.AtomicBoolean
  * detection. It remains active as long as FilterConfig.respectGitignore is
  * true, regardless of the global Git state.
  *
+ * ### Project root resolution
+ *
+ * When the user opens the plugin from a file or folder that lives inside a
+ * project, the plugin needs to walk up to the project root before it can
+ * scan the tree or read the per-project config. The walk is performed by
+ * [resolveProjectRoot] and is bounded by
+ * PluginSettings.getParentSearchLimit, which the user can raise from the
+ * settings page for very deep package trees or set to 0 to keep the
+ * plugin strictly scoped to the selected folder.
+ *
+ * The heuristic has three stages:
+ *
+ *  1. Walk up to the configured limit looking for a .gitignore. This is
+ *     the most accurate signal because the filtering rules the user
+ *     maintains live next to it.
+ *  2. If no .gitignore is found, look for the CodeAssist project boundary
+ *     in the absolute path (the "/codeassist/projects/<name>/" segment
+ *     that CodeAssist uses on Android). This covers projects that do not
+ *     have a .gitignore yet but still have a well-defined root.
+ *  3. If neither is found, return the selected folder unchanged, so the
+ *     plugin never leaves the folder the user explicitly chose.
+ *
+ * The resolved root is then used consistently by the configuration dialog
+ * for four things that must agree with each other:
+ *
+ *  - reading the .gitignore rules,
+ *  - loading and saving the per-project config under
+ *    .platform/plugins/com.devdayton.onecodeforai/config.json,
+ *  - scanning the tree (relative paths are computed against this root),
+ *  - and resolving the File objects the dump generator will read.
+ *
  * ### Tree v2: project config is per-project
  *
- * Starting with Tree v2 the per-path selection made in the tree selector is
- * stored per project under
+ * Starting with Tree v2 the per-path selection made in the tree selector
+ * is stored per project under
  * projectRoot/.platform/plugins/com.devdayton.onecodeforai/config.json and
  * is read by ConfigurationDialog when it opens. This entry point does not
  * need to know about that config: the dialog loads it, applies it to the
  * tree, and writes it back on Generate. The plugin class remains
- * responsible only for opening the dialog for the correct project root and
- * for coordinating the single-dialog lock.
+ * responsible only for opening the dialog for the correct project root
+ * and for coordinating the single-dialog lock.
  *
  * ### Context-menu label refresh
  *
- * The plugin's context-menu label is resolved from R.string.action_label at
- * registration time, using the effective locale from
+ * The plugin's context-menu label is resolved from R.string.action_label
+ * at registration time, using the effective locale from
  * LanguageHelper.detectIdeLocale. When the user changes the UI language
  * from the settings page, the label in the context menu does not update
  * until the next CodeAssist restart. This is a deliberate limitation:
@@ -68,22 +101,22 @@ import java.util.concurrent.atomic.AtomicBoolean
  * it to pick up a new label would duplicate the action in the menu. There
  * is no portable way to force an in-place update across CodeAssist builds,
  * so the plugin chooses not to re-register at all. Every other surface
- * (dialogs, settings page, info screen, notifications, error messages) does
- * pick up the new language on the next newly-opened window, matching the
- * standard Android behavior for runtime locale changes.
+ * (dialogs, settings page, info screen, notifications, error messages)
+ * does pick up the new language on the next newly-opened window, matching
+ * the standard Android behavior for runtime locale changes.
  */
 class OneCodeForAIPlugin : Plugin {
 
     /**
      * Ensures that only one configuration dialog can be active at a time.
-     * This prevents multiple concurrent invocations if the user rapidly taps
-     * the action menu item.
+     * This prevents multiple concurrent invocations if the user rapidly
+     * taps the action menu item.
      */
     private val dialogVisible = AtomicBoolean(false)
 
     /**
-     * A handler bound to the main looper, used to marshal dialog creation and
-     * UI updates back to the main thread.
+     * A handler bound to the main looper, used to marshal dialog creation
+     * and UI updates back to the main thread.
      */
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -91,17 +124,17 @@ class OneCodeForAIPlugin : Plugin {
      * An in-memory cache mapping a selected directory path to its resolved
      * project root.
      *
-     * Resolving a Git root involves traversing parent directories and reading
-     * from the filesystem, which can be slow on network storage or deeply
-     * nested structures. Caching the result prevents redundant lookups when
-     * the user repeatedly opens the dialog for the same project during a
-     * session.
+     * Resolving a Git root involves traversing parent directories and
+     * reading from the filesystem, which can be slow on network storage or
+     * deeply nested structures. Caching the result prevents redundant
+     * lookups when the user repeatedly opens the dialog for the same
+     * project during a session.
      *
      * Backed by WeakHashMap so that a long IDE session that opens many
      * projects does not accumulate entries for projects the rest of the
-     * process has already forgotten. The values are File instances whose only
-     * strong reference is this map, so they are collected together with the
-     * key.
+     * process has already forgotten. The values are File instances whose
+     * only strong reference is this map, so they are collected together
+     * with the key.
      */
     private val rootCache = WeakHashMap<String, File>()
 
@@ -132,13 +165,14 @@ class OneCodeForAIPlugin : Plugin {
     }
 
     /**
-     * Registers the plugin's primary UI action with the supplied actionLabel.
+     * Registers the plugin's primary UI action with the supplied
+     * actionLabel.
      *
      * Extracted from register so the construction of the SimpleAction (same
-     * ID, same places, same icon) lives in a single place. The click handler
-     * closes over the supplied logCallback, not over the host logger object,
-     * which keeps the method usable from tests without needing a real
-     * PluginRegistration.
+     * ID, same places, same icon) lives in a single place. The click
+     * handler closes over the supplied logCallback, not over the host
+     * logger object, which keeps the method usable from tests without
+     * needing a real PluginRegistration.
      *
      * The method is called exactly once per process lifetime. It is
      * deliberately not re-invoked when the UI language changes: the host
@@ -151,9 +185,9 @@ class OneCodeForAIPlugin : Plugin {
      * @param actionLabel localized label to display in the context menu and
      *   command palette. Resolved by the caller so this method stays
      *   locale-agnostic.
-     * @param logCallback forwards a message to the host's logger. Passed as a
-     *   parameter rather than read from a field so this method has no hidden
-     *   dependency on companion state.
+     * @param logCallback forwards a message to the host's logger. Passed as
+     *   a parameter rather than read from a field so this method has no
+     *   hidden dependency on companion state.
      */
     private fun registerAction(
         reg: PluginRegistration,
@@ -174,15 +208,16 @@ class OneCodeForAIPlugin : Plugin {
     }
 
     /**
-     * Resolves the appropriate project root and initiates the configuration
-     * flow.
+     * Resolves the appropriate project root and initiates the
+     * configuration flow.
      *
      * This method implements a performance-conscious strategy by avoiding
-     * filesystem I/O on the main thread. It follows three distinct execution
-     * paths based on the global Git settings and cache state:
+     * filesystem I/O on the main thread. It follows three distinct
+     * execution paths based on the global Git settings and cache state:
      *
      * 1. Git Disabled: bypasses repository detection entirely. Uses the
-     *    selected folder or its nearest .gitignore ancestor as the root.
+     *    resolveProjectRoot heuristic (.gitignore search, then CodeAssist
+     *    project boundary, then the selected folder itself).
      * 2. Git Enabled, Cache Hit: uses a previously resolved Git root,
      *    executing immediately.
      * 3. Git Enabled, Cache Miss: dispatches a background thread to perform
@@ -220,11 +255,12 @@ class OneCodeForAIPlugin : Plugin {
         val gitEnabled = context?.let { PluginSettings.isGitEnabled(it) } ?: true
 
         // Path 1: Git functionality is globally disabled.
-        // We bypass Git detection entirely. However, to preserve .gitignore
-        // filtering, we search for an ancestor .gitignore file to act as the
-        // root.
+        // We bypass Git detection entirely. The project root is resolved by
+        // the heuristic (.gitignore search, CodeAssist project boundary,
+        // fallback to the selected folder), bounded by the user-configured
+        // parent search limit.
         if (!gitEnabled) {
-            val projectRoot = findGitignoreRoot(selectedCanonical) ?: selectedCanonical
+            val projectRoot = resolveProjectRoot(selectedCanonical, context)
             logInfo("Git disabled globally. Using project root: ${projectRoot.name}")
             return showConfigurationDialog(projectRoot, logInfo)
         }
@@ -248,11 +284,14 @@ class OneCodeForAIPlugin : Plugin {
         }
 
         // Dispatch repository detection to a background thread to prevent
-        // blocking the UI.
+        // blocking the UI. When Git is enabled the detection tries JGit
+        // first (which understands worktrees and submodules) and falls
+        // back to the parent-search heuristic if JGit cannot find a
+        // repository (e.g. a plain folder without a .git marker).
         Thread({
-            val projectRoot: File = runCatching { GitUtils.findGitRoot(selected) }
-                .getOrNull()
-                ?: selected
+            val projectRoot: File = runCatching {
+                GitUtils.findGitRoot(selected) ?: resolveProjectRoot(selected, context)
+            }.getOrNull() ?: selected
 
             rootCache[selectedCanonical.absolutePath] = projectRoot
 
@@ -283,8 +322,8 @@ class OneCodeForAIPlugin : Plugin {
      * Constructs and displays the configuration dialog on the main thread.
      *
      * This method reads the current plugin settings to initialize the
-     * dialog's state. It respects the alreadyReserved flag to maintain state
-     * consistency across asynchronous root resolution.
+     * dialog's state. It respects the alreadyReserved flag to maintain
+     * state consistency across asynchronous root resolution.
      *
      * ### Tree v2: overrides come from the dialog, not from here
      *
@@ -371,35 +410,122 @@ class OneCodeForAIPlugin : Plugin {
         return ActionResult.message(message(R.string.opening_config))
     }
 
+    // ------------------------------------------------------------------
+    // Project root resolution
+    // ------------------------------------------------------------------
+
     /**
-     * Searches for a .gitignore file in the specified directory and its
-     * parent directories, up to a maximum depth.
+     * Resolves the project root for [startDir] using a three-step
+     * heuristic.
      *
-     * This method acts as a fallback mechanism to preserve .gitignore
-     * filtering capabilities when Git is globally disabled. By identifying
-     * the directory that contains the .gitignore file, we can correctly
-     * resolve relative paths within the ignore rules, even if the user
-     * initially selected a subfolder.
+     * The heuristic exists because the plugin API does not expose the
+     * host's Project model (it lives in the project-model module, which is
+     * not a dependency of the plugin), so the root has to be inferred
+     * from the filesystem. The inference is bounded by
+     * PluginSettings.getParentSearchLimit so a deeply nested package tree
+     * does not force an unbounded walk.
      *
-     * The search is intentionally bounded to prevent excessive directory
-     * traversal on deeply nested or mistakenly configured paths.
+     * 1. **.gitignore search.** Walks up to the configured limit looking
+     *    for a directory that contains a .gitignore. This is the most
+     *    accurate signal because the user's filtering rules live next to
+     *    it, and its presence almost always implies "this is a project".
+     * 2. **CodeAssist project boundary.** If no .gitignore is found,
+     *    looks for the "/codeassist/projects/<name>/" segment in the
+     *    absolute path. This covers projects that do not have a
+     *    .gitignore yet but still have a well-defined root — the same
+     *    segment is what the host uses to scope its own project view.
+     * 3. **Fallback.** Returns [startDir] unchanged so the plugin never
+     *    leaves the folder the user explicitly selected. This is
+     *    important: opening the plugin on a folder outside any project
+     *    should still produce a working dialog, just without the parent
+     *    search finding anything.
      *
-     * @param startDir The directory selected by the user.
-     * @return The directory containing the .gitignore, or null if not found.
+     * The resolved root is what ConfigurationDialog uses for four things
+     * that must agree with each other: reading the .gitignore rules,
+     * loading and saving the per-project config, scanning the tree
+     * (relative paths are computed against this root), and resolving the
+     * File objects the dump generator will read. If the four disagreed,
+     * the per-path overrides saved under TreeOverrides would not match
+     * the paths the scanner produced on the next open, and the config
+     * would silently be lost.
+     *
+     * @param startDir the folder the user selected, already canonicalized.
+     * @param context any Context; used only to read the parent search
+     *   limit. May be null, in which case the default limit is used.
+     * @return the resolved project root, never null.
      */
-    private fun findGitignoreRoot(startDir: File): File? {
+    private fun resolveProjectRoot(startDir: File, context: Context?): File {
+        val limit = context?.let { PluginSettings.getParentSearchLimit(it) }
+            ?: DEFAULT_PARENT_SEARCH_LIMIT
+
+        // Step 1: .gitignore.
+        findAncestorWithMarker(startDir, limit) { File(it, ".gitignore").isFile }?.let {
+            return it
+        }
+
+        // Step 2: CodeAssist project boundary.
+        findCodeAssistProjectRoot(startDir)?.let { return it }
+
+        // Step 3: fallback.
+        return startDir
+    }
+
+    /**
+     * Walks up to [limit] parents of [startDir] and returns the first one
+     * whose predicate holds, or null when the limit is reached or the
+     * filesystem root is hit.
+     *
+     * The `levels <= limit` condition means the walk visits [startDir]
+     * itself plus [limit] ancestors, which is the intuitive reading of
+     * "search this folder and up to N parents". Setting [limit] to 0
+     * therefore still checks [startDir] itself, but no parent — that is
+     * the behaviour a user expects when they choose "never leave the
+     * selected folder".
+     *
+     * @param startDir the folder to begin the walk from.
+     * @param limit maximum number of parents to visit, after [startDir].
+     * @param predicate the test to apply at each level.
+     * @return the first matching ancestor, or null.
+     */
+    private fun findAncestorWithMarker(
+        startDir: File,
+        limit: Int,
+        predicate: (File) -> Boolean
+    ): File? {
         var current: File? = startDir
         var levels = 0
-        val maxLevels = 5
-
-        while (current != null && levels < maxLevels) {
-            if (File(current, ".gitignore").isFile) {
-                return current
-            }
+        while (current != null && levels <= limit) {
+            if (predicate(current)) return current
             current = current.parentFile
             levels++
         }
         return null
+    }
+
+    /**
+     * Detects the CodeAssist project boundary by looking for the segment
+     * "/codeassist/projects/<name>" in the absolute path.
+     *
+     * The check is done on the normalized absolute path rather than by
+     * walking parentFile repeatedly, because the layout uses a fixed depth
+     * under /codeassist/projects/ and walking would be unnecessary. It
+     * also naturally handles the Android and desktop layouts without
+     * hardcoding the leading "/storage/emulated/0/Android/data/..." part,
+     * since only the trailing segment is checked.
+     *
+     * Returns null when the pattern is not present, so the caller can
+     * fall through to the selected folder unchanged.
+     */
+    private fun findCodeAssistProjectRoot(startDir: File): File? {
+        val path = startDir.absolutePath.replace('\\', '/')
+        val marker = "/codeassist/projects/"
+        val index = path.indexOf(marker)
+        if (index < 0) return null
+        val afterMarker = path.substring(index + marker.length)
+        val projectName = afterMarker.substringBefore('/')
+        if (projectName.isBlank()) return null
+        val rootPath = path.substring(0, index + marker.length + projectName.length)
+        return File(rootPath)
     }
 
     companion object {
@@ -410,5 +536,12 @@ class OneCodeForAIPlugin : Plugin {
         const val KEY_EXCLUDE_BINARIES = "exclude_binaries"
         const val DEFAULT_ACTION_LABEL = "Generate Context TXT (Share/Export)"
         const val ROOT_SWITCH_DELAY_MS = 250L
+
+        /**
+         * Default parent search limit used when no Context is available to
+         * read the user preference. Matches PluginSettings's default so a
+         * null context produces the same behaviour as a fresh install.
+         */
+        private const val DEFAULT_PARENT_SEARCH_LIMIT = 10
     }
 }

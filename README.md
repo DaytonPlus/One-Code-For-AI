@@ -36,10 +36,10 @@ No cloud upload. No telemetry. Just clean AI context.
   - `*.log`
   - `build/`
   - `**/generated/**`
-- Respect root `.gitignore` rules, including override behavior.
+- Respect root `.gitignore` rules, including override behavior. The checkbox that enables this now lives inside the `.gitignore` section itself, right above the chips it controls.
 - Exclude binary files automatically.
 - Preview the project tree before export.
-- Manually include or exclude individual files or folders.
+- Manually include, stub, or exclude individual files and folders.
 - Configure per-file and total export size limits.
 
 ### 🌳 Interactive project tree (Tree v2)
@@ -62,6 +62,11 @@ Your manual tree decisions are stored per project in `.platform/plugins/com.devd
 - View the current branch, commit, and repo status.
 - Disable Git globally while keeping `.gitignore` filtering available.
 
+### 🎨 Theme support
+- The plugin UI ships with a **light** and a **dark** palette. The dark palette preserves the original hand-tuned colors; the light palette keeps the same visual identity (warm accent, muted text hierarchy, soft outlines) on a light background.
+- The theme can be set to **System** (follow the device's light/dark mode — the default), **Light**, or **Dark** from the settings page.
+- Only newly opened dialogs and screens pick up a change; already-open windows keep their palette until reopened, matching the standard Android behavior for runtime theme changes.
+
 ### 📱 Built-in presets and settings
 - Professional presets for:
   - Android (Kotlin)
@@ -71,8 +76,8 @@ Your manual tree decisions are stored per project in `.platform/plugins/com.devd
   - Python
   - Plain text
 - Save and restore custom profiles.
-- Configure Git, animations, notifications, filtering behavior, and export limits.
-- Use contextual help inside the UI for filters and `.gitignore` rules.
+- Configure Git, animations, notifications, UI language, UI theme, export limits, and the parent-folder search limit from a single settings page.
+- Use contextual help inside the UI: Export profile, Version control, Inclusions, Exclusions, Reference only, Gitignore rules, Binary exclusion, Project tree, Locked nodes, and Per-file size limit all expose a "?" affordance with an inline explanation.
 - Built-in presets now use **reference-only** entries for generated files and lockfiles — `R.java`, `BuildConfig.java`, `local.properties`, `package-lock.json`, `pnpm-lock.yaml`, `poetry.lock`, `Pipfile.lock`. The dump stays structurally complete without paying the token cost of those files' contents.
 
 ### 🌍 Multi-language interface
@@ -89,7 +94,8 @@ Your manual tree decisions are stored per project in `.platform/plugins/com.devd
 - Save, share, or regenerate the final output.
 - Clear warnings for unreadable files or incomplete exports.
 - Persistent recovery behavior for previous valid output.
-- The tree's loading state is now robust: cancelling a scan, superseding it with a filter change, or hitting an error always restores the correct panel state. No orphan spinners.
+- The tree's loading state is now robust: cancelling a scan, superseding it with a filter change, or hitting an error always restores the correct panel state. No orphan spinners, and the Cancel button is only shown while a scan is running.
+- The project root is resolved by a three-step heuristic (`.gitignore` search, CodeAssist project boundary, fallback to the selected folder), bounded by a user-configurable parent folder search limit (default 10, range 0–50). Set it to 0 to keep the plugin strictly scoped to the folder you selected.
 
 ---
 
@@ -167,7 +173,7 @@ The plugin is organized into a few main areas:
 
 · core/ — filtering, Git handling, dump generation, file scanning, profile logic, tree overrides, and the per-project tree config store
 · android/ — host integration, file access, notifications, and export coordination
-· ui/ — configuration dialog, project tree UI, settings, help, result panels, and the tree's custom scroll views
+· ui/ — configuration dialog, project tree UI, settings, help, result panels, theme palette, and the tree's custom scroll views
 · root package — plugin entry point and info screen
 
 ---
@@ -178,11 +184,20 @@ The plugin is organized into a few main areas:
 · Reference-only files: a new third inclusion state lets you list a file in the dump — name and size — without reading its content. Ideal for lockfiles, generated code, and machine-local configuration. Configured both by pattern (in the new Reference only section of the dialog) and per file (in the tree).
 · Per-project tree config: the tree selection is saved to .platform/plugins/com.devdayton.onecodeforai/config.json inside the project, so each project keeps its own decisions independent of the preset. Only written on Generate; closing the dialog without generating discards manual changes.
 · Show locked toggle: hard-excluded folders (node_modules, build, .git, …) and binary files appear as locked nodes in the tree. Enabling "Show locked" makes them interactive. Locking is per-session and safe — unlocking does not automatically include anything inside the folder.
-· Tri-state checkbox: every row shows its state with a custom tri-state indicator (checkmark, dash, empty). Cycling a folder advances its whole subtree, but only touches descendants whose current state matches the folder's aggregate, preserving manual overrides.
+· Tri-state indicator: every row shows its state with a custom tri-state glyph (checkmark for Included, dash for Reference only, empty for Excluded). Cycling a folder advances its whole subtree, but only touches descendants whose current state matches the folder's aggregate, preserving manual overrides.
 · Built-in presets updated: Android, Web, and Python presets now use reference-only entries for R.java, BuildConfig.java, local.properties, package-lock.json, pnpm-lock.yaml, poetry.lock, and Pipfile.lock. The dump stays structurally complete without paying the token cost of those files' contents.
-· Tree loading robustness: cancelling a scan, superseding it with a filter change, or hitting an error now always restores the correct panel state. No orphan "Analyzing…" spinners; the Cancel button and the Reload action both work reliably.
-· Improved initial render: the tri-state indicator and lock glyphs are visible from the first frame, without waiting for a user interaction to trigger a refresh.
-· Preset spinner no longer restores the last state from SharedPreferences. The preset name and its tree overrides are read from the project's config.json, so the correct preset is always shown for the correct project.
+· Tree loading robustness: cancelling a scan, superseding it with a filter change, or hitting an error now always restores the correct panel state. The Cancel button and the Reload action both work reliably.
+· Initial render fix: the tri-state indicator and lock glyphs are visible from the first frame, without waiting for a user interaction to trigger a refresh.
+· Preset restoration: the preset spinner now reads its initial selection from the project's config.json instead of SharedPreferences, so the correct preset is always shown for the correct project.
+· Theme selector: the plugin UI now supports a light and a dark palette, resolved at every UI entry point. A new Theme selector in the settings page offers System (follow device), Light, and Dark; the default is System.
+· Dark and light palettes: the dark palette preserves the original hand-tuned colors. The light palette introduces a lighter background, softer outlines, and a slightly darker accent for legibility on light backgrounds.
+· Help icons for every section: Export profile, Version control, Inclusions, Exclusions, Reference only, Gitignore rules, Binary exclusion, Project tree, Locked nodes, and Per-file size limit now all expose a "?" affordance with an inline explanation.
+· Help icon alignment: the "?" icon now sits flush with the right edge of its section title or panel instead of inheriting the frame's extra padding on top of the section's own. The touch target is preserved.
+· Gitignore section redesign: the "Respect .gitignore rules" checkbox has been moved inside the .gitignore section, directly below the title and above the flow of chips. Toggling it off clears the flow in place (no dialog reload, no tree re-scan); toggling it back on repopulates the chips from the cached rules.
+· Configurable parent folder search limit: the plugin used to walk exactly 5 parent folders looking for a .gitignore. The limit is now a user setting (default 10, clamped to 0–50), exposed in the settings page as "Parent folder search limit". A value of 0 makes the plugin strictly scoped to the selected folder.
+· Project root resolution: new three-step heuristic (.gitignore search, CodeAssist project boundary detection, fallback to the selected folder). Used both when Git is disabled and as the fallback when JGit cannot find a repository.
+· .platform excluded from the dump: the plugin's own per-project config directory (.platform/plugins/com.devdayton.onecodeforai/) is now hard-excluded from the dump, alongside .git, .gradle, and .idea. Users who need to inspect it can enable "Show locked" and mark it explicitly.
+· Tree opening fix: the tree section no longer stays on "Analyzing…" forever on first open. The section is marked visible immediately, and the Cancel button is only shown while a scan is running.
 
 ---
 

@@ -32,6 +32,10 @@
     <string name="preset_name_reserved">That name is reserved for a built-in profile.</string>
     <string name="preset_name_duplicate">A profile named \"%1$s\" already exists.</string>
 
+    <!-- > Section help: presets -->
+    <string name="help_presets_title">Export profile</string>
+    <string name="help_presets_body">Export profiles are reusable bundles of filter rules: inclusions, exclusions, reference-only patterns, and the base toggles (binaries, gitignore, size limit). Built-in profiles cover common project types; save your own from the dialog once you have tuned a selection you like.\n\nSelecting a profile re-scans the tree with that profile\'s rules. Any manual adjustments you had made in the tree under a different profile are discarded on preset switch, because they belonged to the previous profile\'s context. They will reappear when you switch back to that profile.</string>
+
     <!-- > Base filters -->
     <string name="section_base_filters">Base filters</string>
     <string name="exclude_binaries">Exclude binary files</string>
@@ -58,6 +62,8 @@
 
     <!-- > Version control (config dialog) -->
     <string name="section_version_control">Version control</string>
+    <string name="help_version_control_title">Version control</string>
+    <string name="help_version_control_body">When this section is enabled and the project is a Git repository, you can export a Git snapshot instead of the current working tree.\n\nPick a branch, tag, or commit using the search icon next to the ref field, or type any expression Git can resolve (HEAD~3, origin/main, v1.2.0). The resolved short hash appears under the field so you can confirm the target before generating.\n\nPreview diff shows what would change between the selected ref and the working tree, without modifying anything. Useful to sanity-check what the export is going to contain.\n\nYou can disable Git entirely from the plugin settings page; the section will then show a \"disabled globally\" notice. .gitignore rules keep working either way.</string>
     <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
     <string name="no_branch">no branch</string>
     <string name="no_commit">no commit</string>
@@ -202,6 +208,11 @@
     <string name="settings_total_export_limit_desc">Hard cap, in kilobytes, on the total size of a single dump. When reached, the export stops including files and appends a truncation notice. Most useful when the per-file size limit is disabled. Set to 0 for no limit.</string>
     <string name="settings_ui_language">Interface language</string>
     <string name="settings_ui_language_desc">Language used by the plugin UI. \"Auto\" follows the IDE language. Only newly opened dialogs and screens pick up the change; already-open windows keep their current language until reopened.</string>
+    <string name="settings_ui_theme">Theme</string>
+    <string name="settings_ui_theme_desc">Color scheme used by the plugin UI. \"System\" follows the device\'s light/dark mode. Only newly opened dialogs and screens pick up the change; already-open windows keep their current theme until reopened.</string>
+    <string name="settings_ui_theme_system">System (follow device)</string>
+    <string name="settings_ui_theme_light">Light</string>
+    <string name="settings_ui_theme_dark">Dark</string>
 
     <!-- > Misc config messages -->
     <string name="git_disabled_globally">Git is disabled globally in CodeAssist settings. Enable it there to use branches, tags, and commits.</string>

@@ -87,6 +87,25 @@ import java.util.concurrent.atomic.AtomicLong
  * it was unlocked are discarded, the node is collapsed, and it is marked
  * lazy again so the next unlock rebuilds it from scratch.
  *
+ * ### Clickability is dynamic
+ *
+ * Every interactive surface (chevron, tri-state indicator, row-wide tap)
+ * is always registered as clickable. The `locked` check happens **inside**
+ * the click handler, not at row construction time. This is what makes
+ * `toggleShowLocked` take effect immediately on already-rendered rows:
+ * flipping `locked` from false to true disables every interaction on the
+ * row without needing to rebuild it, and flipping it back re-enables them
+ * just as cheaply.
+ *
+ * ### Lazy directories respond to the first click
+ *
+ * A directory whose children have never been loaded (a hard-excluded
+ * folder that was just unlocked) has an EXCLUDE aggregate by construction,
+ * so a naive state-cycle click would be a silent no-op. The first click
+ * on such a directory expands it and triggers the sub-scan, giving the
+ * user a visible response; subsequent clicks cycle the loaded children
+ * normally.
+ *
  * ### Cancellation
  *
  * Scanning is cancellable through [cancelScan], which increments the
@@ -890,6 +909,15 @@ class ProjectTreeView(
      * refresh, which is why a freshly opened tree used to show empty
      * squares until the user touched something.
      *
+     * ### Dynamic clickability
+     *
+     * Every interactive surface (chevron, tri-state indicator, row-wide
+     * tap) is registered as clickable unconditionally. The `locked` check
+     * happens inside the handler, not at construction time, so flipping
+     * `locked` from [toggleShowLocked] takes effect immediately on
+     * already-rendered rows. This is what allows the "Show locked" toggle
+     * to work without a full tree rebuild.
+     *
      * @param isSticky `true` for the pinned header row (root).
      */
     private fun buildRow(node: TreeNode, isSticky: Boolean = false): View {
@@ -905,19 +933,18 @@ class ProjectTreeView(
             layoutParams = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT)
         }
 
-        // Chevron — wrapped in a 32dp container so the tap target is
-        // generous even though the icon itself is 16dp. Files and the
-        // sticky row use an invisible spacer of the same width so that
-        // the indicator and icon columns line up across every row.
+        // Chevron — always clickable; the locked check happens inside the
+        // handler so unlock via toggleShowLocked takes effect immediately
+        // without needing to rebuild the row.
         val hasChildren = node.isDirectory && (node.children.isNotEmpty() || node.lazyDirectory)
         if (hasChildren && !isSticky) {
             val res = if (node.expanded) R.drawable.ic_tech_chevron_down
                       else R.drawable.ic_tech_chevron_right
             val arrowContainer = FrameLayout(activity).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(32), dp(32))
-                isClickable = !node.locked
-                isFocusable = !node.locked
-                setOnClickListener { toggleExpanded(node) }
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { if (!node.locked) toggleExpanded(node) }
             }
             val arrow = ImageView(activity).apply {
                 val drawable = UiFactory.run { activity.loadPluginDrawable(res) }
@@ -936,16 +963,14 @@ class ProjectTreeView(
             })
         }
 
-        // Tri-state indicator — a custom ImageView because Android's
-        // native CheckBox only supports two states. LOCKED rows get a
-        // static lock glyph and no listener.
+        // Tri-state indicator — always clickable; locked check inside.
         val indicatorContainer = FrameLayout(activity).apply {
             layoutParams = LinearLayout.LayoutParams(dp(36), dp(32)).apply {
                 marginStart = dp(2)
                 marginEnd = dp(2)
             }
-            isClickable = !node.locked
-            isFocusable = !node.locked
+            isClickable = true
+            isFocusable = true
             setOnClickListener {
                 if (node.locked) return@setOnClickListener
                 if (isSticky) onParentClick(node) else cycleState(node)
@@ -994,11 +1019,12 @@ class ProjectTreeView(
             )
         }
 
-        // Row-wide tap cycles the state, but not on the sticky header
-        // and not on LOCKED rows.
-        if (!isSticky && !node.locked) {
+        // Row-wide tap — always clickable; locked check inside.
+        if (!isSticky) {
             row.isClickable = true
-            row.setOnClickListener { cycleState(node) }
+            row.setOnClickListener {
+                if (!node.locked) cycleState(node)
+            }
         }
 
         // Paint the initial visual state so the tri-state indicator and
@@ -1017,14 +1043,27 @@ class ProjectTreeView(
      * Advances [node]'s state through the cycle INCLUDE -> STUB -> EXCLUDE
      * -> INCLUDE and refreshes the visible rows.
      *
-     * Called for leaf files, for the state indicator of a directory, and
-     * for the row-wide tap on any non-sticky, non-locked row. Directory
-     * state is derived from children, so the actual propagation happens
-     * in [onParentClick].
+     * ### Lazy directories
+     *
+     * A directory that has never been loaded (a hard-excluded folder that
+     * was just unlocked via the "Show locked" toggle) has no children
+     * yet. Its aggregate is EXCLUDE by construction, so calling
+     * [onParentClick] on it would be a silent no-op. Instead, the first
+     * click on the indicator expands the directory, which triggers the
+     * sub-scan and gives the user a visible response. Subsequent clicks
+     * will cycle the loaded children normally.
+     *
+     * This is the only place where "clicking a directory" is treated as
+     * "expand the directory": everywhere else the click applies the state
+     * cycle to the loaded children.
      */
     private fun cycleState(node: TreeNode) {
         if (node.locked) return
         if (node.isDirectory) {
+            if (node.lazyDirectory && !node.expanded) {
+                toggleExpanded(node)
+                return
+            }
             onParentClick(node)
             return
         }
@@ -1218,6 +1257,14 @@ class ProjectTreeView(
      * and the node is collapsed. This ensures the next time the user
      * re-unlocks it, the subtree is rebuilt from scratch and no stale
      * per-file state survives from the previous unlocked session.
+     *
+     * ### Clickability
+     *
+     * Because row clickability is checked at click time rather than
+     * construction time (see the class-level "Clickability is dynamic"
+     * note), flipping `locked` here takes effect immediately on every
+     * already-rendered row. No tree rebuild is needed for the toggle to
+     * work in both directions.
      */
     fun toggleShowLocked(show: Boolean) {
         if (showLocked == show) return
