@@ -88,15 +88,27 @@ import dev.ide.platform.settings.SettingsPage
  * entry point by CodeAssistTheme.applyTheme. The theme selector on this
  * page is a [SettingControl.Choice] with three options:
  *
- *  - System (follow device): use the device night-mode flag. Default.
+ *  - System (follow device): use the device night-mode flag.
  *  - Light: always light, regardless of the device setting.
- *  - Dark: always dark, regardless of the device setting.
+ *  - Dark: always dark, regardless of the device setting. Default.
  *
  * The selected option is persisted as a code ("system", "light", "dark")
  * under ui_theme. CodeAssistTheme.getUiTheme is the reader; this page is
  * the only writer. Only newly opened dialogs and screens pick up the
  * change; already-open windows keep their current palette until reopened,
  * matching the standard Android behaviour for runtime theme changes.
+ *
+ * The *default* of the preference is "dark" (see PluginSettings's
+ * THEME_DEFAULT), so a fresh install starts on the plugin's original
+ * hand-tuned dark palette. Users who prefer to follow the device's
+ * night-mode flag can pick "System (follow device)" from the dropdown;
+ * that choice is stored explicitly under ui_theme and is not affected by
+ * the default. Because the dropdown's initial selection is driven by
+ * PluginSettings.getUiTheme(context) rather than by the position of an
+ * entry in THEME_OPTIONS, the "Dark" entry is highlighted on a fresh
+ * install regardless of where it appears in the list — which is what
+ * allows the list order to stay stable across releases (see the
+ * THEME_OPTIONS KDoc).
  *
  * ### Cache invalidation
  *
@@ -287,6 +299,11 @@ internal class OneCodeForAISettingsPage : SettingsPage {
             // the currently selected theme code ("system", "light", or
             // "dark"); the 5th is the full option list. Only newly opened
             // windows pick up the change, matching the language selector.
+            //
+            // The initial selection is whatever PluginSettings.getUiTheme
+            // returns; on a fresh install that is "dark" (see the
+            // PluginSettings KDoc), so the dropdown highlights Dark on
+            // first open even though System appears first in the list.
             // --------------------------------------------------------------
             SettingControl.Choice(
                 KEY_UI_THEME,
@@ -439,8 +456,11 @@ internal class OneCodeForAISettingsPage : SettingsPage {
                 // the theme code ("dark"), or as the localized label
                 // ("Dark"). resolveThemeCode turns all three into the code
                 // that PluginSettings.setUiTheme expects. The fallback is
-                // "system", which is always a safe choice and matches the
-                // pre-selector behaviour.
+                // "system", which is always a safe choice and never
+                // produces an unreadable screen; note that this fallback
+                // is *not* the same as the preference default ("dark",
+                // see PluginSettings.THEME_DEFAULT) — it only fires when
+                // the host reports a value that cannot be normalised.
                 val raw = values.getStringSafe(key, CodeAssistTheme.THEME_SYSTEM)
                 val code = resolveThemeCode(raw)
                 PluginLogger.d(tag, "Extracted value for '$key': '$raw' -> '$code'")
@@ -551,8 +571,14 @@ internal class OneCodeForAISettingsPage : SettingsPage {
      *     practice, because the host and the selector share the same
      *     Configuration, but the branch is left as a best-effort fallback
      *     rather than as a requirement.
-     *  4. "system" as a safe default, matching the pre-selector behaviour
-     *     and never producing an unreadable screen.
+     *  4. "system" as a safe fallback for unparseable host values. Note that
+     *     this is **not** the same as the preference default (which is
+     *     "dark", see PluginSettings's THEME_DEFAULT): this branch only
+     *     fires when the host reports a value that cannot be normalised
+     *     (a corrupted preference, a forward-compatibility bug, a manual
+     *     adb shell edit). In that case "system" is the least surprising
+     *     choice because it lets the device decide, rather than forcing a
+     *     palette the user did not pick.
      *
      * @param raw The un-normalised string reported by the host.
      * @return A code from THEME_OPTIONS (its first component), or
@@ -803,9 +829,22 @@ internal class OneCodeForAISettingsPage : SettingsPage {
          * persisted, so translation changes and label reorders cannot
          * corrupt the user's selection.
          *
-         * The order matches the "most encompassing first" rule: the default
-         * (System) is first so the selector starts on the option that most
-         * users should keep.
+         * ### List order vs. default
+         *
+         * System is first because it is the most general option ("let the
+         * device decide"), but the documented *preference default* is Dark
+         * (see PluginSettings's THEME_DEFAULT). The dropdown's initial
+         * selection is driven by PluginSettings.getUiTheme(), not by the
+         * position of an entry in this list, so a fresh install highlights
+         * Dark on first open even though it is third here.
+         *
+         * The order is therefore a UI convention (System first as the most
+         * encompassing choice) and is **not** aligned with the default. Do
+         * not "fix" this by moving Dark to the top: doing so would change
+         * the persisted index on hosts that store the dropdown selection
+         * as an integer (see the LANGUAGE_OPTIONS KDoc for the full
+         * rationale) and would silently mis-restore the theme on upgrades
+         * from a build that wrote an index under the old order.
          *
          * The list order is the persisted index on hosts that store the
          * dropdown selection as an integer, for the same reason as

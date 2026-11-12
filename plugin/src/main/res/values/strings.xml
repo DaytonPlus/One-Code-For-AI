@@ -4,10 +4,10 @@
     <!-- APP IDENTITY                                                   -->
     <!-- ============================================================== -->
     <string name="app_name">CodeAssist OCFAI</string>
+    <string name="app_display_name">One Code For AI</string>
 
     <!-- ============================================================== -->
     <!-- COMMON                                                          -->
-    <!-- Shared labels used across multiple dialogs and screens.         -->
     <!-- ============================================================== -->
     <string name="close">Close</string>
     <string name="cancel">Cancel</string>
@@ -36,22 +36,36 @@
     <string name="help_presets_title">Export profile</string>
     <string name="help_presets_body">Export profiles are reusable bundles of filter rules: inclusions, exclusions, reference-only patterns, and the base toggles (binaries, gitignore, size limit). Built-in profiles cover common project types; save your own from the dialog once you have tuned a selection you like.\n\nSelecting a profile re-scans the tree with that profile\'s rules. Any manual adjustments you had made in the tree under a different profile are discarded on preset switch, because they belonged to the previous profile\'s context. They will reappear when you switch back to that profile.</string>
 
-    <!-- > Base filters -->
-    <string name="section_base_filters">Base filters</string>
+    <!-- > Base flags -->
     <string name="exclude_binaries">Exclude binary files</string>
     <string name="respect_gitignore">Respect .gitignore rules</string>
     <string name="max_size">Maximum size</string>
     <string name="kb_suffix"> KB</string>
 
-    <!-- > Inclusions, exclusions, stub patterns, .gitignore -->
+    <!-- > Section toggle labels -->
+    <!-- Short labels used as the checkbox of each rule-list section, and
+         as the section header for the General group (which has no
+         checkbox of its own — it contains the base flags rather than
+         a single toggleable rule list). -->
+    <string name="section_general">General</string>
     <string name="section_inclusions">Inclusions</string>
     <string name="section_exclusions">Exclusions</string>
     <string name="section_stub_patterns">Reference only</string>
+    <string name="section_gitignore">Gitignore</string>
+    <string name="section_version_control">Version control</string>
+    <string name="section_tree">File tree</string>
+
+    <!-- > Legacy label kept for backward compatibility with older
+         translations. Not referenced by the current dialog. -->
     <string name="section_gitignore_rules">Rules detected in .gitignore</string>
+
+    <!-- > Empty-state placeholders -->
     <string name="no_inclusions">No additional extensions</string>
     <string name="no_exclusions">No custom exclusions</string>
     <string name="no_stub_patterns">No reference-only patterns</string>
     <string name="no_gitignore_rules">No rules found in .gitignore</string>
+
+    <!-- > Add / edit / delete tag dialogs -->
     <string name="add_inclusion_title">Add inclusion</string>
     <string name="add_exclusion_title">Add exclusion</string>
     <string name="add_stub_title">Add reference-only pattern</string>
@@ -61,7 +75,6 @@
     <string name="action_add">+ Add</string>
 
     <!-- > Version control (config dialog) -->
-    <string name="section_version_control">Version control</string>
     <string name="help_version_control_title">Version control</string>
     <string name="help_version_control_body">When this section is enabled and the project is a Git repository, you can export a Git snapshot instead of the current working tree.\n\nPick a branch, tag, or commit using the search icon next to the ref field, or type any expression Git can resolve (HEAD~3, origin/main, v1.2.0). The resolved short hash appears under the field so you can confirm the target before generating.\n\nPreview diff shows what would change between the selected ref and the working tree, without modifying anything. Useful to sanity-check what the export is going to contain.\n\nYou can disable Git entirely from the plugin settings page; the section will then show a \"disabled globally\" notice. .gitignore rules keep working either way.</string>
     <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
@@ -101,7 +114,6 @@
     <string name="git_diff_content">Diff content</string>
 
     <!-- > File tree -->
-    <string name="section_tree">File tree</string>
     <string name="show_tree">Show file tree</string>
     <string name="tree_show_locked">Show locked</string>
     <string name="tree_locked_hint">(locked)</string>
@@ -213,6 +225,8 @@
     <string name="settings_ui_theme_system">System (follow device)</string>
     <string name="settings_ui_theme_light">Light</string>
     <string name="settings_ui_theme_dark">Dark</string>
+    <string name="settings_parent_search_limit">Parent folder search limit</string>
+    <string name="settings_parent_search_limit_desc">How many parent folders the plugin walks up looking for .gitignore or the CodeAssist project root. Increase for very deep package trees. Set to 0 to never leave the selected folder.</string>
 
     <!-- > Misc config messages -->
     <string name="git_disabled_globally">Git is disabled globally in CodeAssist settings. Enable it there to use branches, tags, and commits.</string>
@@ -225,7 +239,7 @@
     <string name="info_title">INFO</string>
     <string name="info_subtitle">Plugin for CodeAssist</string>
     <string name="open_codeassist">Open CodeAssist</string>
-    <string name="footer_made_with">Made with ❤️ for the community</string>
+    <string name="footer_made_with">Made with love for the community</string>
     <string name="creator_dev">Independent developer</string>
     <string name="codeassist_not_installed">CodeAssist is not installed</string>
     <string name="codeassist_open_error">Could not open CodeAssist</string>
@@ -237,7 +251,7 @@
     <string name="whats_new_item_1">Added a full language selector with 18 built-in translations, replacing the single \"Force English UI\" toggle.</string>
     <string name="whats_new_item_2">Automatic migration: users who had \"Force English UI\" enabled keep their English UI through the new selector, no action required.</string>
     <string name="whats_new_item_3">Critical fix for Android 8-12 crashes caused by JGit 7.x depending on InputStream.readAllBytes() (API 33+); now on JGit 5.13.3.</string>
-    <string name="whats_new_item_4">.gitignore fixes: patterns like **/generated/** now match files at the project root, and [abc] / [!abc] character classes are honored.</string>
+    <string name="whats_new_item_4">.gitignore fixes: patterns with double-star prefixes now match files at the project root, and [abc] / [!abc] character classes are honored.</string>
     <string name="whats_new_item_5">svg is no longer classified as binary, and lockfiles can be force-included via Inclusions.</string>
     <string name="whats_new_item_6">Five recursive tree walks converted to iterative ones, preventing StackOverflowError on pathological directory trees.</string>
     <string name="whats_new_item_7">Git reference validation moved off the UI thread; the Generate button no longer freezes on large repositories.</string>
@@ -261,6 +275,7 @@
 
     <!-- > How to use -->
     <string name="integration_title">CodeAssist integration</string>
+    <string name="integration_subtitle">Export a project as AI-ready context in four steps.</string>
     <string name="step_1_title">Open a project</string>
     <string name="step_1_desc">Tap the project file tree in CodeAssist</string>
     <string name="step_2_title">Long-press a folder</string>
@@ -272,7 +287,39 @@
 
     <!-- > Features -->
     <string name="features_title">Features</string>
-    <string name="feature_1">Advanced Glob Filters: Use patterns like *.log, build/, or **/generated/**</string>
+
+    <!-- Category headers -->
+    <string name="feature_cat_export">Export and filtering</string>
+    <string name="feature_cat_git">Git integration</string>
+    <string name="feature_cat_customize">Customization</string>
+    <string name="feature_cat_privacy">Privacy</string>
+
+    <!-- Export and filtering -->
+    <string name="feature_export_1">Advanced glob filters: *.log, build/, and double-star path globs</string>
+    <string name="feature_export_2">Professional presets: Android, Web, Python, Plain text</string>
+    <string name="feature_export_3">Interactive tree with three-state control (Included, Reference-only, Excluded)</string>
+    <string name="feature_export_4">Reference-only mode for lockfiles and generated code</string>
+    <string name="feature_export_5">Real-time progress with background generation</string>
+
+    <!-- Git integration -->
+    <string name="feature_git_1">Export from branches, tags, or specific commits</string>
+    <string name="feature_git_2">Preview diffs before generating</string>
+    <string name="feature_git_3">Global kill switch to disable Git entirely</string>
+
+    <!-- Customization -->
+    <string name="feature_customize_1">Light and dark themes</string>
+    <string name="feature_customize_2">18 languages, selectable independently of the IDE</string>
+    <string name="feature_customize_3">Contextual help on every section</string>
+    <string name="feature_customize_4">Configurable per-file and total export limits</string>
+
+    <!-- Privacy -->
+    <string name="feature_privacy_1">100% offline: no internet permission, no telemetry</string>
+    <string name="feature_privacy_2">Local processing only - no cloud, no uploads</string>
+
+    <!-- Legacy flat feature list. Kept for backward compatibility with
+         any older translation; the current dialog groups the same
+         information under the four category strings above. -->
+    <string name="feature_1">Advanced Glob Filters: Use patterns like *.log, build/, or nested generated directories</string>
     <string name="feature_2">Git Integration: Export from branches, tags, commits, or preview diffs</string>
     <string name="feature_3">Professional Presets: Android (Kotlin, Source, Resources), Web, Python, Text</string>
     <string name="feature_4">Contextual Help: Inline dialogs explain filters, patterns, and .gitignore priority</string>
@@ -300,7 +347,7 @@
     <string name="tech_info_status">Status</string>
     <string name="tech_info_status_stable">Stable</string>
 
-    <!-- > Help & FAQ -->
+    <!-- > Help and FAQ -->
     <string name="help_title">HELP AND FAQ</string>
     <string name="help_header_subtitle">Find answers to common issues and learn how to get the most out of the plugin.</string>
 
@@ -314,7 +361,7 @@
     <string name="help_a3">A rule is highlighted in amber when one of your manual inclusion, exclusion, or reference-only filters is actively overriding it. Inclusions, exclusions, and reference-only patterns always take priority over .gitignore.</string>
 
     <string name="help_q4">How do I use glob patterns in filters?</string>
-    <string name="help_a4">Use standard glob syntax: *.log (any log file), build/ (specific folder), **/generated/** (any nested generated folder). Tap the \"?\" icon next to the filter sections for a quick guide.</string>
+    <string name="help_a4">Use standard glob syntax: *.log (any log file), build/ (specific folder), and double-star path globs for any nested generated folder. Tap the \"?\" icon next to the filter sections for a quick guide.</string>
 
     <string name="help_q5">What do the new Android presets do?</string>
     <string name="help_a5">Android (Kotlin) exports everything. Android (source only) strips tests and docs. Android (Resources) exports only XMLs (layouts/themes). Generated files like R.java and local.properties are listed as reference-only by default.</string>
@@ -336,29 +383,30 @@
 
     <!-- > Contextual help -->
     <string name="help_icon_description">Section help</string>
+
     <string name="help_inclusions_title">Inclusions</string>
-    <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: kt, json, xml\n- Wildcards: *.log, **/*.kt, src/*.kt\n- Directories: build/, **/generated/**\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.</string>
+    <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: kt, json, xml\n- Wildcards: *.log, src/*.kt\n- Directories: build/\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.\n\nUnchecking the Inclusions box disables the list without deleting it: the rules stay in the profile and are reapplied the next time you check the box.</string>
 
     <string name="help_exclusions_title">Exclusions</string>
-    <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: log, tmp, pyc\n- Wildcards: *.log, **/*.test.kt, src/*.bak\n- Directories: build/, **/generated/**\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.</string>
+    <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: log, tmp, pyc\n- Wildcards: *.log, src/*.bak\n- Directories: build/\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.\n\nUnchecking the Exclusions box disables the list without deleting it: the rules stay in the profile and are reapplied the next time you check the box.</string>
 
     <string name="help_stub_title">Reference only</string>
-    <string name="help_stub_body">Patterns for files that should be listed in the dump but whose content is not read. Useful for lockfiles, generated code, and local configuration.\n\nA reference-only file appears in the directory tree with a [ref] suffix and a size marker, but no content. The AI model learns that the file exists and how large it is, without receiving its body.\n\nSupported syntax (same as inclusions and exclusions):\n- Filenames: package-lock.json, local.properties\n- Wildcards: *.lock, **/*.generated.kt\n\nReference-only patterns take priority over inclusions and exclusions. Inclusions take priority over exclusions.</string>
+    <string name="help_stub_body">Patterns for files that should be listed in the dump but whose content is not read. Useful for lockfiles, generated code, and local configuration.\n\nA reference-only file appears in the directory tree with a [ref] suffix and a size marker, but no content. The AI model learns that the file exists and how large it is, without receiving its body.\n\nSupported syntax (same as inclusions and exclusions):\n- Filenames: package-lock.json, local.properties\n- Wildcards: *.lock\n\nReference-only patterns take priority over inclusions and exclusions. Inclusions take priority over exclusions.\n\nUnchecking the Reference only box disables the list without deleting it: the patterns stay in the profile and are reapplied the next time you check the box.</string>
 
     <string name="help_gitignore_title">Gitignore rules</string>
-    <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only - edit .gitignore directly to change it.\n\nInclusions, exclusions, and reference-only patterns take priority over these rules: adding a matching rule forces the file in, out, or into reference-only mode regardless of .gitignore. Overridden rules are highlighted in amber. Negated rules (starting with \'!\') are shown with a distinct background so they can be told apart from positive rules.</string>
+    <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only - edit .gitignore directly to change it.\n\nInclusions, exclusions, and reference-only patterns take priority over these rules: adding a matching rule forces the file in, out, or into reference-only mode regardless of .gitignore. Overridden rules are highlighted in amber. Negated rules (starting with \'!\') are shown with a distinct background so they can be told apart from positive rules.\n\nUnchecking the Gitignore box disables the .gitignore rules without deleting the file: the rules stay on disk and are reapplied the next time you check the box.</string>
 
     <string name="help_binaries_title">Binary exclusion</string>
     <string name="help_binaries_body">Binary files are detected by a fixed list of known binary extensions (images, video, audio, archives, compiled binaries, fonts, databases). Files with these extensions are skipped so the dump stays focused on readable source code.\n\nDetection is extension-based only. To skip an uncommon binary format, add its extension to Exclusions. To force-include one, add it to Inclusions, or to list it as reference-only, add it to Reference only.\n\nDisabling this toggle includes the listed extensions in the export, which is rarely useful for AI context.</string>
 
     <string name="help_tree_title">Project tree preview</string>
-    <string name="help_tree_body">Shows the project tree with every entry the filters have selected. Each entry has three states:\n\n- Included: the file\'s full content is written to the dump.\n- Reference only: the file\'s name, size, and [ref] marker are written, but the content is not read.\n- Excluded: the file is not written to the dump.\n\nClick a row to cycle through the three states. Click a folder to apply the next state to its children, preserving any manual overrides the children had.\n\nHard-excluded folders (like .git, node_modules) and binary files are initially locked: they are visible but disabled. Enable \"Show locked\" to unlock them and interact with them.\n\nExcluding a folder automatically excludes its children. Re-including a single child inside an excluded folder restores only that entry, mirroring the behavior of .gitignore negation.</string>
+    <string name="help_tree_body">Shows the project tree with every entry the filters have selected. Each entry has three states:\n\n- Included: the file\'s full content is written to the dump.\n- Reference only: the file\'s name, size, and [ref] marker are written, but the content is not read.\n- Excluded: the file is not written to the dump.\n\nClick a row to cycle through the three states. Click a folder to apply the next state to its children, preserving any manual overrides the children had.\n\nHard-excluded folders (like .git, node_modules) and binary files are initially locked: they are visible but disabled. Enable \"Show locked\" to unlock them and interact with them.\n\nExcluding a folder automatically excludes its children. Re-including a single child inside an excluded folder restores only that entry, mirroring the behavior of .gitignore negation.\n\nUnchecking the File tree box hides the tree without losing your manual overrides: the selection is preserved and reapplied the next time you check the box.</string>
 
     <string name="help_tree_locked_title">Locked nodes</string>
     <string name="help_tree_locked_body">Locked nodes are hard-excluded folders (like .git, node_modules, build) and binary files. They appear in the tree but cannot be interacted with until you enable \"Show locked\".\n\nWhy locked: these entries are excluded by default to keep the tree fast and to avoid accidentally dumping the contents of dependency folders. Enabling \"Show locked\" unlocks them so you can include, stub, or exclude them explicitly.\n\nLocking is per-session. It is not saved to the project, because unlocking node_modules is almost always a one-off action.</string>
 
     <string name="help_max_size_title">Per-file size limit</string>
-    <string name="help_max_size_body">When enabled, files larger than the selected size are skipped. This protects the dump from a single huge file (e.g. a bundled asset or generated SQL) dominating the output.\n\nWhen disabled, every text file is included regardless of size, which can produce very large dumps. Combine it with the total export size limit in Settings to keep exports bounded.</string>
+    <string name="help_max_size_body">When enabled, files larger than the selected size are skipped. This protects the dump from a single huge file (e.g. a bundled asset or generated SQL) dominating the output.\n\nWhen disabled, every text file is included regardless of size, which can produce very large dumps. Combine it with the total export size limit in Settings to keep exports bounded.\n\nUnchecking the Maximum size box does not delete the current value: the number stays in the field and is reapplied the next time you check the box.</string>
 
     <!-- ============================================================== -->
     <!-- HOST INTEGRATION                                                -->

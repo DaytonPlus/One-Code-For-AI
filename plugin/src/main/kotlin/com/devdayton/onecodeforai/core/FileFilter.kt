@@ -47,28 +47,64 @@ import java.util.concurrent.ConcurrentHashMap
  * call [resolveMode] (or [walkIncludedAndStubbed]) and inspect the
  * returned state directly.
  *
+ * ### Section enable switches (Tree v2, section-toggle patch)
+ *
+ * The three user rule lists — inclusions, exclusions and stub patterns
+ * — are each guarded by a boolean flag on [FilterConfig]
+ * ([FilterConfig.enableInclusions], [FilterConfig.enableExclusions],
+ * [FilterConfig.enableStubPatterns]). The flags are what powers the
+ * section checkboxes in the configuration dialog: a user can
+ * temporarily disable a rule list without destroying it, so toggling
+ * the section off and back on restores the same rules.
+ *
+ * In [resolveMode] the flag is evaluated **before** the corresponding
+ * list. When the flag is `false`, the branch is skipped entirely, as if
+ * the list were empty, and the next rule in the chain is evaluated.
+ * This is what makes "disabled section" behave like "the user removed
+ * every rule from that section" without the destructive side effect of
+ * actually deleting the entries — the config still carries the rules,
+ * but this class ignores them, and the user can turn the section back
+ * on without losing anything.
+ *
+ * The flags are **not** aliases for "the list is empty". A section can
+ * be enabled with an empty list (the filter then matches nothing) or
+ * disabled with a populated list (the filter then ignores the list
+ * entirely). The distinction is what makes the toggle reversible across
+ * a save/load cycle; see the [FilterConfig] KDoc, section *Section
+ * enable switches*, for the full rationale.
+ *
  * ### Priority order in [resolveMode]
  *
  * The rules are evaluated in a fixed order that mirrors the existing
  * inclusions > exclusions precedence and adds the stub layer on top:
  *
- *  1. [FilterConfig.stubPatterns] match → STUB
- *  2. [FilterConfig.inclusions] match   → INCLUDE
- *  3. [FilterConfig.exclusions] match   → EXCLUDE
- *  4. `.gitignore` match                → EXCLUDE (only if respecting)
- *  5. per-file size overflow             → EXCLUDE (only if limiting)
- *  6. binary extension                   → EXCLUDE (only if excluding)
- *  7. hidden file (dot-prefixed)         → EXCLUDE
- *  8. text extension or no extension     → INCLUDE
- *  9. otherwise                          → EXCLUDE
+ *  1. [FilterConfig.enableStubPatterns] && [FilterConfig.stubPatterns]
+ *     match → `STUB`
+ *  2. [FilterConfig.enableInclusions] && [FilterConfig.inclusions]
+ *     match → `INCLUDE`
+ *  3. [FilterConfig.enableExclusions] && [FilterConfig.exclusions]
+ *     match → `EXCLUDE`
+ *  4. `.gitignore` match → `EXCLUDE` (only if respecting)
+ *  5. per-file size overflow → `EXCLUDE` (only if limiting)
+ *  6. binary extension → `EXCLUDE` (only if excluding)
+ *  7. hidden file (dot-prefixed) → `EXCLUDE`
+ *  8. text extension or no extension → `INCLUDE`
+ *  9. otherwise → `EXCLUDE`
  *
- * Stub patterns precede inclusions on purpose: a file the user marked as
- * reference-only must not be silently promoted back to a full include
- * by a broad inclusion pattern. Per-path overrides in [TreeOverrides]
- * are applied **before** this whole chain by the caller (see the tree
- * scanner); this class is not aware of them and must not be, so that a
- * profile's rules stay independent of any single project's manual
- * choices.
+ * Stub patterns precede inclusions on purpose: a file the user marked
+ * as reference-only must not be silently promoted back to a full
+ * include by a broad inclusion pattern. Per-path overrides in
+ * [TreeOverrides] are applied **before** this whole chain by the
+ * caller (see the tree scanner); this class is not aware of them and
+ * must not be, so that a profile's rules stay independent of any
+ * single project's manual choices.
+ *
+ * Each of the three section flags short-circuits its corresponding
+ * branch: when the flag is `false`, that branch is skipped and the next
+ * rule in the chain is evaluated. This is what allows a user to, for
+ * example, disable exclusions and still have the inclusion list and the
+ * `.gitignore` rules applied, without any of the disabled section's
+ * entries being silently lost.
  *
  * ### Hard-excluded directories and binary extensions are the tree's
  * ### responsibility, not this class's
@@ -76,30 +112,30 @@ import java.util.concurrent.ConcurrentHashMap
  * The hard-excluded directory set and the binary extension set are used
  * by the tree scanner to decide which entries become LOCKED. This class
  * only knows them as exclusions that may be reached through rules (see
- * [hardExcludedDirectories] and [binaryExtensions]). A caller that wants
- * to know whether an entry would be locked must ask the scanner, not
- * this filter.
+ * [hardExcludedDirectories] and [binaryExtensions]). A caller that
+ * wants to know whether an entry would be locked must ask the scanner,
+ * not this filter.
  *
  * ### Performance and caching of `.gitignore`
  *
  * The `.gitignore` file is read and parsed at most once per
  * `(absolutePath, lastModified)` pair, shared through [gitignoreCache].
  * Before Tree v2, every [FileFilter] instance re-read and re-parsed the
- * file, and the configuration dialog plus the tree scanner both created
- * instances (and rescanned on every filter change). The cache is bounded
- * to [GITIGNORE_CACHE_MAX_ENTRIES] entries to prevent unbounded growth
- * across a long IDE session with many projects; the eviction is
- * approximate (removes the lexicographically first key, not the true
- * LRU) but bounded and O(1).
+ * file, and the configuration dialog plus the tree scanner both
+ * created instances (and rescanned on every filter change). The cache
+ * is bounded to [GITIGNORE_CACHE_MAX_ENTRIES] entries to prevent
+ * unbounded growth across a long IDE session with many projects; the
+ * eviction is approximate (removes the lexicographically first key, not
+ * the true LRU) but bounded and O(1).
  *
  * ### Cancellation
  *
- * The export path is cancellable through the standard `Thread.interrupt`
- * mechanism. [walkIncludedAndStubbed] — and [walkIncludedFiles], which
- * delegates to it — checks the worker thread's interrupt flag between
- * directory entries, so an export that is cancelled mid-walk unwinds
- * within a single entry instead of having to finish scanning the whole
- * tree.
+ * The export path is cancellable through the standard
+ * `Thread.interrupt` mechanism. [walkIncludedAndStubbed] — and
+ * [walkIncludedFiles], which delegates to it — checks the worker
+ * thread's interrupt flag between directory entries, so an export that
+ * is cancelled mid-walk unwinds within a single entry instead of having
+ * to finish scanning the whole tree.
  *
  * The thrown [InterruptedException] propagates to the caller unchanged;
  * the export coordinator treats it as a user cancellation and never
@@ -145,12 +181,13 @@ class FileFilter(
      * (e.g. a caller that only uses [matchesAny] on inclusions), and
      * because the parse involves reading a file.
      *
-     * The lazy is not synchronized (LazyThreadSafetyMode.NONE) because
-     * a [FileFilter] instance is confined to a single consumer at a
-     * time — the export path creates one per run, and the tree scanner
-     * creates one per scan. Sharing a single instance across threads is
-     * therefore a programming error, and the potential double-parse in
-     * a race is harmless: both threads produce the same immutable list.
+     * The lazy is not synchronized (`LazyThreadSafetyMode.NONE`)
+     * because a [FileFilter] instance is confined to a single consumer
+     * at a time — the export path creates one per run, and the tree
+     * scanner creates one per scan. Sharing a single instance across
+     * threads is therefore a programming error, and the potential
+     * double-parse in a race is harmless: both threads produce the same
+     * immutable list.
      */
     private val ignoreRules: List<IgnoreRule> by lazy(LazyThreadSafetyMode.NONE) {
         if (this.config.respectGitignore) loadIgnoreRules() else emptyList()
@@ -192,11 +229,33 @@ class FileFilter(
     /**
      * Resolves the export role of a filesystem entry.
      *
-     * Returns [NodeState.INCLUDE], [NodeState.STUB] or [NodeState.EXCLUDE]
-     * according to the priority documented on the class. It never
-     * returns [NodeState.LOCKED] — locking is the tree scanner's
-     * responsibility, because it is the scanner that decides when to
-     * descend into hard-excluded directories.
+     * Returns [NodeState.INCLUDE], [NodeState.STUB] or
+     * [NodeState.EXCLUDE] according to the priority documented on the
+     * class. It never returns [NodeState.LOCKED] — locking is the tree
+     * scanner's responsibility, because it is the scanner that decides
+     * when to descend into hard-excluded directories.
+     *
+     * ### Section enable flags
+     *
+     * The three user rule lists are each guarded by a boolean flag on
+     * [FilterConfig] ([FilterConfig.enableInclusions],
+     * [FilterConfig.enableExclusions],
+     * [FilterConfig.enableStubPatterns]). When the flag is `false`, the
+     * corresponding list is ignored entirely: the branch is skipped and
+     * the next rule in the chain is evaluated, exactly as if the list
+     * were empty. This is what makes the section checkboxes in the
+     * configuration dialog reversible — the rules stay in the config,
+     * they are just not applied while the section is off, so turning
+     * the checkbox back on restores the exact same state without the
+     * user having to re-enter anything.
+     *
+     * The flags are evaluated **before** their list so that a disabled
+     * section cannot win against an enabled one on a technicality. For
+     * example, with inclusions enabled and stub patterns disabled, a
+     * file that matches both lists is exported as INCLUDE, because the
+     * stub branch is skipped before the stub match is even attempted.
+     * Re-enabling stub patterns flips that file back to STUB, which is
+     * the expected behaviour of an enable toggle.
      *
      * ### `respectExcludedPaths` and the tree selector
      *
@@ -217,10 +276,10 @@ class FileFilter(
      *
      * ### Cancellation
      *
-     * No interrupt check here: this method is called once per entry from
-     * the walk loop, which is where the flag is polled. Adding a second
-     * check per entry would double the cost of the hottest path in the
-     * filter for no benefit.
+     * No interrupt check here: this method is called once per entry
+     * from the walk loop, which is where the flag is polled. Adding a
+     * second check per entry would double the cost of the hottest path
+     * in the filter for no benefit.
      */
     fun resolveMode(
         relativePath: String,
@@ -238,9 +297,12 @@ class FileFilter(
 
         if (isDirectory) {
             if (name in excludedDirectoryNames) return NodeState.EXCLUDE
-            if (matchesAny(config.stubPatterns, path, name, extension = "")) return NodeState.STUB
-            if (matchesAny(config.inclusions, path, name, extension = "")) return NodeState.INCLUDE
-            if (matchesAny(config.exclusions, path, name, extension = "")) return NodeState.EXCLUDE
+            if (config.enableStubPatterns &&
+                matchesAny(config.stubPatterns, path, name, extension = "")) return NodeState.STUB
+            if (config.enableInclusions &&
+                matchesAny(config.inclusions, path, name, extension = "")) return NodeState.INCLUDE
+            if (config.enableExclusions &&
+                matchesAny(config.exclusions, path, name, extension = "")) return NodeState.EXCLUDE
             if (isIgnored(path, isDirectory = true)) return NodeState.EXCLUDE
             return NodeState.INCLUDE
         }
@@ -250,9 +312,12 @@ class FileFilter(
 
         val extension = name.substringAfterLast('.', "").lowercase()
 
-        if (matchesAny(config.stubPatterns, path, name, extension)) return NodeState.STUB
-        if (matchesAny(config.inclusions, path, name, extension)) return NodeState.INCLUDE
-        if (matchesAny(config.exclusions, path, name, extension)) return NodeState.EXCLUDE
+        if (config.enableStubPatterns &&
+            matchesAny(config.stubPatterns, path, name, extension)) return NodeState.STUB
+        if (config.enableInclusions &&
+            matchesAny(config.inclusions, path, name, extension)) return NodeState.INCLUDE
+        if (config.enableExclusions &&
+            matchesAny(config.exclusions, path, name, extension)) return NodeState.EXCLUDE
 
         if (isIgnored(path, isDirectory = false)) return NodeState.EXCLUDE
         if (config.excludeBinaries && extension in BINARY_EXTENSIONS) return NodeState.EXCLUDE
@@ -269,12 +334,16 @@ class FileFilter(
      * Legacy boolean entry point retained for source compatibility.
      *
      * Equivalent to `resolveMode(...) == NodeState.INCLUDE`. New code
-     * should call [resolveMode] directly and inspect the returned state,
-     * because this wrapper silently discards the distinction between
-     * EXCLUDE and STUB.
+     * should call [resolveMode] directly and inspect the returned
+     * state, because this wrapper silently discards the distinction
+     * between EXCLUDE and STUB.
      *
      * The `respectExcludedPaths` parameter is forwarded unchanged; see
-     * [resolveMode] for its meaning.
+     * [resolveMode] for its meaning. The section enable flags are
+     * honoured transparently by the underlying [resolveMode] call, so a
+     * caller that uses this wrapper also gets the "disabled section
+     * behaves like empty list" semantics without having to know the
+     * flags exist.
      */
     fun include(file: File, respectExcludedPaths: Boolean = true): Boolean {
         if (isSymbolicLink(file) || (!file.isDirectory && !file.isFile)) return false
@@ -297,7 +366,8 @@ class FileFilter(
      * comes from the tree object rather than from a directory walk.
      *
      * See [resolveMode] for the priority order and the meaning of
-     * `respectExcludedPaths`.
+     * `respectExcludedPaths`. The section enable flags are honoured
+     * transparently, as in [include].
      */
     fun includePath(
         relativePath: String,
@@ -316,24 +386,33 @@ class FileFilter(
      * ### Which states are emitted
      *
      * Both [NodeState.INCLUDE] and [NodeState.STUB] files are returned;
-     * the caller distinguishes them by the second component of the pair.
-     * This is what lets the dump generator write a stub's header and
-     * size marker without ever opening the file. [NodeState.EXCLUDE]
-     * entries are skipped entirely. [NodeState.LOCKED] is never returned
-     * by this method because the filter does not produce that state —
-     * locking is the scanner's decision, and the scanner does not
-     * descend into locked directories anyway.
+     * the caller distinguishes them by the second component of the
+     * pair. This is what lets the dump generator write a stub's header
+     * and size marker without ever opening the file.
+     * [NodeState.EXCLUDE] entries are skipped entirely.
+     * [NodeState.LOCKED] is never returned by this method because the
+     * filter does not produce that state — locking is the scanner's
+     * decision, and the scanner does not descend into locked
+     * directories anyway.
+     *
+     * The section enable flags are honoured transparently by the
+     * underlying [resolveMode] calls, so a disabled section's rules are
+     * not applied when the walk decides what to yield. A directory that
+     * is only excluded because of a disabled-section rule is therefore
+     * walked as if the rule did not exist, which is exactly what the
+     * user sees in the tree selector.
      *
      * ### Directory-level stubs
      *
-     * A directory that matches a stub pattern is *walked* as if it were
-     * included, because a directory stub is a structural hint rather
-     * than a leaf entry: the dump format has no way to express "this
-     * folder's contents were omitted" as a single block. The children
-     * of such a directory are then resolved individually, so a folder
-     * that matches a stub pattern still contributes per-file stubs for
-     * each of its files, which is exactly the mental model a user has
-     * when they mark a folder as reference-only in the tree selector.
+     * A directory that matches a stub pattern is *walked* as if it
+     * were included, because a directory stub is a structural hint
+     * rather than a leaf entry: the dump format has no way to express
+     * "this folder's contents were omitted" as a single block. The
+     * children of such a directory are then resolved individually, so
+     * a folder that matches a stub pattern still contributes per-file
+     * stubs for each of its files, which is exactly the mental model a
+     * user has when they mark a folder as reference-only in the tree
+     * selector.
      *
      * ### Cancellation
      *
@@ -347,8 +426,8 @@ class FileFilter(
      *    or yielding, so a wide directory with thousands of children
      *    unwinds on the very next entry.
      *
-     * `listFiles()` and `sortedWith` themselves are not interruptible —
-     * both are bounded by the number of entries in a single directory
+     * `listFiles()` and `sortedWith` themselves are not interruptible
+     * — both are bounded by the number of entries in a single directory
      * and complete in milliseconds on any realistic project — so adding
      * a check inside them is not worth the extra branch per iteration.
      *
@@ -403,7 +482,8 @@ class FileFilter(
      * file the tree selector shows as included or reference-only".
      *
      * Cancellation semantics are identical to
-     * [walkIncludedAndStubbed].
+     * [walkIncludedAndStubbed]. Section enable flags are also honoured
+     * identically, since this method delegates to the same walk.
      */
     fun walkIncludedFiles(): Sequence<File> =
         walkIncludedAndStubbed().filter { it.second == NodeState.INCLUDE }.map { it.first }
@@ -422,18 +502,30 @@ class FileFilter(
      * Delegates to [walkIncludedAndStubbed], so it also honours the
      * worker thread's interrupt flag: if the export is cancelled while
      * the pre-count is running, this throws [InterruptedException]
-     * instead of finishing the traversal.
+     * instead of finishing the traversal. Section enable flags affect
+     * the count exactly as they affect the walk, because both share
+     * the same [resolveMode] calls.
      */
     fun countEligibleFiles(): Int = walkIncludedAndStubbed().count()
 
     /**
-     * Root `.gitignore` rules available for display in the configuration
-     * UI.
+     * Root `.gitignore` rules available for display in the
+     * configuration UI.
      *
      * Negative rules (`!foo`) are included with their `!` prefix
      * preserved so the UI can show them as negations. Previously they
      * were filtered out, which hid from the user that a `!important.txt`
-     * in their `.gitignore` was actually overriding a broader exclusion.
+     * in their `.gitignore` was actually overriding a broader
+     * exclusion.
+     *
+     * The returned list is **not** affected by the section enable
+     * flags: the `.gitignore` file itself is always read (subject to
+     * [FilterConfig.respectGitignore]), and the caller can display the
+     * rules regardless of whether inclusions, exclusions, or stub
+     * patterns are enabled. This is deliberate: the "Gitignore"
+     * section in the configuration dialog needs the raw rule list to
+     * render its chip flow, and that flow is independent of the other
+     * sections' toggles.
      */
     fun loadGitignoreRules(): List<String> =
         readGitignoreEntry()?.displayRules ?: emptyList()
@@ -445,8 +537,8 @@ class FileFilter(
     /**
      * Throws [InterruptedException] when the current thread has been
      * interrupted. Shared by every loop in this class so the walk
-     * responds to `ExportCoordinator.cancel()` within a single directory
-     * entry.
+     * responds to `ExportCoordinator.cancel()` within a single
+     * directory entry.
      */
     private fun ensureActive() {
         if (Thread.currentThread().isInterrupted) {
@@ -479,8 +571,8 @@ class FileFilter(
      *
      * The ancestor loop is what makes a broad ignore rule like `build/`
      * propagate into every descendant even when a later rule negates a
-     * specific child: the walk checks each ancestor prefix, so a negated
-     * `build/keep.txt` cannot bypass an ignored `build/`.
+     * specific child: the walk checks each ancestor prefix, so a
+     * negated `build/keep.txt` cannot bypass an ignored `build/`.
      */
     private fun isIgnored(relativePath: String, isDirectory: Boolean): Boolean {
         val segments = relativePath.split('/').filter(String::isNotEmpty)
@@ -524,9 +616,9 @@ class FileFilter(
      * The fast path returns the cached entry without touching the
      * filesystem beyond the `lastModified()` call; the slow path reads
      * and parses the file once and stores the result.
-     * ConcurrentHashMap provides the happens-before guarantee needed for
-     * the immutable [GitignoreCacheEntry] to be safely shared between
-     * threads.
+     * `ConcurrentHashMap` provides the happens-before guarantee needed
+     * for the immutable [GitignoreCacheEntry] to be safely shared
+     * between threads.
      *
      * The cache is bounded: when it exceeds
      * [GITIGNORE_CACHE_MAX_ENTRIES], the lexicographically-first key is
@@ -580,6 +672,15 @@ class FileFilter(
      * The only difference is the state the caller assigns when a match
      * is found, which is why this method returns a boolean and the
      * decision lives in [resolveMode].
+     *
+     * This method does **not** consult the section enable flags. The
+     * caller is expected to gate the call on
+     * [FilterConfig.enableInclusions],
+     * [FilterConfig.enableExclusions] or
+     * [FilterConfig.enableStubPatterns] as appropriate. Keeping the
+     * gate at the call site rather than inside this helper is what
+     * allows [resolveMode] to short-circuit the disabled branch
+     * entirely instead of computing a match it is going to ignore.
      */
     private fun matchesAny(
         rules: List<String>,
@@ -704,8 +805,8 @@ class FileFilter(
 
         /**
          * Upper bound on cached `.gitignore` entries. Chosen so a
-         * typical IDE session (1-3 open projects) never evicts, while a
-         * long-running session with dozens of projects does not grow
+         * typical IDE session (1-3 open projects) never evicts, while
+         * a long-running session with dozens of projects does not grow
          * without limit.
          */
         private const val GITIGNORE_CACHE_MAX_ENTRIES = 32
@@ -753,10 +854,10 @@ class FileFilter(
          * Extensions treated as text by default.
          *
          * `svg` is here because it is XML. `lock` is deliberately not
-         * here: lockfiles are text, but they are typically machine-
-         * generated and multi-megabyte, so they are only included when
-         * the user adds `lock` to inclusions explicitly, or stubbed via
-         * stub patterns.
+         * here: lockfiles are text, but they are typically
+         * machine-generated and multi-megabyte, so they are only
+         * included when the user adds `lock` to inclusions explicitly,
+         * or stubbed via stub patterns.
          */
         private val TEXT_EXTENSIONS = setOf(
             "kt", "kts", "java", "xml", "toml", "gradle", "properties", "json",

@@ -20,11 +20,25 @@ import com.devdayton.onecodeforai.android.PluginSettings
  *
  * The theme is resolved in this order:
  *
- *  1. If the user has chosen "light" or "dark" in the settings page, that
- *     choice wins.
- *  2. Otherwise the system's night-mode flag decides.
- *  3. If neither is available, dark is used as a safe default — the
- *     plugin's original, hand-tuned palette.
+ *  1. If the user has explicitly chosen "light" or "dark" in the
+ *     settings page, that choice wins. Because the *preference default*
+ *     is "dark" (see PluginSettings's THEME_DEFAULT), a fresh install
+ *     always lands in this branch and never reaches the device check in
+ *     step 2. That is deliberate: the plugin's original hand-tuned dark
+ *     palette is the app's visual identity, so a new user should see it
+ *     immediately rather than depend on the device happening to be in
+ *     night mode.
+ *  2. If the preference is "system", or an unrecognised value (a
+ *     corrupted preference, a theme removed in a future version, a
+ *     manual adb shell edit), the device's night-mode flag decides. For
+ *     an unknown value, following the device is safer than arbitrarily
+ *     pinning a palette: it never forces a choice the user did not pick.
+ *  3. [activePalette] is initialised to [DarkPalette] before any
+ *     [applyTheme] call, so a caller that somehow reads a color before
+ *     the theme is resolved still gets the plugin's original palette.
+ *     This matches the documented preference default, and keeps the
+ *     failure mode safe (readable colors rather than uninitialised
+ *     ones, which would render as transparent black and hide the UI).
  *
  * [applyTheme] must be called before any view is constructed in a given
  * UI entry point (activity onCreate, dialog show). It is safe to call
@@ -33,13 +47,21 @@ import com.devdayton.onecodeforai.android.PluginSettings
  */
 object CodeAssistTheme {
 
-    /** Preference value for "follow the system theme". */
+    /**
+     * Preference value for "follow the system theme".
+     *
+     * This is one of the three options exposed by the theme selector,
+     * but it is **not** the preference default: a fresh install starts
+     * on "dark" (see PluginSettings's THEME_DEFAULT). Users who prefer
+     * the device to decide can pick this option; that choice is stored
+     * explicitly under `ui_theme` and is not affected by the default.
+     */
     const val THEME_SYSTEM = "system"
 
     /** Preference value for "always light". */
     const val THEME_LIGHT = "light"
 
-    /** Preference value for "always dark". */
+    /** Preference value for "always dark". Documented preference default. */
     const val THEME_DARK = "dark"
 
     /**
@@ -69,8 +91,22 @@ object CodeAssistTheme {
     /**
      * The plugin's original, hand-tuned dark palette.
      *
-     * Used as the default and as the fallback when the system theme cannot
-     * be determined.
+     * This is the documented **preference default** (see PluginSettings's
+     * THEME_DEFAULT), so a fresh install renders with this palette on the
+     * first frame without ever consulting the device's night-mode flag.
+     *
+     * It is also:
+     *
+     *  - the initial value of [activePalette] before [applyTheme] runs, so
+     *    a caller that reads a color before the theme is resolved still
+     *    gets a usable palette rather than transparent black, and
+     *  - the palette selected by the "system" branch of [applyTheme] when
+     *    the device is in night mode.
+     *
+     * Keeping this palette as the default is what preserves the visual
+     * identity of every screen built before the light palette existed:
+     * existing users see no change, and new users see the same palette
+     * the plugin was designed with.
      */
     private object DarkPalette : Palette {
         override val BG = Color.parseColor("#171719")
@@ -93,6 +129,10 @@ object CodeAssistTheme {
     /**
      * Light palette. Chosen so that the plugin keeps its identity while
      * remaining legible on a light background.
+     *
+     * Only reached when the user explicitly picks "light" from the theme
+     * selector, or when they pick "system" and the device is in light mode.
+     * A fresh install never lands here.
      */
     private object LightPalette : Palette {
         override val BG = Color.parseColor("#F3F3F5")
@@ -115,28 +155,65 @@ object CodeAssistTheme {
     /**
      * The palette currently in effect. Written by [applyTheme], read by
      * every color getter.
+     *
+     * Initialised to [DarkPalette] so that any read that happens before
+     * [applyTheme] runs returns the documented preference default (see
+     * PluginSettings's THEME_DEFAULT), not an uninitialised value.
+     * `@Volatile` because the write in [applyTheme] must be visible to
+     * every subsequent read on the main thread without a lock.
      */
     @Volatile
     private var activePalette: Palette = DarkPalette
 
     /**
      * Resolves and applies the effective palette for [context].
+     *
+     * The three-way `when` below mirrors the class-level resolution
+     * order exactly, and the inline comments on each branch name the
+     * scenario it covers. No logic changes are needed when the
+     * preference default changes, because "dark" already has its own
+     * branch; the only effect of the new default is that the `else`
+     * branch is reached less often (only on an explicit "system" choice
+     * or a corrupted value).
      */
     fun applyTheme(context: Context) {
         activePalette = when (PluginSettings.getUiTheme(context)) {
+            // Explicit "light" choice from the theme selector. Not the
+            // default; only reached after a user action.
             THEME_LIGHT -> LightPalette
+
+            // Explicit "dark" choice, OR the preference default. A
+            // fresh install always lands here and never reaches the
+            // device check below, which is what makes the dark palette
+            // the plugin's unconditional first-impression identity.
             THEME_DARK -> DarkPalette
+
+            // Explicit "system" choice, OR an unrecognised value (a
+            // corrupted preference, a theme removed in a future version,
+            // a manual adb shell edit). Falling back to "follow the
+            // device" is the safest failure mode: it never forces a
+            // palette the user did not pick, and it matches the
+            // pre-selector behaviour for any user whose preference
+            // predates the theme selector.
             else -> if (isSystemDark(context)) DarkPalette else LightPalette
         }
     }
 
     /**
      * Returns true if the current effective palette is dark.
+     *
+     * Kept as an identity check rather than a color comparison because
+     * the two palettes are singleton objects; `===` is cheaper and
+     * cannot be fooled by a caller that happens to have built a
+     * drawable with the other palette's `BG` value.
      */
     fun isDark(): Boolean = activePalette === DarkPalette
 
     /**
      * Reads the system night-mode flag.
+     *
+     * Only consulted from the "system" branch of [applyTheme]; a fresh
+     * install with the default "dark" preference never calls this.
      */
     private fun isSystemDark(context: Context): Boolean {
         val mode = context.resources.configuration.uiMode and
@@ -264,3 +341,27 @@ object CodeAssistTheme {
         }
     }
 }
+
+/**
+ * Returns the same colour with a different alpha channel, preserving the
+ * RGB components.
+ *
+ * Used by the UI to derive low-alpha variants of the palette colours (e.g.
+ * hairline dividers, faint pressable backgrounds, subtle slot borders)
+ * without declaring a separate palette entry for every opacity level.
+ *
+ * Declared as a top-level extension (rather than a member of
+ * [CodeAssistTheme]) so that every view-building file in the `ui` package
+ * can call `color.withAlpha(n)` without an import. A member of the object
+ * would only be reachable as `CodeAssistTheme.withAlpha(color, n)`, which
+ * would force every call site to change.
+ *
+ * [OneCodeForAIInfoActivity][com.devdayton.onecodeforai.OneCodeForAIInfoActivity]
+ * keeps its own private copy of this helper; the two implementations are
+ * identical, and the private one is unchanged so the info screen keeps
+ * compiling regardless of this shared helper.
+ *
+ * @param alpha 0..255, where 0 is fully transparent and 255 is fully opaque.
+ */
+fun Int.withAlpha(alpha: Int): Int =
+    Color.argb(alpha, Color.red(this), Color.green(this), Color.blue(this))

@@ -23,9 +23,10 @@ import android.content.Context
  *  - getUiLanguage, which defaults to LANGUAGE_AUTO so the plugin
  *    follows the host IDE language unless the user explicitly picks
  *    one.
- *  - getUiTheme, which defaults to "system" so the plugin follows the
- *    device night-mode flag unless the user explicitly picks a
- *    variant.
+ *  - getUiTheme, which defaults to "dark" so a fresh install gets the
+ *    plugin's original hand-tuned dark palette. Users who want to
+ *    follow the device night-mode flag can pick "System (follow
+ *    device)" from the theme selector.
  *  - getTotalExportLimitKb, which defaults to 0 (no cap) so a fresh
  *    install preserves the previous behaviour.
  *  - getParentSearchLimit, which defaults to 10 so the plugin walks
@@ -79,9 +80,11 @@ import android.content.Context
  * The active palette is resolved at every UI entry point from the
  * value stored under KEY_UI_THEME:
  *
- *  - "system" (default): follow the device night-mode flag.
+ *  - "dark" (default): always dark. Matches the plugin's original,
+ *    hand-tuned palette and gives a fresh install a consistent
+ *    developer-tool look regardless of the device's night-mode flag.
+ *  - "system": follow the device night-mode flag.
  *  - "light": always light.
- *  - "dark": always dark.
  *
  * The value is read on every UI entry point creation (activity
  * onCreate, dialog show) via CodeAssistTheme.applyTheme, so changing
@@ -181,6 +184,7 @@ object PluginSettings {
      * Values are "system" (follow the device night-mode flag), "light"
      * (always light), or "dark" (always dark). Stored verbatim; the
      * mapping to an actual palette lives in CodeAssistTheme.applyTheme.
+     * The documented default is "dark" (see THEME_DEFAULT).
      */
     private const val KEY_UI_THEME = "ui_theme"
 
@@ -200,13 +204,22 @@ object PluginSettings {
     /**
      * Default value for getUiTheme.
      *
-     * Mirrors CodeAssistTheme.THEME_SYSTEM but is duplicated here as a
+     * Mirrors CodeAssistTheme.THEME_DARK but is duplicated here as a
      * plain string so that PluginSettings stays free of UI imports.
      * Keeping the string literal in one place per layer is the same
      * trade-off as LANGUAGE_AUTO, which is also declared here rather
      * than in LanguageHelper.
+     *
+     * Historically this was "system" (follow the device night-mode
+     * flag). It is now "dark" so that a fresh install gets the
+     * plugin's hand-tuned dark palette immediately, matching the
+     * plugin's original visual identity. Users who prefer to follow
+     * the system night-mode flag can still pick "System (follow
+     * device)" from the theme selector in the settings page; that
+     * choice is stored explicitly under KEY_UI_THEME and is not
+     * affected by this default.
      */
-    private const val THEME_SYSTEM_DEFAULT = "system"
+    private const val THEME_DEFAULT = "dark"
 
     /**
      * Default value for getParentSearchLimit.
@@ -480,9 +493,11 @@ object PluginSettings {
      *
      * Values:
      *
-     *  - "system" (default): follow the device night-mode flag.
+     *  - "dark" (default): always dark. Matches the plugin's original,
+     *    hand-tuned palette and gives a fresh install a consistent
+     *    developer-tool look regardless of the device night-mode flag.
+     *  - "system": follow the device night-mode flag.
      *  - "light": always light.
-     *  - "dark": always dark.
      *
      * The value is read on every UI entry point creation (activity
      * onCreate, dialog show) via CodeAssistTheme.applyTheme, so
@@ -491,20 +506,21 @@ object PluginSettings {
      * palette until reopened, matching standard Android behaviour for
      * runtime theme changes.
      *
-     * The fallback is "system" so existing users who never opened the
-     * settings page keep the pre-selector behaviour: in dark mode they
-     * see the original dark palette, in light mode they see the new
-     * light palette. A user who wants the previous behaviour
-     * permanently can pick "dark" from the selector.
+     * The fallback is "dark" so a fresh install starts on the plugin's
+     * original hand-tuned palette. Users who want to follow the
+     * device night-mode flag can pick "System (follow device)" from
+     * the selector; that choice is stored explicitly under
+     * KEY_UI_THEME and is not affected by this default.
      *
-     * Unknown or corrupted values (a language that was removed, a
-     * manual adb shell edit, a forward-compatibility bug) degrade to
-     * "system" rather than pinning the UI to an arbitrary palette:
-     * "system" is always a safe choice and never produces an
-     * unreadable screen.
+     * Unknown or corrupted values (a theme that was removed, a manual
+     * adb shell edit, a forward-compatibility bug) degrade to the
+     * documented default ("dark") rather than pinning the UI to an
+     * arbitrary palette: "dark" is always safe (it was the plugin's
+     * only palette before the theme selector was introduced) and never
+     * produces an unreadable screen.
      */
     fun getUiTheme(context: Context): String =
-        readString(context, KEY_UI_THEME, THEME_SYSTEM_DEFAULT)
+        readString(context, KEY_UI_THEME, THEME_DEFAULT)
 
     /**
      * Persists the theme code.

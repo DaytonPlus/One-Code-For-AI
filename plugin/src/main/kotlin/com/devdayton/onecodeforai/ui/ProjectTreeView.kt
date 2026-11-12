@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicLong
  * (INCLUDE / STUB / EXCLUDE) and the LOCKED concept possible without
  * duplicating filtering logic between the tree and the exporter.
  *
- * ### States and propagation
+ * ### States and cycles
  *
  * Every rendered node has a [NodeState]:
  *
@@ -60,18 +60,39 @@ import java.util.concurrent.atomic.AtomicLong
  *    a hard-excluded directory or a binary extension that the user has
  *    not unlocked. Produced only by the scanner.
  *
- * Clicking a leaf cycles INCLUDE -> STUB -> EXCLUDE -> INCLUDE. Clicking a
- * directory applies the next state **to its whole non-locked subtree**,
- * but only touches descendants whose current state matches the
- * directory's aggregate state. That is what preserves a user's manual
- * exclusions when they toggle a mixed folder.
+ * **Both leaves and folders use the same three-step cycle:**
  *
- * The aggregate of a directory (and of the sticky root header) is "the
- * most permissive child wins":
+ *  INCLUDE -> STUB -> EXCLUDE -> INCLUDE
  *
- *  - INCLUDE if any non-LOCKED child is INCLUDE,
- *  - STUB otherwise if any non-LOCKED child is STUB,
- *  - EXCLUDE if every non-LOCKED child is EXCLUDE (or there are none).
+ * Clicking a **file** cycles only that file's own state. Clicking a
+ * **folder** cycles the folder's aggregate AND forces every non-locked
+ * descendant (folders and files, at every depth) to the same next state.
+ * A folder click is therefore a uniform operation: after it, the folder
+ * and everything inside it share the same state, with no mixed
+ * intermediate values. This is what makes the folder-level tri-state
+ * indicator meaningful — it never disagrees with its children.
+ *
+ * ### Upward propagation
+ *
+ * When a node's state changes, the change must be reflected not only in
+ * that node's row but also in the aggregate indicators of every ancestor.
+ * Without upward propagation, marking a deep file INCLUDE would update
+ * its immediate parent's row (because [refreshNodeRow] recomputes the
+ * display state from the aggregate) but leave the grandparent, great-
+ * grandparent and root rows stuck on their old display state — their
+ * `state` fields would still hold the pre-change value, and their
+ * aggregates are computed by reading `child.state`, not by recursively
+ * recomputing the child's aggregate.
+ *
+ * [propagateToAncestors] fixes this by walking up the parent chain and
+ * updating each ancestor's `state` field to the aggregate of its
+ * children. It stops as soon as an ancestor's aggregate matches its
+ * current `state` (because the higher ancestors read this `state` and
+ * therefore cannot change either) and it **never** touches the other
+ * children of the ancestors. This is what preserves the "sin forzar
+ * cambiar otro tipo, solo los que están desmarcados" contract: the
+ * ancestors' state moves from EXCLUDE to INCLUDE/STUB as needed, but
+ * no sibling is forced to change.
  *
  * ### Hard-excluded and binary nodes
  *
@@ -85,7 +106,11 @@ import java.util.concurrent.atomic.AtomicLong
  * When the toggle is turned off, every node that was originally LOCKED
  * goes back to its initial blocked state: children that were loaded while
  * it was unlocked are discarded, the node is collapsed, and it is marked
- * lazy again so the next unlock rebuilds it from scratch.
+ * lazy again so the next unlock rebuilds it from scratch. The whole tree
+ * is re-aggregated bottom-up (see [recomputeAllAggregates]) and the
+ * state-changed callback is fired (see [propagateStateChange]) so the
+ * dialog's cached export map is invalidated — otherwise a previously-
+ * included descendant of a now-locked folder would remain in the export.
  *
  * ### Clickability is dynamic
  *
@@ -104,7 +129,9 @@ import java.util.concurrent.atomic.AtomicLong
  * so a naive state-cycle click would be a silent no-op. The first click
  * on such a directory expands it and triggers the sub-scan, giving the
  * user a visible response; subsequent clicks cycle the loaded children
- * normally.
+ * normally. Clicks that arrive while the sub-scan is still running are
+ * ignored (the children list is empty but `expanded` is already true,
+ * so `onParentClick` would otherwise cycle an empty list).
  *
  * ### Cancellation
  *
@@ -119,12 +146,33 @@ import java.util.concurrent.atomic.AtomicLong
  *    of tearing down and rebuilding the whole tree when a single node
  *    changes. Cost is O(visible) rather than O(all).
  *  - [refreshNodeRow] guards the state-icon assignment behind a check on
- *    the currently-set drawable, so a single toggle repaints only the rows
- *    whose state actually changed.
+ *    the currently-set **resource ID**, not the Drawable instance.
+ *    `UiFactory.loadPluginDrawable` returns a fresh Drawable per call, so
+ *    an identity check on the Drawable would always fail and the guard
+ *    would never fire. Storing the resource ID lets the guard actually
+ *    short-circuit `setImageDrawable`.
  *  - [TreeNode] keeps direct references to its row views so a refresh never
  *    has to search the hierarchy for the widget it needs to update.
  *  - Directory children are populated lazily (see [renderNode] and
  *    [populateChildren]).
+ *  - [expandAll] / [collapseAll] toggle the visibility of existing wrappers
+ *    in place instead of calling [renderInternal], which would destroy and
+ *    recreate every row on the UI thread.
+ *  - `cycleState` and `onParentClick` call [propagateStateChange] once and
+ *    never redundantly call `onStatesChanged(currentStates())` after it.
+ *    The duplicate walk the previous implementation performed is what made
+ *    each click cost three full traversals of the tree.
+ *
+ * ### `currentStates()` returns files only
+ *
+ * Directories are containers, not exportable entries. Including them in
+ * the state map would make
+ * [com.devdayton.onecodeforai.core.CodeDumpGenerator] attempt to read
+ * them as files and emit a `[File read error: ...]` marker for every
+ * directory in the project. The tree header is built from the *paths*
+ * of the included files (see `DirectoryTree.writePathsTo`), so the folder
+ * structure is inferred without any directory entry in the map. See
+ * [currentStates] for the full rationale.
  *
  * @param activity      Host activity used to inflate every view. Must be a
  *                      real activity (not a service context) because the
@@ -134,7 +182,7 @@ import java.util.concurrent.atomic.AtomicLong
  * @param onStatesChanged invoked on the UI thread whenever the per-path
  *                      state map changes, so the caller can persist it or
  *                      forward it to the export coordinator. The map
- *                      contains every non-LOCKED path currently rendered.
+ *                      contains only files (see [currentStates]).
  * @param onStatsChanged invoked on the UI thread whenever the aggregate
  *                      [PreviewStats] change (initial render, state flip,
  *                      expand/collapse when it affects visibility).
@@ -185,12 +233,6 @@ class ProjectTreeView(
      * expansion state.
      */
     private val expandedPaths = mutableSetOf<String>()
-
-    /**
-     * Relative path of a row that should flash once its view has been
-     * attached. An empty string means "pulse the root (sticky) row".
-     */
-    private var pendingPulsePath: String? = null
 
     /**
      * Reentrancy guard for the bidirectional scroll synchronization between
@@ -323,11 +365,25 @@ class ProjectTreeView(
     fun getView(): View = outerContainer
 
     /**
-     * Returns a snapshot of the current per-path states.
+     * Returns a snapshot of the current per-file states.
      *
-     * LOCKED entries are excluded from the map because they are not part
-     * of the export (and including them would inflate the progress
-     * denominator with entries the generator is not going to visit).
+     * ### Directories are excluded on purpose
+     *
+     * Directories are containers, not exportable entries. Including them
+     * in the map would make
+     * [com.devdayton.onecodeforai.core.CodeDumpGenerator] attempt to read
+     * them as files and emit a `[File read error: ...]` marker for every
+     * directory in the project. The tree header is built from the
+     * *paths* of the included files (see `DirectoryTree.writePathsTo`),
+     * so the folder structure is inferred without any directory entry in
+     * the map.
+     *
+     * ### LOCKED entries are excluded
+     *
+     * LOCKED entries are not part of the export (the user has not opted
+     * into seeing them yet), so including them would inflate the
+     * progress denominator with entries the generator is not going to
+     * visit.
      *
      * The map is a defensive copy: the caller can safely pass it to a
      * background thread without the UI mutating it under their feet.
@@ -340,7 +396,11 @@ class ProjectTreeView(
         while (stack.isNotEmpty()) {
             val node = stack.removeLast()
             if (node.locked) continue
-            if (node.depth > 0) out[node.relativePath] = node.state
+            // Files only. Directories are containers, not exportable
+            // entries; see the KDoc above.
+            if (node.depth > 0 && !node.isDirectory) {
+                out[node.relativePath] = node.state
+            }
             node.children.forEach { stack.addLast(it) }
         }
         return out
@@ -372,6 +432,13 @@ class ProjectTreeView(
      * after: a path present in [TreeOverrides.includedPaths] is created
      * with [NodeState.INCLUDE] regardless of what the filter says, and
      * likewise for stubs and exclusions.
+     *
+     * ### Parent links
+     *
+     * Every child is given a `parent` reference to its enclosing node as
+     * it is added. This is what makes [propagateToAncestors] possible: a
+     * state change can walk up the parent chain without having to find
+     * the path from the root first.
      */
     fun scanAsync(
         config: FilterConfig,
@@ -404,6 +471,7 @@ class ProjectTreeView(
                         ?.sortedWith(
                             compareBy<File> { !it.isDirectory }
                                 .thenBy { it.name.lowercase() }
+                                .thenBy { it.name }
                         )
                         ?: continue
                     val childDirectories = mutableListOf<TreeNode>()
@@ -426,6 +494,10 @@ class ProjectTreeView(
                             file.name.substringAfterLast('.', "").lowercase() in filter.binaryExtensions()
 
                         if (isHardExcluded || isBinaryFile) {
+                            // The initial scan always creates LOCKED nodes:
+                            // the user has not toggled "Show locked" yet
+                            // (the toggle starts OFF). Unlocking happens
+                            // post-scan via toggleShowLocked().
                             val lockedNode = TreeNode(
                                 file, file.isDirectory, node.depth + 1, relativePath, file.name
                             ).apply {
@@ -433,6 +505,7 @@ class ProjectTreeView(
                                 wasLockedOriginally = true
                                 state = NodeState.EXCLUDE
                                 lazyDirectory = file.isDirectory
+                                parent = node
                             }
                             node.children.add(lockedNode)
                             if (file.isDirectory) childDirectories.add(lockedNode)
@@ -466,6 +539,7 @@ class ProjectTreeView(
                             ).apply {
                                 this.state = state
                                 this.expanded = expandedPaths.contains(relativePath)
+                                parent = node
                             }
                             node.children.add(child)
                             childDirectories.add(child)
@@ -480,6 +554,7 @@ class ProjectTreeView(
                                 file, false, node.depth + 1, relativePath, file.name
                             ).apply {
                                 this.state = state
+                                parent = node
                             }
                             node.children.add(child)
 
@@ -594,13 +669,6 @@ class ProjectTreeView(
             root.children.forEach { child -> renderNode(child, rowsContainer) }
         }
 
-        // An empty pendingPulsePath targets the sticky root row, which has
-        // just been rebuilt above.
-        if (pendingPulsePath == "") {
-            pendingPulsePath = null
-            pulseRow(rootRow)
-        }
-
         if (fireStats) onStatsChanged(computeStatsFromTree(root))
     }
 
@@ -634,11 +702,6 @@ class ProjectTreeView(
         }
         node.wrapper = wrapper
         parent.addView(wrapper)
-
-        if (pendingPulsePath == node.relativePath) {
-            pendingPulsePath = null
-            pulseRow(row)
-        }
     }
 
     /**
@@ -655,6 +718,25 @@ class ProjectTreeView(
      * The sub-scan reuses [scanToken] for cancellation: collapsing the
      * node before the sub-scan finishes increments the token implicitly
      * via [cancelScan], and the sub-scan worker silently drops its result.
+     *
+     * ### Forced-state inheritance
+     *
+     * When the sub-scan completes, the node's current `state` (which may
+     * have been forced by a folder-level click on an ancestor) is applied
+     * to the newly scanned children, unless the node's state is EXCLUDE.
+     * Without this inheritance, expanding a folder that was just forced to
+     * INCLUDE would revert the new children to their filter-derived
+     * (mostly EXCLUDE) states, breaking the "folder click changes
+     * everything inside" contract.
+     *
+     * ### Upward propagation
+     *
+     * After the sub-scan populates the children, the node's own `state`
+     * may change (e.g. it was EXCLUDE and the new children are all
+     * INCLUDE). [propagateToAncestors] is called so every ancestor's
+     * `state` is updated to reflect the change. Without this, expanding
+     * a previously-empty folder would update the folder's own row but
+     * leave the parent and grandparents stuck on their old display state.
      *
      * ### Idempotency
      *
@@ -688,8 +770,26 @@ class ProjectTreeView(
                             node.lazyDirectory = false
                             node.children.clear()
                             node.children.addAll(subChildren)
+                            // Re-establish the parent link: the children
+                            // were created on the worker thread without
+                            // a parent reference, and the tree's upward
+                            // propagation depends on it.
+                            subChildren.forEach { it.parent = node }
+
+                            // Inherit the folder's forced state, if any.
+                            // EXCLUDE is the default and needs no
+                            // propagation — the filter already produced
+                            // EXCLUDE children for an excluded folder.
+                            if (node.state != NodeState.EXCLUDE) {
+                                node.children.forEach { applyRecursiveForced(it, node.state) }
+                            }
+
                             node.children.forEach { renderNode(it, cw) }
                             node.state = computeAggregateState(node.children)
+                            // The folder's own state may have moved to
+                            // INCLUDE/STUB now that its children exist;
+                            // propagate so ancestors reflect it.
+                            propagateToAncestors(node)
                             refreshNodeRow(node)
                         }
                     }
@@ -713,6 +813,23 @@ class ProjectTreeView(
      * the same per-entry rules as [scanAsync] (hard-excluded directories
      * and binary files become LOCKED, overrides apply), so the tree looks
      * consistent whether a folder was scanned eagerly or lazily.
+     *
+     * ### showLocked is respected
+     *
+     * If "Show locked" is currently ON, hard-excluded sub-folders and
+     * binary files are created as **unlocked** EXCLUDE nodes instead of
+     * LOCKED ones. This is what makes the toggle consistent below the
+     * first level: without this, expanding a just-unlocked folder would
+     * recreate LOCKED children for the same hard-excluded names, and the
+     * user would see locked nodes appearing inside a folder they had
+     * explicitly unlocked.
+     *
+     * ### Every directory child is lazy
+     *
+     * Sub-directories created here are marked `lazyDirectory = true`,
+     * even when they are not hard-excluded. The sub-scan only reads one
+     * level, so a sub-directory's children are not known yet; marking it
+     * lazy is what makes the next expand trigger its own sub-scan.
      */
     private fun scanSubtree(
         node: TreeNode,
@@ -723,6 +840,7 @@ class ProjectTreeView(
         val files = node.file.listFiles()?.sortedWith(
             compareBy<File> { !it.isDirectory }
                 .thenBy { it.name.lowercase() }
+                .thenBy { it.name }
         ) ?: return out
 
         for (file in files) {
@@ -737,7 +855,12 @@ class ProjectTreeView(
             if (isHardExcluded || isBinaryFile) {
                 out.add(
                     TreeNode(file, file.isDirectory, node.depth + 1, relativePath, file.name).apply {
-                        locked = true
+                        // If show-locked is currently ON, create the node
+                        // as already unlocked. The show-locked toggle has
+                        // already run for the rest of the tree, so
+                        // creating a LOCKED child here would produce an
+                        // inconsistently locked sub-tree.
+                        locked = !showLocked
                         wasLockedOriginally = true
                         state = NodeState.EXCLUDE
                         lazyDirectory = file.isDirectory
@@ -769,6 +892,9 @@ class ProjectTreeView(
             out.add(
                 TreeNode(file, file.isDirectory, node.depth + 1, relativePath, file.name).apply {
                     this.state = state
+                    // Sub-scan only reads one level, so any directory child
+                    // needs another sub-scan when the user expands it.
+                    this.lazyDirectory = file.isDirectory
                 }
             )
         }
@@ -830,10 +956,13 @@ class ProjectTreeView(
      *
      * ### Redundant-setter guard
      *
-     * The state icon assignment is guarded on the currently-set drawable so
-     * a row whose state has not changed is not touched. The tint and
-     * text-color assignments are left unguarded because they are cheap and
-     * idempotent.
+     * The state icon assignment is guarded on the currently-set **resource
+     * ID**, not on the Drawable instance. `UiFactory.loadPluginDrawable`
+     * returns a fresh Drawable per call (the ConstantState is shared, the
+     * instance is not), so an identity check on the Drawable would always
+     * be true and the guard would never fire. Storing the resource ID lets
+     * the guard actually short-circuit `setImageDrawable` when the state
+     * has not changed.
      *
      * ### LOCKED rows
      *
@@ -850,12 +979,11 @@ class ProjectTreeView(
      */
     private fun refreshNodeRow(node: TreeNode) {
         if (node.locked) {
-            val drawable = UiFactory.run { activity.loadPluginDrawable(R.drawable.ic_state_locked) }
-            node.stateIcon?.let { icon ->
-                if (node.stateIconDrawable !== drawable) {
-                    icon.setImageDrawable(drawable)
-                    node.stateIconDrawable = drawable
-                }
+            val resId = R.drawable.ic_state_locked
+            if (node.stateIconResId != resId) {
+                val drawable = UiFactory.run { activity.loadPluginDrawable(resId) }
+                node.stateIcon?.setImageDrawable(drawable)
+                node.stateIconResId = resId
             }
             node.iconView?.setColorFilter(CodeAssistTheme.TEXT_MUTED)
             node.nameView?.setTextColor(CodeAssistTheme.TEXT_MUTED)
@@ -866,20 +994,15 @@ class ProjectTreeView(
         // their own state.
         val displayState = if (node.isDirectory) computeAggregateState(node.children) else node.state
 
-        val drawable = UiFactory.run {
-            activity.loadPluginDrawable(
-                when (displayState) {
-                    NodeState.INCLUDE -> R.drawable.ic_state_include
-                    NodeState.STUB -> R.drawable.ic_state_stub
-                    NodeState.EXCLUDE, NodeState.LOCKED -> R.drawable.ic_state_exclude
-                }
-            )
+        val resId = when (displayState) {
+            NodeState.INCLUDE -> R.drawable.ic_state_include
+            NodeState.STUB -> R.drawable.ic_state_stub
+            NodeState.EXCLUDE, NodeState.LOCKED -> R.drawable.ic_state_exclude
         }
-        node.stateIcon?.let { icon ->
-            if (node.stateIconDrawable !== drawable) {
-                icon.setImageDrawable(drawable)
-                node.stateIconDrawable = drawable
-            }
+        if (node.stateIconResId != resId) {
+            val drawable = UiFactory.run { activity.loadPluginDrawable(resId) }
+            node.stateIcon?.setImageDrawable(drawable)
+            node.stateIconResId = resId
         }
         val tinted = displayState == NodeState.EXCLUDE
         node.iconView?.setColorFilter(
@@ -1040,8 +1163,11 @@ class ProjectTreeView(
     // ------------------------------------------------------------------
 
     /**
-     * Advances [node]'s state through the cycle INCLUDE -> STUB -> EXCLUDE
-     * -> INCLUDE and refreshes the visible rows.
+     * Advances [node]'s state and refreshes the visible rows.
+     *
+     * - For a leaf, cycles INCLUDE -> STUB -> EXCLUDE -> INCLUDE.
+     * - For a directory, delegates to [onParentClick], which uses the same
+     *   three-step cycle but forces the next state onto every descendant.
      *
      * ### Lazy directories
      *
@@ -1056,12 +1182,24 @@ class ProjectTreeView(
      * This is the only place where "clicking a directory" is treated as
      * "expand the directory": everywhere else the click applies the state
      * cycle to the loaded children.
+     *
+     * ### Upward propagation
+     *
+     * After a leaf's state changes, [propagateToAncestors] walks up the
+     * parent chain and updates each ancestor's `state` to its new
+     * aggregate. Without this, the leaf would update visually, its
+     * immediate parent would update visually (because [refreshNodeRow]
+     * recomputes the display state from the aggregate), but the
+     * grandparent and higher ancestors would stay stuck on their old
+     * display state — their `state` fields would still hold the pre-change
+     * value, and their aggregates are computed by reading `child.state`,
+     * not by recursively recomputing the child's aggregate.
      */
     private fun cycleState(node: TreeNode) {
         if (node.locked) return
         if (node.isDirectory) {
-            if (node.lazyDirectory && !node.expanded) {
-                toggleExpanded(node)
+            if (node.lazyDirectory && node.children.isEmpty()) {
+                if (!node.expanded) toggleExpanded(node)
                 return
             }
             onParentClick(node)
@@ -1072,50 +1210,72 @@ class ProjectTreeView(
             NodeState.STUB -> NodeState.EXCLUDE
             NodeState.EXCLUDE, NodeState.LOCKED -> NodeState.INCLUDE
         }
+        // Update ancestors' state fields before refreshing the rows, so
+        // the grandparent-and-up rows read the correct child.state when
+        // their aggregate is recomputed.
+        propagateToAncestors(node)
         refreshVisibleRows(fireStats = true)
         node.rowView?.let { pulseRow(it) }
+        // propagateStateChange already calls onStatesChanged(currentStates());
+        // a duplicate explicit call here would walk the entire tree a
+        // second time on every click.
         propagateStateChange()
-        onStatesChanged(currentStates())
     }
 
     /**
-     * Applies the "advance one step" rule to [node] and its whole
-     * non-locked subtree.
+     * Applies the folder-cycle rule to [node] and its entire non-locked
+     * subtree.
      *
-     * ### The rule
+     * ### Three-step cycle
      *
-     * The aggregate of [node]'s children is computed first. The click then
-     * advances **only the descendants whose current state matches that
-     * aggregate**. Descendants that already have a different state (a
-     * manual override, for example) are left untouched. This is what
-     * preserves a user's manual exclusions when they toggle a mixed
-     * folder.
+     * The aggregate of the folder determines the next state, using the
+     * same INCLUDE -> STUB -> EXCLUDE -> INCLUDE cycle as a leaf. The
+     * next state is applied **uniformly** to every non-locked descendant
+     * (folders and files), so after the click the folder and its entire
+     * subtree share the same state. This is what makes the folder-level
+     * tri-state indicator trustworthy: it never disagrees with its
+     * children.
      *
-     * ### Recursion into descendants
+     * ### All descendants are forced
      *
-     * Directories do not carry their own state — it is derived from their
-     * children. So writing to a directory's `state` directly has no
-     * visible effect: [refreshNodeRow] immediately overwrites it with the
-     * aggregate. The only way to "advance" a directory is to advance its
-     * descendants, which is exactly what [applyRecursive] does.
-     *
-     * Without this recursion a folder could be marked INCLUDE while its
-     * children stayed EXCLUDE — a state that is impossible to reach by
-     * clicking on the folder's own indicator, but that the user *can*
-     * reach by clicking a leaf first and then the folder. Recursing into
-     * the whole subtree makes the visible result match what the user
-     * expected: clicking the folder affects every file inside it.
+     * Unlike a "only matching children" propagation, this method forces
+     * every descendant to the target state. That means a user who had
+     * manually excluded a child inside an otherwise-included folder will
+     * see that child become INCLUDE when the folder is cycled to INCLUDE.
+     * This is a deliberate trade-off in favour of uniformity: the folder
+     * click is a bulk operation, and the user expects bulk results.
+     * Individual overrides are still reachable by clicking the child
+     * directly after the folder click.
      *
      * ### LOCKED descendants
      *
      * Ignored entirely: a manual "keep locked" gesture must never be
      * undone by an ancestor click.
+     *
+     * ### All-children-locked guard
+     *
+     * If the folder has no non-locked children (e.g. every child is
+     * LOCKED), the click is a no-op. Forcing a state on a folder whose
+     * every entry is locked would set `node.state` to a value the
+     * aggregate would immediately overwrite to EXCLUDE, and the user
+     * would see the row's indicator flip silently back to EXCLUDE with
+     * no children changing. Ignoring the click is more honest.
+     *
+     * ### Upward propagation
+     *
+     * After the folder's state is forced, [propagateToAncestors] walks
+     * up the parent chain and updates each ancestor's `state` to its new
+     * aggregate. This is what makes a deep folder click visible all the
+     * way up to the root.
      */
     private fun onParentClick(node: TreeNode) {
         if (node.locked) return
+        if (node.lazyDirectory && node.children.isEmpty()) return
 
-        val children = node.children.filter { !it.locked }
-        val aggregate = computeAggregateState(children)
+        val nonLockedChildren = node.children.filter { !it.locked }
+        if (nonLockedChildren.isEmpty()) return
+
+        val aggregate = computeAggregateState(nonLockedChildren)
         val toState: NodeState = when (aggregate) {
             NodeState.INCLUDE -> NodeState.STUB
             NodeState.STUB -> NodeState.EXCLUDE
@@ -1123,33 +1283,103 @@ class ProjectTreeView(
             NodeState.LOCKED -> NodeState.EXCLUDE // unreachable
         }
 
-        children.forEach { child ->
-            val childAggregate = if (child.isDirectory) computeAggregateState(child.children) else child.state
-            if (childAggregate == aggregate) {
-                applyRecursive(child, toState)
-            }
-        }
+        // Force every non-locked descendant to the target state, at every
+        // depth. Folders are included in the force so their `state` field
+        // stays in sync with the aggregate their children will produce.
+        nonLockedChildren.forEach { applyRecursiveForced(it, toState) }
+        node.state = toState
+
+        // Update ancestors before refreshing the rows, so the ancestors'
+        // displays reflect the new aggregate of this folder.
+        propagateToAncestors(node)
 
         refreshVisibleRows(fireStats = true)
         node.rowView?.let { pulseRow(it) }
+        // See cycleState: propagateStateChange already fires the state
+        // callback; the duplicate call was removed.
         propagateStateChange()
-        onStatesChanged(currentStates())
     }
 
     /**
-     * Applies [toState] to [node] and every non-locked descendant.
+     * Applies [toState] to [node] and every non-locked descendant,
+     * including directories.
      *
-     * Used by [onParentClick] so that toggling a folder advances its whole
-     * subtree, not just its direct children. LOCKED descendants are
-     * skipped: a manual "keep locked" gesture must never be undone by an
-     * ancestor click.
+     * Unlike the previous `applyRecursive`, this method sets the folder's
+     * own `state` too, so the folder's displayed tri-state (which is
+     * derived from its children's aggregate) matches the value that the
+     * user's click produced. Without setting the folder state explicitly,
+     * a folder whose children are all forced to STUB would display as
+     * STUB anyway (because the aggregate is STUB), but its own `state`
+     * field would remain stale — and any code that reads the folder's
+     * state directly (e.g. a future feature, or a persisted config map
+     * that ever includes folders) would see an inconsistent value.
+     *
+     * LOCKED descendants are skipped: a manual "keep locked" gesture
+     * must never be undone by an ancestor click.
      */
-    private fun applyRecursive(node: TreeNode, toState: NodeState) {
+    private fun applyRecursiveForced(node: TreeNode, toState: NodeState) {
         if (node.locked) return
-        if (!node.isDirectory) {
-            node.state = toState
-        } else {
-            node.children.forEach { applyRecursive(it, toState) }
+        node.state = toState
+        if (node.isDirectory) {
+            node.children.forEach { applyRecursiveForced(it, toState) }
+        }
+    }
+
+    /**
+     * Walks up the parent chain of [node] and updates each ancestor's
+     * `state` field to the aggregate of its children.
+     *
+     * ### Why this is necessary
+     *
+     * When a node's state changes, only its own `state` field is updated
+     * by [cycleState] / [onParentClick]. The node's parent (and grandparent,
+     * etc.) has its own `state` field that can become stale: for example,
+     * if the parent had every child at EXCLUDE, its `state` was EXCLUDE;
+     * if one of those children now becomes INCLUDE, the parent's new
+     * aggregate is INCLUDE, but its `state` field is still EXCLUDE.
+     *
+     * That stale `state` is invisible in the parent's row, because
+     * [refreshNodeRow] recomputes the display state from the aggregate
+     * every time. But it **does** affect the ancestor's aggregation of its
+     * own children: [computeAggregateState] reads `child.state` directly,
+     * not the recursively-recomputed display state. Without this
+     * propagation, marking a deep file INCLUDE would update that file's
+     * row and its immediate parent's row, but leave the grandparent, great-
+     * grandparent, and root rows stuck on their old display state.
+     *
+     * ### Propagation rule
+     *
+     * The method walks up the parent chain. For each ancestor it
+     * recomputes the aggregate of its children. If the aggregate matches
+     * the ancestor's current `state`, the walk **stops**: the higher
+     * ancestors read this `state`, which did not change, so they cannot
+     * change either. If the aggregate does not match, the ancestor's
+     * `state` is updated and the walk continues.
+     *
+     * ### What it does NOT do
+     *
+     * It never touches the ancestor's other children. This is the
+     * contract the user asked for: "sin forzar cambiar otro tipo, solo
+     * los que están desmarcados". The ancestor's `state` moves from
+     * EXCLUDE to INCLUDE/STUB (or vice versa) as needed, but no sibling
+     * is forced to change. If another sibling already keeps the
+     * aggregate at INCLUDE, the ancestor does not even need to be
+     * updated and the walk stops at that point.
+     */
+    private fun propagateToAncestors(node: TreeNode) {
+        var current = node.parent
+        while (current != null) {
+            val newAggregate = computeAggregateState(current.children)
+            if (current.state == newAggregate) {
+                // The ancestor's state did not change; its own ancestors
+                // read this state and therefore cannot change either.
+                // Stopping here keeps the propagation O(depth) even on
+                // trees where most of the ancestor chain is already in
+                // the correct state.
+                return
+            }
+            current.state = newAggregate
+            current = current.parent
         }
     }
 
@@ -1239,37 +1469,46 @@ class ProjectTreeView(
     /**
      * Unlocks or re-locks every originally-locked node in the tree.
      *
-     * ### On unlock (show = true)
+     * ### On unlock (`show = true`)
      *
-     * Every node marked [TreeNode.wasLockedOriginally] becomes
-     * interactive: `locked` flips to false and its state is reset to
-     * EXCLUDE. Its descendants are **not** touched — they were never
-     * loaded (the node was `lazyDirectory`), so the first expand will
-     * scan them fresh, and the user has to set them explicitly. This is
-     * the safety rule: unlocking node_modules must not silently include
-     * or exclude any file inside it.
+     * Every node marked [TreeNode.wasLockedOriginally] becomes interactive:
+     * `locked` flips to false and its state is reset to EXCLUDE. Its
+     * descendants are **not** touched — they were never loaded (the node
+     * was `lazyDirectory`), so the first expand will scan them fresh, and
+     * the user has to set them explicitly. Unlocking node_modules must not
+     * silently include or exclude any file inside it.
      *
-     * ### On re-lock (show = false)
+     * ### On re-lock (`show = false`)
      *
-     * Every originally-locked node goes back to its initial blocked
-     * state: `locked` flips to true, `lazyDirectory` flips to true again,
-     * any children that were loaded while it was unlocked are discarded,
-     * and the node is collapsed. This ensures the next time the user
-     * re-unlocks it, the subtree is rebuilt from scratch and no stale
-     * per-file state survives from the previous unlocked session.
+     * Every originally-locked node goes back to its initial blocked state:
+     * `state` resets to EXCLUDE, `locked` flips to true, `lazyDirectory`
+     * flips to true again, any children that were loaded while it was
+     * unlocked are discarded, and the node is collapsed. This is the
+     * "deselects everything" contract: the locked node and everything
+     * below it return to EXCLUDE and will not appear in the export.
      *
-     * ### Clickability
+     * ### Bottom-up aggregate recomputation
      *
-     * Because row clickability is checked at click time rather than
-     * construction time (see the class-level "Clickability is dynamic"
-     * note), flipping `locked` here takes effect immediately on every
-     * already-rendered row. No tree rebuild is needed for the toggle to
-     * work in both directions.
+     * After the re-lock, every node's `state` may have changed. The
+     * aggregates of the ancestors of the affected nodes are recomputed
+     * bottom-up via [recomputeAllAggregates]. Without this, a parent that
+     * had a locked child now unlocked and included would still think it
+     * was EXCLUDE, and its own row would not update.
+     *
+     * ### Cache invalidation
+     *
+     * `onStatesChanged` is fired at the end so the dialog's cached export
+     * map matches the new tree. Without this, toggling "Show locked" OFF
+     * after having previously included one of its descendants would leave
+     * a stale INCLUDE entry in the cache, and Generate would export a
+     * file the user can no longer see in the tree.
      */
     fun toggleShowLocked(show: Boolean) {
         if (showLocked == show) return
         showLocked = show
         val root = rootNode ?: return
+
+        // Phase 1: unlock / re-lock, in pre-order.
         val stack = ArrayDeque<TreeNode>()
         stack.addLast(root)
         while (stack.isNotEmpty()) {
@@ -1304,7 +1543,54 @@ class ProjectTreeView(
             // cases the traversal stays correct.
             node.children.forEach { stack.addLast(it) }
         }
+
+        // Phase 2: recompute every directory's aggregate bottom-up. Some
+        // ancestors may now have a different aggregate because a locked
+        // child was re-locked (state flipped to EXCLUDE) or unlocked
+        // (state flipped to EXCLUDE too, but `locked` flipped to false
+        // so it now counts towards the aggregate — which can move a
+        // previously "all children locked" parent from EXCLUDE to a
+        // different aggregate).
+        recomputeAllAggregates()
+
         refreshVisibleRows(fireStats = true)
+        // Fire the state-changed callback so the dialog's cached export
+        // map is invalidated when previously-exported descendants of a
+        // locked folder become locked again. Without this, the cache
+        // keeps the stale INCLUDE/STUB entries and Generate would export
+        // entries the tree no longer shows.
+        propagateStateChange()
+    }
+
+    /**
+     * Recomputes every non-locked directory's `state` from its children,
+     * bottom-up.
+     *
+     * Implemented as a post-order iterative traversal (push a marker on
+     * the way down, recompute on the way back up) because a recursive
+     * implementation would risk a StackOverflowError on pathologically
+     * deep trees, and a naive top-down traversal would recompute a
+     * parent's aggregate before its children had been updated.
+     *
+     * Only non-locked directories are recomputed. Locked nodes keep
+     * EXCLUDE as their `state`, and leaves keep whatever state the user
+     * (or the filter) gave them — this method must not touch either.
+     */
+    private fun recomputeAllAggregates() {
+        val root = rootNode ?: return
+        val stack = ArrayDeque<Pair<TreeNode, Boolean>>()
+        stack.addLast(root to false)
+        while (stack.isNotEmpty()) {
+            val (node, processed) = stack.removeLast()
+            if (processed) {
+                if (node.isDirectory && !node.locked) {
+                    node.state = computeAggregateState(node.children)
+                }
+            } else {
+                stack.addLast(node to true)
+                node.children.forEach { stack.addLast(it to false) }
+            }
+        }
     }
 
     /**
@@ -1332,7 +1618,8 @@ class ProjectTreeView(
      *
      * This is the single rule used by the sticky header's aggregate
      * indicator, every directory's aggregate indicator, the parent-click
-     * propagation, and the scanner's post-processing of directory nodes.
+     * propagation, the scanner's post-processing of directory nodes, and
+     * the upward propagation in [propagateToAncestors].
      */
     private fun computeAggregateState(children: List<TreeNode>): NodeState {
         var anyInclude = false
@@ -1425,49 +1712,86 @@ class ProjectTreeView(
     // ------------------------------------------------------------------
 
     /**
-     * Expands every non-locked directory and rebuilds the tree.
+     * Expands every non-locked directory, in place.
      *
-     * Uses a full rebuild because the visibility of every row changes at
-     * once. LOCKED directories are not expanded, because doing so would
-     * require a sub-scan per directory and defeat the purpose of the
-     * "Show locked" toggle (which is explicitly lazy).
+     * Used to call [renderInternal], which destroyed and recreated every
+     * row on the UI thread. That produced a visible flicker and a
+     * 200-500ms main-thread block on large projects. The current
+     * implementation walks the existing wrappers and only flips their
+     * visibility, which is O(visible) and produces no flicker.
+     *
+     * Lazy directories with no loaded children stay collapsed: expanding
+     * them would require a per-folder sub-scan, which is a user-initiated
+     * action triggered by a direct click, not by a bulk operation.
      */
     fun expandAll() {
         val root = rootNode ?: return
-        markAllExpanded(root, true)
         expandedPaths.clear()
         collectExpandable(root).forEach { expandedPaths.add(it) }
-        renderInternal(fireStats = false)
+        root.children.forEach { toggleAllWrappers(it, expand = true) }
     }
 
     /**
-     * Collapses every directory and rebuilds the tree.
+     * Collapses every directory, in place. Same rationale as [expandAll].
      */
     fun collapseAll() {
         val root = rootNode ?: return
-        markAllExpanded(root, false)
         expandedPaths.clear()
-        renderInternal(fireStats = false)
+        root.children.forEach { toggleAllWrappers(it, expand = false) }
     }
 
     /**
-     * Sets [expanded] on [node] and every non-locked descendant using an
-     * explicit [ArrayDeque] stack instead of recursion.
+     * Toggles the visibility of [node]'s children wrapper in place.
+     *
+     * Only existing wrappers are touched: a directory whose subtree was
+     * never materialized (because it was collapsed when the tree was
+     * first rendered) has no wrapper, so it is left as-is. This matches
+     * the previous full-rebuild behavior, which also only rendered rows
+     * for nodes that had been expanded at render time.
+     *
+     * The chevron of each toggled directory is updated to the target
+     * state **without animation**. Bulk expand/collapse should be
+     * instantaneous; animating every chevron in the tree would produce a
+     * cascade of rotations that is strictly worse than an instant update.
+     *
+     * `node.expanded` is kept in sync with the wrapper's visibility, so a
+     * subsequent direct click on a chevron behaves correctly: it will
+     * collapse an expanded wrapper, or expand a collapsed one, without
+     * needing a double click.
      */
-    private fun markAllExpanded(node: TreeNode, expanded: Boolean) {
-        val stack = ArrayDeque<TreeNode>()
-        stack.addLast(node)
-        while (stack.isNotEmpty()) {
-            val current = stack.removeLast()
-            if (current.locked) continue
-            current.expanded = expanded
-            current.children.forEach { stack.addLast(it) }
+    private fun toggleAllWrappers(node: TreeNode, expand: Boolean) {
+        if (node.locked) return
+        if (!node.isDirectory) return
+
+        val cw = node.childrenWrapper
+        if (cw != null) {
+            if (expand && node.children.isNotEmpty()) {
+                populateChildren(node)
+                cw.visibility = View.VISIBLE
+                node.expanded = true
+            } else {
+                cw.visibility = View.GONE
+                node.expanded = false
+            }
+
+            node.arrow?.let { arrow ->
+                val res = if (node.expanded) R.drawable.ic_tech_chevron_down
+                          else R.drawable.ic_tech_chevron_right
+                val drawable = UiFactory.run { activity.loadPluginDrawable(res) }
+                if (drawable != null) arrow.setImageDrawable(drawable)
+                else runCatching { arrow.setImageResource(res) }
+                arrow.rotation = 0f
+            }
         }
+
+        node.children.forEach { toggleAllWrappers(it, expand) }
     }
 
     /**
      * Returns the relative paths of every non-locked directory that can be
-     * expanded (i.e. every directory with at least one child).
+     * expanded (i.e. every directory with at least one child). Excludes
+     * lazy-empty directories, matching [expandAll]'s policy of not
+     * triggering per-folder sub-scans from a bulk operation.
      */
     private fun collectExpandable(root: TreeNode): List<String> {
         val out = mutableListOf<String>()
@@ -1610,7 +1934,9 @@ class ProjectTreeView(
      *    aggregate the scanner computed, or the state a click would
      *    advance the matching children to — [refreshNodeRow] re-derives it
      *    from the children on every refresh so the displayed state always
-     *    matches what the next click will produce.
+     *    matches what the next click will produce. The field is also
+     *    kept up to date by [propagateToAncestors], so an ancestor's
+     *    aggregation of its children sees the correct value.
      *  - `locked` marks the node as non-interactive (hard-excluded
      *    directory or binary file that has not been unlocked).
      *  - `wasLockedOriginally` is set once by the scanner and never
@@ -1622,6 +1948,15 @@ class ProjectTreeView(
      *    have never been scanned. Expanding such a directory after
      *    unlocking it triggers a sub-scan through [populateChildren].
      *  - `expanded` tracks whether the children wrapper is visible.
+     *  - `parent` is the enclosing [TreeNode], set when the node is added
+     *    to its parent's children list. Used by [propagateToAncestors] to
+     *    walk up the parent chain on a state change without having to
+     *    find the path from the root first. Null for the root node.
+     *  - `stateIconResId` is the resource ID of the drawable currently
+     *    assigned to `stateIcon`. Used by [refreshNodeRow] as a fast
+     *    redundant-setter guard: `UiFactory.loadPluginDrawable` returns a
+     *    fresh Drawable instance on every call, so an identity check on
+     *    the Drawable would always be true and the guard would never fire.
      *
      * Instances are created on the worker thread during [scanAsync] and
      * then mutated on the UI thread during rendering. The two phases do
@@ -1640,12 +1975,13 @@ class ProjectTreeView(
         var wasLockedOriginally: Boolean = false
         var lazyDirectory: Boolean = false
         var expanded = false
+        var parent: TreeNode? = null
         var wrapper: View? = null
         var rowView: View? = null
         var childrenWrapper: LinearLayout? = null
         var arrow: ImageView? = null
         var stateIcon: ImageView? = null
-        var stateIconDrawable: android.graphics.drawable.Drawable? = null
+        var stateIconResId: Int? = null
         var iconView: ImageView? = null
         var nameView: TextView? = null
     }

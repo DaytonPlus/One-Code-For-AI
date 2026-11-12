@@ -75,16 +75,72 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  * instantly even on devices where JGit class-loading, .gitignore parsing,
  * or the project's config.json read take a few hundred milliseconds:
  *
- *  1. show displays the skeleton screen and requests the legacy storage
- *     permission (API 26-28 only) so the system prompt has time to appear
- *     while the UI is still loading.
- *  2. .gitignore rules and the project's TreeConfigStore config are read
- *     on a background thread.
- *  3. buildFullUI is invoked on the main thread once that data is
+ *  1. [show] displays the skeleton screen and requests the legacy
+ *     storage permission (API 26-28 only) so the system prompt has time
+ *     to appear while the UI is still loading.
+ *  2. `.gitignore` rules and the project's [TreeConfigStore] config are
+ *     read on a background thread.
+ *  3. [buildFullUI] is invoked on the main thread once that data is
  *     available.
  *  4. The Git section (JGit access) is rendered with its own loading
  *     placeholder and resolved asynchronously, so the dialog is never
  *     blocked by repository I/O.
+ *
+ * ### Section-toggle layout (v2)
+ *
+ * The dialog uses a single, consistent pattern for every option that
+ * controls "is this rule list / feature active?": a checkbox row
+ * labeled with the section name in uppercase (matching the visual
+ * language of [sectionTitleWithHelp] and of the info screen's
+ * `// NN TITLE` headers), with the optional Add button and the help
+ * icon on its right, followed by a body that is shown only when the
+ * checkbox is checked. The body is a plain flow container with no
+ * surrounding card — the checkbox is what makes it a section, not a
+ * decorated panel. This is deliberately closer to a settings list than
+ * to a card-based dialog, and it is what the user sees for:
+ *
+ *  - **Inclusions**, **Exclusions**, **Reference only** — checkbox
+ *    plus Add button plus a chip flow. When the checkbox is off, the
+ *    flow is hidden and the Add button is hidden with it. The rules
+ *    themselves are preserved in the config (via
+ *    `FilterConfig.enableInclusions` / `enableExclusions` /
+ *    `enableStubPatterns`), so toggling back on restores the exact same
+ *    state.
+ *  - **Gitignore** — checkbox plus a chip flow populated from the root
+ *    `.gitignore` file. No Add button (the rules come from the file,
+ *    not from the UI) and no empty-state text (an empty flow is a valid
+ *    state that simply means "the file has no rules").
+ *  - **Version control** — checkbox plus a content container that
+ *    hosts the branch info, the ref input with its search button, the
+ *    resolved-ref label and the diff preview button.
+ *  - **File tree** — checkbox plus the show-locked row, the
+ *    reload/expand/collapse actions and the tree itself.
+ *
+ * Sections are **not** separated by hairline dividers. The uppercase
+ * section title is visually distinct enough to bound each block without
+ * the extra vertical space a divider would add, and keeping the dividers
+ * out is what makes the panel short enough to fit on a phone screen
+ * without scrolling past chrome. Only one separator remains in the whole
+ * form: the one below the preset spinner, which closes the "Export
+ * profile" block and matches the original baseDivider spacing. See
+ * [sectionSeparator] for the full rationale.
+ *
+ * Toggling any section animates the body with a short fade+slide (see
+ * [animateToggle]) so the expand/collapse feels consistent across the
+ * whole dialog. Animations are gated by
+ * `PluginSettings.areAnimationsEnabled`.
+ *
+ * ### General section
+ *
+ * The base flags that are not rule lists ("Exclude binary files" and
+ * "Maximum size" with its KB input) live under a **General** section
+ * header at the top of the form, above the first rule list. Grouping
+ * them here makes the form hierarchy explicit: the General block
+ * contains single-purpose flags whose labels are self-explanatory, and
+ * every block below it is a toggleable section with its own rules.
+ * Their own checkbox labels stay in the default style (13sp, primary
+ * color) because they are flags inside a section, not section headers
+ * themselves.
  *
  * ### Tree v2: the tree is the export source of truth
  *
@@ -104,10 +160,16 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  *    ProjectTreeView.currentStates and forwards it to the
  *    ExportCoordinator.
  *
+ * The section enable flags are part of the FilterConfig that this
+ * dialog builds, so a section toggled off here is also toggled off for
+ * the filter — the tree selector's initial state, the export
+ * coordinator's generator, and the preset round-trip all consult the
+ * same flags.
+ *
  * ### Tree config persistence
  *
  * The project's tree state is stored under
- * .platform/plugins/com.devdayton.onecodeforai/config.json. Only two
+ * `.platform/plugins/com.devdayton.onecodeforai/config.json`. Only two
  * events write it:
  *
  *  - Generate (before the export launches), which saves only the diff
@@ -122,13 +184,11 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  * The tree section has three visual states, managed by [TreeUiState]:
  *
  *  - LOADING: the spinner and the Cancel button are visible, the tree is
- *    hidden. Entered by startTreeScan before the scan is dispatched.
+ *    hidden.
  *  - TREE: the spinner, the cancel button and the error message are
- *    hidden, the tree is visible. Entered by the scan's onComplete and
- *    by collapsing the tree section.
+ *    hidden, the tree is visible.
  *  - ERROR: the spinner and Cancel button are hidden, the message text
- *    is visible, the tree is hidden. Entered by the scan's onError and
- *    by the Cancel button.
+ *    is visible, the tree is hidden.
  *
  * The state machine is the single writer of the loading panel's
  * visibility, so the "Analyzing…" spinner can never end up orphaned when
@@ -136,18 +196,13 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  *
  * ### Gitignore section
  *
- * The "Respect .gitignore rules" checkbox used to live in the base
- * filters panel, separated from the rules it actually controls. It now
- * lives inside the .gitignore section itself, directly under the section
- * title and above the flow of chips, so the causal relationship is
- * obvious to the user.
- *
- * When the checkbox is toggled off, the flow of chips is cleared in
- * place — no dialog reload, no tree re-scan — and the section collapses
- * to just the title and the checkbox. When it is toggled back on, the
- * chips are repopulated from the gitignoreTags cache that was read once
- * when the dialog opened. No additional file I/O is performed because
- * the .gitignore file has not changed.
+ * The "Respect .gitignore rules" checkbox **is** the section header
+ * (`[ ] GITIGNORE  [?]`), the rules are the section body, and there is
+ * no empty-state text. When the checkbox is toggled off, the flow of
+ * chips is cleared in place and the section body is hidden — no dialog
+ * reload, no tree re-scan. When it is toggled back on, the chips are
+ * repopulated from the `gitignoreTags` cache that was read once when
+ * the dialog opened.
  *
  * @param activity          Host activity used to build the dialog.
  * @param projectRoot       Root of the project being exported.
@@ -204,16 +259,24 @@ class ConfigurationDialog(
     private lateinit var presetAdapter: ArrayAdapter<String>
     private lateinit var btnSavePreset: ImageButton
     private lateinit var btnDeletePreset: ImageButton
+
+    // ---- Base flags ----
     private lateinit var cbBinaries: CheckBox
-    private lateinit var cbGitignore: CheckBox
     private lateinit var cbMaxSize: CheckBox
     private lateinit var etMaxSize: EditText
+
+    // ---- Section toggles + flows ----
+    private lateinit var cbInclusions: CheckBox
+    private lateinit var cbExclusions: CheckBox
+    private lateinit var cbStubPatterns: CheckBox
+    private lateinit var cbGitignore: CheckBox
     private lateinit var flowInclusions: FlowLayout
     private lateinit var flowExclusions: FlowLayout
     private lateinit var flowStubPatterns: FlowLayout
     private lateinit var flowGitignore: FlowLayout
-    private lateinit var gitignoreSection: LinearLayout
-    private lateinit var layoutGitBox: LinearLayout
+    private lateinit var btnAddInclusion: TextView
+    private lateinit var btnAddExclusion: TextView
+    private lateinit var btnAddStubPattern: TextView
 
     // ---- Git ----
     private lateinit var cbUseGit: CheckBox
@@ -222,6 +285,7 @@ class ConfigurationDialog(
     private lateinit var tvGitInfo: TextView
     private lateinit var tvGitWarning: TextView
     private lateinit var gitDetailsBox: LinearLayout
+    private lateinit var gitContentContainer: LinearLayout
     private val resolveHandler = Handler(Looper.getMainLooper())
     private var pendingResolve: Runnable? = null
 
@@ -322,8 +386,8 @@ class ConfigurationDialog(
      * initial config and preset. The previous "last state" pair that
      * PresetManager used to persist has been removed in Tree v2: the
      * preset is now stored per project in config.json alongside the tree
-     * overrides, so a fresh install or a project that has never generated
-     * falls back to initialConfig and the "Custom" preset.
+     * overrides, so a fresh install or a project that has never
+     * generated falls back to initialConfig and the "Custom" preset.
      */
     fun show() {
         // Resolve the palette for this dialog's lifetime. Called before
@@ -523,16 +587,32 @@ class ConfigurationDialog(
      * currentOverrides so ProjectTreeView.scanAsync can apply them while
      * scanning.
      *
-     * ### Gitignore section layout
+     * ### Layout
      *
-     * The .gitignore section is laid out as:
+     * The dialog is a single vertical column, with no cards between
+     * sections. The order is:
      *
-     *   [TITLE]  (?)          <- sectionTitleWithHelp
-     *   [ ] Respect .gitignore rules
-     *   [chips flow]           <- populated only when the checkbox is on
+     *  1. Presets (spinner + save/delete) — kept as a title+content
+     *     because it is the one place where a title above the control
+     *     actually clarifies what the control is for.
+     *  2. A single hairline separator, which closes the "Export profile"
+     *     block. See [sectionSeparator] for why no other section has one.
+     *  3. General (Exclude binary files, Maximum size) — flat rows
+     *     grouped under a title, without a surrounding panel.
+     *  4. Inclusions (toggle + Add + help + flow).
+     *  5. Exclusions (same shape).
+     *  6. Reference only (same shape).
+     *  7. Gitignore (toggle + help + flow, no Add, no empty state).
+     *  8. Version control (toggle + help + content), or a static
+     *     "disabled globally" notice when the master switch is off.
+     *  9. File tree (toggle + help + show-locked row + tree).
+     * 10. Generate button + description.
      *
-     * The checkbox controls exactly the flow below it, which is why it
-     * lives here instead of in the base filters panel.
+     * Everything from the section toggles onwards uses [sectionToggleRow]
+     * and [animateToggle] so the expand/collapse behaviour is uniform.
+     * The uppercase section titles are the only block boundaries below
+     * the General section; the form has no dividers between them on
+     * purpose (see [sectionSeparator]).
      */
     private fun buildFullUI(
         dialog: Dialog,
@@ -566,10 +646,7 @@ class ConfigurationDialog(
 
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(
-                CodeAssistTheme.dp(activity, 18), CodeAssistTheme.dp(activity, 16),
-                CodeAssistTheme.dp(activity, 18), CodeAssistTheme.dp(activity, 18)
-            )
+            setPadding(dp(18), dp(16), dp(18), dp(18))
             background = CodeAssistTheme.roundedBg(activity, CodeAssistTheme.BG, 15f, CodeAssistTheme.OUTLINE)
         }
         scroll.addView(root, ViewGroup.LayoutParams(
@@ -591,7 +668,7 @@ class ConfigurationDialog(
         headerText.addView(activity.textView(
             activity.pluginString(R.string.dialog_subtitle, projectRoot.name),
             10f, CodeAssistTheme.TEXT_SECONDARY
-        ).apply { setPadding(0, CodeAssistTheme.dp(activity, 5), 0, 0) })
+        ).apply { setPadding(0, dp(5), 0, 0) })
         header.addView(headerText)
         header.addView(activity.iconButton(
             R.drawable.ic_tech_close, activity.pluginString(R.string.close)
@@ -599,16 +676,13 @@ class ConfigurationDialog(
         root.addView(header)
         root.addView(divider())
 
-        // --- CONFIG CONTAINER ---
-        configContainer = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-        }
+        configContainer = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         root.addView(configContainer)
 
-        // ============ FORM ============
-
-        // Presets section — with its own help icon so the reusable-profile
-        // concept is discoverable without leaving the dialog.
+        // === PRESETS ===
+        // Kept as a title + content pair because the spinner's role
+        // ("pick a starting ruleset") is not obvious from the control
+        // alone, and the save/delete buttons need a label to make sense.
         configContainer.addView(sectionTitleWithHelp(
             R.string.section_presets,
             R.string.help_presets_title,
@@ -623,50 +697,51 @@ class ConfigurationDialog(
             background = CodeAssistTheme.roundedBg(
                 activity, CodeAssistTheme.SURFACE_RAISED, 8f, CodeAssistTheme.OUTLINE
             )
-            dropDownVerticalOffset = CodeAssistTheme.dp(activity, 4)
+            dropDownVerticalOffset = dp(4)
             setPopupBackgroundDrawable(ColorDrawable(CodeAssistTheme.SURFACE_RAISED))
-            layoutParams = LinearLayout.LayoutParams(0, CodeAssistTheme.dp(activity, 42), 1f)
+            layoutParams = LinearLayout.LayoutParams(0, dp(42), 1f)
         }
         btnSavePreset = activity.iconButton(
             R.drawable.ic_tech_save, activity.pluginString(R.string.save_preset)
         ) { showSavePresetDialog() }.apply {
             visibility = if (isCustomMode) View.VISIBLE else View.GONE
-            layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
-                marginStart = CodeAssistTheme.dp(activity, 8)
-            }
+            layoutParams = (layoutParams as LinearLayout.LayoutParams).apply { marginStart = dp(8) }
         }
         btnDeletePreset = activity.iconButton(
             R.drawable.ic_tech_trash, activity.pluginString(R.string.delete_preset)
         ) { confirmDeletePreset() }.apply {
             visibility = View.GONE
-            layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
-                marginStart = CodeAssistTheme.dp(activity, 8)
-            }
+            layoutParams = (layoutParams as LinearLayout.LayoutParams).apply { marginStart = dp(8) }
         }
         presetRow.addView(spinnerPresets)
         presetRow.addView(btnSavePreset)
         presetRow.addView(btnDeletePreset)
         configContainer.addView(presetRow)
 
-        // Base filters section. The "Respect .gitignore rules" checkbox
-        // no longer lives here: it was moved inside the .gitignore section
-        // below, where it can visually control the flow it governs.
-        configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_base_filters)))
-        val basePanel = panel()
+        // === GENERAL ===
+        // A single hairline closes the Export profile block. It is the
+        // only separator in the whole form: from here down, the
+        // uppercase section titles alone bound each block, which keeps
+        // the panel short and minimalist (see the class-level "Section
+        // toggle layout" note and [sectionSeparator]'s KDoc for the
+        // rationale).
+        configContainer.addView(sectionSeparator(topDp = 12, bottomDp = 4))
+        configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_general)))
+
         cbBinaries = activity.checkBox(activity.pluginString(R.string.exclude_binaries)).apply {
             isChecked = currentConfig.excludeBinaries
             setOnCheckedChangeListener { _, _ -> if (!isUpdatingUI) markAsCustom() }
         }
-        basePanel.addView(rowWithHelp(cbBinaries, R.string.help_binaries_title, R.string.help_binaries_body))
+        configContainer.addView(rowWithHelp(cbBinaries, R.string.help_binaries_title, R.string.help_binaries_body))
 
         val sizeRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, 0)
+            setPadding(0, dp(4), 0, 0)
         }
         cbMaxSize = activity.checkBox(activity.pluginString(R.string.max_size)).apply {
             isChecked = currentConfig.useMaxSize
-            minHeight = CodeAssistTheme.dp(activity, 40)
+            minHeight = dp(40)
             setPadding(0, 0, 0, 0)
             setOnCheckedChangeListener { _, checked ->
                 etMaxSize.isEnabled = checked
@@ -676,7 +751,6 @@ class ConfigurationDialog(
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
         sizeRow.addView(cbMaxSize)
-
         etMaxSize = activity.editText(
             currentConfig.maxSizeKb.toString(),
             InputType.TYPE_CLASS_NUMBER
@@ -687,129 +761,223 @@ class ConfigurationDialog(
             setOnFocusChangeListener { _, hasFocus ->
                 if (!hasFocus && !isUpdatingUI) markAsCustom()
             }
-            layoutParams = LinearLayout.LayoutParams(
-                CodeAssistTheme.dp(activity, 78), CodeAssistTheme.dp(activity, 40)
-            )
+            layoutParams = LinearLayout.LayoutParams(dp(78), dp(40)).apply { marginStart = dp(6) }
         }
         sizeRow.addView(etMaxSize)
         sizeRow.addView(activity.textView(
             activity.pluginString(R.string.kb_suffix), 11f, CodeAssistTheme.TEXT_SECONDARY
-        ).apply { setPadding(CodeAssistTheme.dp(activity, 6), 0, 0, 0) })
-        basePanel.addView(sizeRow)
-        configContainer.addView(basePanel)
+        ).apply { setPadding(dp(6), 0, dp(4), 0) })
+        sizeRow.addView(helpIcon(
+            R.string.help_max_size_title,
+            R.string.help_max_size_body,
+            Gravity.END or Gravity.CENTER_VERTICAL
+        ))
+        configContainer.addView(sizeRow)
 
-        configContainer.addView(tagSectionHeader(
-            activity.pluginString(R.string.section_inclusions),
-            R.string.help_inclusions_title,
-            R.string.help_inclusions_body,
-            activity.pluginString(R.string.action_add)
-        ) { showAddTagDialog(activity.pluginString(R.string.add_inclusion_title)) { addTag(it, TagKind.INCLUSION) } })
-        flowInclusions = createFlow()
+        // === INCLUSIONS ===
+        // No separator above this section: the uppercase INCLUSIONS
+        // title bounds it, and the General block above is closed by
+        // its own last row (the maximum-size row). Adding a hairline
+        // here would re-introduce the exact visual noise that the
+        // class-level KDoc calls out as a rejected trade-off.
+        cbInclusions = sectionCheckBox(R.string.section_inclusions).apply {
+            isChecked = currentConfig.enableInclusions
+        }
+        btnAddInclusion = activity.actionText(activity.pluginString(R.string.action_add)) {
+            showAddTagDialog(activity.pluginString(R.string.add_inclusion_title)) {
+                addTag(it, TagKind.INCLUSION)
+            }
+        }.apply {
+            visibility = if (currentConfig.enableInclusions) View.VISIBLE else View.GONE
+        }
+        val incRow = sectionToggleRow(
+            cb = cbInclusions,
+            helpTitleRes = R.string.help_inclusions_title,
+            helpBodyRes = R.string.help_inclusions_body,
+            addButton = btnAddInclusion
+        )
+        cbInclusions.setOnCheckedChangeListener { _, checked ->
+            if (isUpdatingUI) return@setOnCheckedChangeListener
+            currentConfig = currentConfig.copy(enableInclusions = checked)
+            animateToggle(flowInclusions, checked)
+            btnAddInclusion.visibility = if (checked) View.VISIBLE else View.GONE
+            markAsCustom()
+        }
+        configContainer.addView(incRow)
+        flowInclusions = createFlow().apply {
+            visibility = if (currentConfig.enableInclusions) View.VISIBLE else View.GONE
+        }
         configContainer.addView(flowInclusions)
 
-        configContainer.addView(tagSectionHeader(
-            activity.pluginString(R.string.section_exclusions),
-            R.string.help_exclusions_title,
-            R.string.help_exclusions_body,
-            activity.pluginString(R.string.action_add)
-        ) { showAddTagDialog(activity.pluginString(R.string.add_exclusion_title)) { addTag(it, TagKind.EXCLUSION) } })
-        flowExclusions = createFlow()
+        // === EXCLUSIONS ===
+        cbExclusions = sectionCheckBox(R.string.section_exclusions).apply {
+            isChecked = currentConfig.enableExclusions
+        }
+        btnAddExclusion = activity.actionText(activity.pluginString(R.string.action_add)) {
+            showAddTagDialog(activity.pluginString(R.string.add_exclusion_title)) {
+                addTag(it, TagKind.EXCLUSION)
+            }
+        }.apply {
+            visibility = if (currentConfig.enableExclusions) View.VISIBLE else View.GONE
+        }
+        val excRow = sectionToggleRow(
+            cb = cbExclusions,
+            helpTitleRes = R.string.help_exclusions_title,
+            helpBodyRes = R.string.help_exclusions_body,
+            addButton = btnAddExclusion
+        )
+        cbExclusions.setOnCheckedChangeListener { _, checked ->
+            if (isUpdatingUI) return@setOnCheckedChangeListener
+            currentConfig = currentConfig.copy(enableExclusions = checked)
+            animateToggle(flowExclusions, checked)
+            btnAddExclusion.visibility = if (checked) View.VISIBLE else View.GONE
+            markAsCustom()
+        }
+        configContainer.addView(excRow)
+        flowExclusions = createFlow().apply {
+            visibility = if (currentConfig.enableExclusions) View.VISIBLE else View.GONE
+        }
         configContainer.addView(flowExclusions)
 
-        configContainer.addView(tagSectionHeader(
-            activity.pluginString(R.string.section_stub_patterns),
-            R.string.help_stub_title,
-            R.string.help_stub_body,
-            activity.pluginString(R.string.action_add)
-        ) { showAddTagDialog(activity.pluginString(R.string.add_stub_title)) { addTag(it, TagKind.STUB) } })
-        flowStubPatterns = createFlow()
+        // === REFERENCE ONLY ===
+        cbStubPatterns = sectionCheckBox(R.string.section_stub_patterns).apply {
+            isChecked = currentConfig.enableStubPatterns
+        }
+        btnAddStubPattern = activity.actionText(activity.pluginString(R.string.action_add)) {
+            showAddTagDialog(activity.pluginString(R.string.add_stub_title)) {
+                addTag(it, TagKind.STUB)
+            }
+        }.apply {
+            visibility = if (currentConfig.enableStubPatterns) View.VISIBLE else View.GONE
+        }
+        val stubRow = sectionToggleRow(
+            cb = cbStubPatterns,
+            helpTitleRes = R.string.help_stub_title,
+            helpBodyRes = R.string.help_stub_body,
+            addButton = btnAddStubPattern
+        )
+        cbStubPatterns.setOnCheckedChangeListener { _, checked ->
+            if (isUpdatingUI) return@setOnCheckedChangeListener
+            currentConfig = currentConfig.copy(enableStubPatterns = checked)
+            animateToggle(flowStubPatterns, checked)
+            btnAddStubPattern.visibility = if (checked) View.VISIBLE else View.GONE
+            markAsCustom()
+        }
+        configContainer.addView(stubRow)
+        flowStubPatterns = createFlow().apply {
+            visibility = if (currentConfig.enableStubPatterns) View.VISIBLE else View.GONE
+        }
         configContainer.addView(flowStubPatterns)
 
-        // --- .gitignore section ---
-        // Layout: [TITLE (?)] [checkbox] [chips flow].
-        // The checkbox controls exactly the flow below it, which is why
-        // it was moved here from the base filters panel.
-        gitignoreSection = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        gitignoreSection.addView(sectionTitleWithHelp(
-            R.string.section_gitignore_rules,
-            R.string.help_gitignore_title,
-            R.string.help_gitignore_body
-        ))
-        cbGitignore = activity.checkBox(activity.pluginString(R.string.respect_gitignore)).apply {
+        // === GITIGNORE ===
+        // The checkbox is the section header. No Add button (the rules
+        // come from the file, not from the UI) and no empty-state text
+        // (an empty flow is a valid state that simply means "the file
+        // has no rules"). See the class KDoc for the rationale.
+        cbGitignore = sectionCheckBox(R.string.section_gitignore).apply {
             isChecked = currentConfig.respectGitignore
-            setOnCheckedChangeListener { _, checked ->
-                if (isUpdatingUI) return@setOnCheckedChangeListener
-                markAsCustom()
-                // Rebuild only the flow in place: no dialog reload, no
-                // tree re-scan. When unchecked, the chips disappear and
-                // the section collapses to title + checkbox. When checked
-                // again, the chips reappear from the cached rules, which
-                // is why the .gitignore file does not need to be re-read.
-                updateGitignoreFlowOnly(checked)
-            }
         }
-        gitignoreSection.addView(cbGitignore)
-        flowGitignore = createFlow()
-        gitignoreSection.addView(flowGitignore)
-        configContainer.addView(gitignoreSection)
+        val giRow = sectionToggleRow(
+            cb = cbGitignore,
+            helpTitleRes = R.string.help_gitignore_title,
+            helpBodyRes = R.string.help_gitignore_body,
+            addButton = null
+        )
+        cbGitignore.setOnCheckedChangeListener { _, checked ->
+            if (isUpdatingUI) return@setOnCheckedChangeListener
+            currentConfig = currentConfig.copy(respectGitignore = checked)
+            animateToggle(flowGitignore, checked)
+            if (checked) updateGitignoreFlowOnly(true)
+            markAsCustom()
+        }
+        configContainer.addView(giRow)
+        flowGitignore = createFlow().apply {
+            visibility = if (currentConfig.respectGitignore) View.VISIBLE else View.GONE
+        }
+        configContainer.addView(flowGitignore)
 
-        // Version control section — with its own help icon so the branch /
-        // tag / commit export flow and the ref picker are discoverable.
+        // === VERSION CONTROL ===
         if (gitEnabledGlobally) {
-            configContainer.addView(sectionTitleWithHelp(
-                R.string.section_version_control,
-                R.string.help_version_control_title,
-                R.string.help_version_control_body
-            ))
-            layoutGitBox = panel()
-            configContainer.addView(layoutGitBox)
+            // The checkbox is the section header; everything git-related
+            // lives inside `gitContentContainer`, which is shown/hidden
+            // by the checkbox with the same fade+slide as the other
+            // sections.
+            cbUseGit = sectionCheckBox(R.string.section_version_control).apply {
+                isChecked = currentConfig.useGit
+            }
+            val gitRow = sectionToggleRow(
+                cb = cbUseGit,
+                helpTitleRes = R.string.help_version_control_title,
+                helpBodyRes = R.string.help_version_control_body,
+                addButton = null
+            )
+            cbUseGit.setOnCheckedChangeListener { _, checked ->
+                if (isUpdatingUI) return@setOnCheckedChangeListener
+                currentConfig = currentConfig.copy(useGit = checked)
+                if (::gitContentContainer.isInitialized) {
+                    animateToggle(gitContentContainer, checked)
+                }
+                if (checked) updateResolvedRef()
+                markAsCustom()
+            }
+            configContainer.addView(gitRow)
+
+            gitContentContainer = LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, dp(2), 0, dp(2))
+                visibility = if (currentConfig.useGit) View.VISIBLE else View.GONE
+            }
+            configContainer.addView(gitContentContainer)
             setupGitUIAsync()
         } else {
+            // Git globally disabled: keep the section title (no checkbox)
+            // plus a static notice. There is no way to enable git from
+            // this dialog; the user has to go to the settings page.
+            // `sectionTitleWithHelp` uses the same uppercase style as
+            // the section checkboxes, so the visual language stays
+            // consistent even without a toggle.
             configContainer.addView(sectionTitleWithHelp(
                 R.string.section_version_control,
                 R.string.help_version_control_title,
                 R.string.help_version_control_body
             ))
-            layoutGitBox = panel()
-            configContainer.addView(layoutGitBox)
-            layoutGitBox.addView(activity.textView(
+            configContainer.addView(activity.textView(
                 activity.pluginString(R.string.git_disabled_globally),
                 11f, CodeAssistTheme.TEXT_MUTED
-            ).apply {
-                setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4))
-            })
+            ).apply { setPadding(0, dp(4), 0, dp(6)) })
+            // `gitContentContainer` is declared but never shown; the
+            // lazy `exportCoordinator` will not touch it, and no other
+            // code path reads it while `gitEnabledGlobally` is false.
+            gitContentContainer = LinearLayout(activity)
         }
 
-        configContainer.addView(sectionTitleWithHelp(
-            R.string.section_tree,
-            R.string.help_tree_title,
-            R.string.help_tree_body
-        ))
-        val treeTogglePanel = panel()
-        cbShowTree = activity.checkBox(activity.pluginString(R.string.show_tree)).apply {
+        // === FILE TREE ===
+        // The old "Show file tree" sub-checkbox is gone; the section
+        // checkbox is the toggle. `show_locked` and the expand/collapse
+        // actions stay exactly where they were, but they are now part
+        // of the section body.
+        cbShowTree = sectionCheckBox(R.string.section_tree).apply {
             isChecked = true
-            setOnCheckedChangeListener { _, checked -> setTreeVisibility(checked) }
         }
-        treeTogglePanel.addView(cbShowTree)
-        configContainer.addView(treeTogglePanel)
-
-        // The checkbox starts checked but the listener was wired after
-        // isChecked = true, so it never fired. Mark the section as visible
-        // so the deferred startTreeScan() at the end of this method
-        // actually runs; otherwise the loading spinner shown by
-        // buildTreeLoadingPanel would be left orphaned with nothing to
-        // cancel or complete it.
+        val treeRow = sectionToggleRow(
+            cb = cbShowTree,
+            helpTitleRes = R.string.help_tree_title,
+            helpBodyRes = R.string.help_tree_body,
+            addButton = null
+        )
+        cbShowTree.setOnCheckedChangeListener { _, checked -> setTreeVisibility(checked) }
+        configContainer.addView(treeRow)
         treeVisible = true
 
         treeActionsRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4))
+            setPadding(0, dp(4), 0, dp(4))
             visibility = View.VISIBLE
         }
         cbShowLocked = activity.checkBox(activity.pluginString(R.string.tree_show_locked)).apply {
             isChecked = PluginSettings.isTreeShowLockedEnabled(activity)
-            minHeight = CodeAssistTheme.dp(activity, 32)
+            minHeight = dp(32)
             setOnCheckedChangeListener { _, checked ->
                 if (::treeView.isInitialized) treeView.toggleShowLocked(checked)
             }
@@ -833,8 +1001,8 @@ class ConfigurationDialog(
             )
             clipToOutline = true
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 320)
-            )
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(320)
+            ).apply { topMargin = dp(4) }
             visibility = View.VISIBLE
         }
         treeView = ProjectTreeView(
@@ -853,6 +1021,11 @@ class ConfigurationDialog(
         ))
         configContainer.addView(treeWrapper)
 
+        // === GENERATE ===
+        // No separator above the Generate button: the 22dp top margin
+        // provides the breathing room, and a hairline here would only
+        // lengthen the panel without adding structural information that
+        // the button's own visual weight does not already provide.
         val generateButton = Button(activity).apply {
             text = activity.pluginString(R.string.action_generate)
             textSize = 13f
@@ -863,14 +1036,14 @@ class ConfigurationDialog(
                 activity, normalColor = CodeAssistTheme.ACCENT,
                 pressedColor = CodeAssistTheme.ACCENT_PRESSED, radiusDp = 9f, strokeColor = null
             )
-            minHeight = CodeAssistTheme.dp(activity, 46)
+            minHeight = dp(46)
             setOnClickListener {
                 readUIValues()
                 startExport(ExportAction.GENERATE)
             }
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 46)
-            ).apply { topMargin = CodeAssistTheme.dp(activity, 22) }
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(46)
+            ).apply { topMargin = dp(22) }
         }
         attachPressScale(generateButton)
         configContainer.addView(generateButton)
@@ -880,10 +1053,7 @@ class ConfigurationDialog(
             10f, CodeAssistTheme.TEXT_MUTED
         ).apply {
             gravity = Gravity.CENTER
-            setPadding(
-                CodeAssistTheme.dp(activity, 8), CodeAssistTheme.dp(activity, 9),
-                CodeAssistTheme.dp(activity, 8), 0
-            )
+            setPadding(dp(8), dp(9), dp(8), 0)
         })
 
         // --- PROGRESS CONTAINER ---
@@ -933,8 +1103,186 @@ class ConfigurationDialog(
     }
 
     // ==================================================================
-    // Section help (?)
+    // Section toggles + help
     // ==================================================================
+
+    /**
+     * Builds a section header: a checkbox on the left, an optional Add
+     * button, and a help icon pinned to the right edge.
+     *
+     * The checkbox carries the section's enable state and its label; the
+     * optional Add button (built and configured by the caller) sits
+     * between the checkbox and the help icon; the help icon is pinned
+     * to the right edge with `Gravity.END` so it stays flush with the
+     * content margin regardless of the section's own padding.
+     *
+     * The `cb` is expected to be styled by [sectionCheckBox] so its
+     * label reads as a section title (uppercase, 11sp, secondary
+     * color). The checkbox widget itself is preserved because the whole
+     * section can be toggled off without destroying its rules (see
+     * `FilterConfig.enableInclusions` and friends).
+     *
+     * Returning the row instead of the individual pieces lets the caller
+     * add it to the layout with the usual `addView(row)` and keeps the
+     * per-section wiring (the checkbox listener, the flow visibility,
+     * the Add-button visibility) inside the caller where the
+     * corresponding field names make it obvious what is being wired.
+     *
+     * The Add button is passed in (rather than built here) because the
+     * caller needs a reference to it in order to hide it when the
+     * section is off. Building it here and returning a Pair would work
+     * too, but the caller would then have to unpack the Pair and the
+     * call site would lose the "this button belongs to this section"
+     * association that a named field provides.
+     */
+    private fun sectionToggleRow(
+        cb: CheckBox,
+        helpTitleRes: Int,
+        helpBodyRes: Int,
+        addButton: TextView?
+    ): LinearLayout {
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(4), 0, dp(4))
+        }
+        cb.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        row.addView(cb)
+        if (addButton != null) {
+            addButton.layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { marginStart = dp(8); marginEnd = dp(4) }
+            row.addView(addButton)
+        }
+        row.addView(helpIcon(helpTitleRes, helpBodyRes, Gravity.END or Gravity.CENTER_VERTICAL))
+        return row
+    }
+
+    /**
+     * Creates a CheckBox styled to match the visual language of a section
+     * title ([sectionTitleWithHelp], and the `// NN TITLE` headers from
+     * the info screen):
+     *
+     *  - **uppercase**, via [LanguageHelper.detectIdeLocale] so the casing
+     *    rule follows the current locale (e.g. Turkish İ/ı),
+     *  - **11sp**, matching the size of `sectionTitle`,
+     *  - **TEXT_SECONDARY** color, matching `sectionTitle`,
+     *  - **sans-serif-medium** weight, matching `sectionTitle`,
+     *  - **letterSpacing 0.15f**, matching `sectionTitle`.
+     *
+     * The checkbox indicator itself is kept: unlike a pure
+     * `sectionTitle`, the checkbox is the section's enable toggle, and
+     * removing the indicator would hide the fact that the whole section
+     * can be disabled without destroying its rules.
+     *
+     * Used by Inclusions / Exclusions / Reference only / Gitignore /
+     * Version control / File tree. The base toggles inside the General
+     * section (Exclude binary files, Maximum size) intentionally keep
+     * the default CheckBox styling: they are single-purpose flags that
+     * should read as content, not as a hierarchy.
+     *
+     * The 42dp minimum height comes from [UiFactory.checkBox] and is
+     * preserved so the tap target does not shrink when the text size
+     * drops from 13sp to 11sp.
+     */
+    private fun sectionCheckBox(labelRes: Int): CheckBox {
+        val cb = activity.checkBox(
+            activity.pluginString(labelRes).uppercase(LanguageHelper.detectIdeLocale(activity))
+        )
+        cb.textSize = 11f
+        cb.setTextColor(CodeAssistTheme.TEXT_SECONDARY)
+        cb.typeface = android.graphics.Typeface.create(
+            "sans-serif-medium", android.graphics.Typeface.NORMAL
+        )
+        cb.letterSpacing = 0.15f
+        return cb
+    }
+
+    /**
+     * Hairline separator used in exactly one place: below the preset
+     * spinner, before the General section title.
+     *
+     * This is the separator that used to be the local `baseDivider` in
+     * the original layout, and it is what visually closes the "Export
+     * profile" block. It is the only separator in the whole form.
+     *
+     * Every other section (General, Inclusions, Exclusions, Reference
+     * only, Gitignore, Version control, File tree) is bounded only by
+     * its uppercase title. Adding a hairline between each of them was
+     * tried and rejected: on a phone screen it made the panel
+     * noticeably longer and busier without adding structural
+     * information the titles did not already provide, and the cumulative
+     * height cost was enough to push the Generate button below the fold
+     * on smaller devices.
+     *
+     * Visual contract: `OUTLINE` at 90 alpha, 1dp tall, with a small
+     * top margin so it reads as a block break rather than a hairline
+     * between two rows inside the same section. The defaults (16dp
+     * top / 4dp bottom) are tuned for the "below presets" case; the
+     * single call site overrides them with tighter values (12dp / 4dp)
+     * to match the original baseDivider spacing.
+     */
+    private fun sectionSeparator(topDp: Int = 16, bottomDp: Int = 4): View = View(activity).apply {
+        setBackgroundColor(CodeAssistTheme.OUTLINE.withAlpha(90))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
+        ).apply {
+            topMargin = dp(topDp)
+            bottomMargin = dp(bottomDp)
+        }
+    }
+
+    /**
+     * Fade + slide animation for a toggled section body.
+     *
+     * When [visible] is `true`, the view is made visible first and then
+     * animated from `alpha=0, translationY=-6dp` to `alpha=1,
+     * translationY=0`; when `false`, the reverse — with the `visibility`
+     * flip deferred to the end of the animation so the collapse is
+     * smooth instead of an abrupt jump.
+     *
+     * The no-op guard (visible and already visible, or hidden and
+     * already hidden) matters because the same method is called from
+     * both the checkbox listener and [applyConfigToUI] after a preset
+     * switch. Without it, applying a config whose section state matches
+     * the current one would still trigger an animation that animates
+     * from a fully-visible view to the same fully-visible state, which
+     * looks like a subtle flicker.
+     *
+     * When animations are disabled in the plugin settings, the
+     * visibility is flipped directly, matching the standard behaviour of
+     * the rest of the plugin's animated helpers.
+     */
+    private fun animateToggle(target: View, visible: Boolean, duration: Long = 200) {
+        if (!animationsEnabled) {
+            target.visibility = if (visible) View.VISIBLE else View.GONE
+            return
+        }
+        if (visible && target.visibility == View.VISIBLE) return
+        if (!visible && target.visibility == View.GONE) return
+
+        target.animate().cancel()
+        if (visible) {
+            target.visibility = View.VISIBLE
+            target.alpha = 0f
+            target.translationY = -dp(6).toFloat()
+            target.animate().alpha(1f).translationY(0f)
+                .setDuration(duration)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        } else {
+            target.animate().alpha(0f).translationY(-dp(6).toFloat())
+                .setDuration(duration)
+                .setInterpolator(DecelerateInterpolator())
+                .withEndAction {
+                    target.visibility = View.GONE
+                    target.alpha = 1f
+                    target.translationY = 0f
+                }
+                .start()
+        }
+    }
 
     /**
      * Creates an inline help icon ("?") inside a 40 dp touch frame.
@@ -962,12 +1310,12 @@ class ConfigurationDialog(
         helpBodyRes: Int,
         iconGravity: Int = Gravity.CENTER
     ): View {
-        val touchSize = CodeAssistTheme.dp(activity, 40)
-        val iconSize = CodeAssistTheme.dp(activity, 18)
+        val touchSize = dp(40)
+        val iconSize = dp(18)
 
         val container = FrameLayout(activity).apply {
             layoutParams = LinearLayout.LayoutParams(touchSize, touchSize).apply {
-                marginStart = CodeAssistTheme.dp(activity, 2)
+                marginStart = dp(2)
             }
             contentDescription = activity.pluginString(R.string.help_icon_description)
             isClickable = true
@@ -988,15 +1336,15 @@ class ConfigurationDialog(
     /**
      * Wraps a CheckBox in a horizontal row with a trailing help icon.
      *
-     * Used for checkboxes that benefit from an inline "?" affordance
-     * (binary exclusion today, potentially others in the future). The
-     * checkbox is given weight = 1 so its touch target fills the
-     * remaining width, and the help icon sits at the far right without
-     * overlapping the checkbox's own hit area — that isolation is what
-     * prevents a tap on the "?" from also toggling the value. The icon
-     * uses Gravity.END so it sits flush with the panel's right edge
-     * rather than inheriting the frame's extra padding on top of the
-     * panel's own.
+     * Used for the base flags (binary exclusion, maximum size's checkbox
+     * aside) that need a "?" affordance but do not belong to a section
+     * with an Add button. The checkbox is given weight = 1 so its touch
+     * target fills the remaining width, and the help icon sits at the
+     * far right without overlapping the checkbox's own hit area — that
+     * isolation is what prevents a tap on the "?" from also toggling
+     * the value. The icon uses Gravity.END so it sits flush with the
+     * panel's right edge rather than inheriting the frame's extra
+     * padding on top of the panel's own.
      */
     private fun rowWithHelp(cb: CheckBox, helpTitleRes: Int, helpBodyRes: Int): LinearLayout {
         val row = LinearLayout(activity).apply {
@@ -1023,17 +1371,24 @@ class ConfigurationDialog(
      * Creates a section title with an inline help icon attached to the
      * right side.
      *
-     * The icon uses Gravity.END so it sits flush with the section's right
-     * edge. The extra touch area lives on the start of the icon only, so
-     * the cumulative padding (root + section + icon frame) does not push
-     * the icon visually away from the edge — this is the fix for the
-     * "help icon has too much right margin when inside a section"
-     * observation.
+     * Still used for two cases that are not section checkboxes:
+     *
+     *  - The **Presets** header, because the spinner's role is not
+     *    obvious from the control alone.
+     *  - The **Version control** header when the Git master switch is
+     *    off, because the section is a static notice (the user cannot
+     *    toggle git from this dialog) and still benefits from a title
+     *    above it.
+     *
+     * The icon uses Gravity.END so it sits flush with the section's
+     * right edge. The extra touch area lives on the start of the icon
+     * only, so the cumulative padding (root + section + icon frame)
+     * does not push the icon visually away from the edge.
      */
     private fun sectionTitleWithHelp(titleRes: Int, helpTitleRes: Int, helpBodyRes: Int): LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, CodeAssistTheme.dp(activity, 18), 0, CodeAssistTheme.dp(activity, 9))
+        setPadding(0, dp(18), 0, dp(9))
         addView(activity.textView(
             activity.pluginString(titleRes).uppercase(LanguageHelper.detectIdeLocale(activity)),
             11f, CodeAssistTheme.TEXT_SECONDARY, true
@@ -1055,18 +1410,13 @@ class ConfigurationDialog(
     private fun buildProgressContainer(): LinearLayout {
         val panel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(
-                CodeAssistTheme.dp(activity, 4), CodeAssistTheme.dp(activity, 8),
-                CodeAssistTheme.dp(activity, 4), CodeAssistTheme.dp(activity, 8)
-            )
+            setPadding(dp(4), dp(8), dp(4), dp(8))
         }
 
         progressIcon = ImageView(activity).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                CodeAssistTheme.dp(activity, 56), CodeAssistTheme.dp(activity, 56)
-            ).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(56), dp(56)).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
-                topMargin = CodeAssistTheme.dp(activity, 24)
+                topMargin = dp(24)
             }
         }
         panel.addView(progressIcon)
@@ -1075,7 +1425,7 @@ class ConfigurationDialog(
             activity.pluginString(R.string.generating_context), 18f, CodeAssistTheme.TEXT_PRIMARY, true
         ).apply {
             gravity = Gravity.CENTER
-            setPadding(0, CodeAssistTheme.dp(activity, 16), 0, CodeAssistTheme.dp(activity, 6))
+            setPadding(0, dp(16), 0, dp(6))
         }
         panel.addView(progressTitle)
 
@@ -1083,10 +1433,7 @@ class ConfigurationDialog(
             activity.pluginString(R.string.preparing_export), 12f, CodeAssistTheme.TEXT_SECONDARY
         ).apply {
             gravity = Gravity.CENTER
-            setPadding(
-                CodeAssistTheme.dp(activity, 8), 0,
-                CodeAssistTheme.dp(activity, 8), CodeAssistTheme.dp(activity, 12)
-            )
+            setPadding(dp(8), 0, dp(8), dp(12))
         }
         panel.addView(progressSubtitle)
 
@@ -1094,11 +1441,11 @@ class ConfigurationDialog(
             isIndeterminate = true
             progressTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 6)
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(6)
             ).apply {
-                marginStart = CodeAssistTheme.dp(activity, 24)
-                marginEnd = CodeAssistTheme.dp(activity, 24)
-                bottomMargin = CodeAssistTheme.dp(activity, 12)
+                marginStart = dp(24)
+                marginEnd = dp(24)
+                bottomMargin = dp(12)
             }
         }
         panel.addView(progressBar)
@@ -1107,16 +1454,13 @@ class ConfigurationDialog(
             activity.pluginString(R.string.generation_minimize_hint), 10f, CodeAssistTheme.TEXT_MUTED
         ).apply {
             gravity = Gravity.CENTER
-            setPadding(
-                CodeAssistTheme.dp(activity, 12), 0,
-                CodeAssistTheme.dp(activity, 12), CodeAssistTheme.dp(activity, 16)
-            )
+            setPadding(dp(12), 0, dp(12), dp(16))
         }
         panel.addView(progressMinimizeHint)
 
         progressStats = activity.textView("", 12f, CodeAssistTheme.TEXT_SECONDARY).apply {
             gravity = Gravity.CENTER
-            setPadding(0, 0, 0, CodeAssistTheme.dp(activity, 12))
+            setPadding(0, 0, 0, dp(12))
             visibility = View.GONE
         }
         panel.addView(progressStats)
@@ -1131,10 +1475,10 @@ class ConfigurationDialog(
                 activity, CodeAssistTheme.SURFACE_RAISED, CodeAssistTheme.SURFACE,
                 9f, CodeAssistTheme.OUTLINE
             )
-            minHeight = CodeAssistTheme.dp(activity, 42)
+            minHeight = dp(42)
             setOnClickListener { ExportCoordinator.cancelCurrent() }
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, CodeAssistTheme.dp(activity, 42)
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(42)
             ).apply { gravity = Gravity.CENTER_HORIZONTAL }
         }
         attachPressScale(progressCancelBtn)
@@ -1144,7 +1488,7 @@ class ConfigurationDialog(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             visibility = View.GONE
-            setPadding(0, CodeAssistTheme.dp(activity, 6), 0, 0)
+            setPadding(0, dp(6), 0, 0)
         }
         progressActionsRow.addView(makeActionChip(R.drawable.ic_tech_share, R.string.action_share) { onShareResultClicked() })
         progressActionsRow.addView(makeActionChip(R.drawable.ic_tech_download, R.string.action_save) { onSaveResultClicked() })
@@ -1160,7 +1504,7 @@ class ConfigurationDialog(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
                 gravity = Gravity.CENTER_HORIZONTAL
-                topMargin = CodeAssistTheme.dp(activity, 8)
+                topMargin = dp(8)
             }
         }
         panel.addView(progressBackLink)
@@ -1178,28 +1522,23 @@ class ConfigurationDialog(
                 activity, CodeAssistTheme.SURFACE_RAISED, CodeAssistTheme.SURFACE,
                 9f, CodeAssistTheme.OUTLINE
             )
-            setPadding(
-                CodeAssistTheme.dp(activity, 14), CodeAssistTheme.dp(activity, 10),
-                CodeAssistTheme.dp(activity, 14), CodeAssistTheme.dp(activity, 10)
-            )
+            setPadding(dp(14), dp(10), dp(14), dp(10))
             setOnClickListener { onClick() }
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = CodeAssistTheme.dp(activity, 4)
-                marginEnd = CodeAssistTheme.dp(activity, 4)
+                marginStart = dp(4)
+                marginEnd = dp(4)
             }
         }
         chip.addView(ImageView(activity).apply {
             setImageDrawable(activity.loadPluginDrawable(iconRes))
             setColorFilter(CodeAssistTheme.ACCENT)
-            layoutParams = LinearLayout.LayoutParams(
-                CodeAssistTheme.dp(activity, 20), CodeAssistTheme.dp(activity, 20)
-            )
+            layoutParams = LinearLayout.LayoutParams(dp(20), dp(20))
         })
         chip.addView(activity.textView(
             activity.pluginString(labelRes), 11f, CodeAssistTheme.TEXT_PRIMARY, true
         ).apply {
             gravity = Gravity.CENTER
-            setPadding(0, CodeAssistTheme.dp(activity, 6), 0, 0)
+            setPadding(0, dp(6), 0, 0)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1526,15 +1865,15 @@ class ConfigurationDialog(
         }
     }
 
-    /** Manages the expansion and scanning of the project tree preview. */
+    /**
+     * Toggles the file tree section body. Uses [animateToggle] for the
+     * same fade+slide as every other section so the collapse/expand feels
+     * uniform across the dialog.
+     */
     private fun setTreeVisibility(visible: Boolean) {
         treeVisible = visible
-        if (::treeActionsRow.isInitialized) {
-            treeActionsRow.visibility = if (visible) View.VISIBLE else View.GONE
-        }
-        if (::treeWrapper.isInitialized) {
-            treeWrapper.visibility = if (visible) View.VISIBLE else View.GONE
-        }
+        if (::treeActionsRow.isInitialized) animateToggle(treeActionsRow, visible)
+        if (::treeWrapper.isInitialized) animateToggle(treeWrapper, visible)
         if (visible) {
             startTreeScan()
         } else if (::treeView.isInitialized) {
@@ -1560,10 +1899,7 @@ class ConfigurationDialog(
         val panel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(
-                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 16),
-                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 16)
-            )
+            setPadding(dp(16), dp(16), dp(16), dp(16))
             background = CodeAssistTheme.roundedBg(
                 activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
             )
@@ -1571,16 +1907,14 @@ class ConfigurationDialog(
         treeLoadingProgress = ProgressBar(activity).apply {
             isIndeterminate = true
             indeterminateTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
-            layoutParams = LinearLayout.LayoutParams(
-                CodeAssistTheme.dp(activity, 34), CodeAssistTheme.dp(activity, 34)
-            )
+            layoutParams = LinearLayout.LayoutParams(dp(34), dp(34))
         }
         panel.addView(treeLoadingProgress)
         treeLoadingText = activity.textView(
             activity.pluginString(R.string.analyzing), 12f, CodeAssistTheme.TEXT_SECONDARY
         ).apply {
             gravity = Gravity.CENTER
-            setPadding(0, CodeAssistTheme.dp(activity, 10), 0, 0)
+            setPadding(0, dp(10), 0, 0)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
             )
@@ -1595,20 +1929,17 @@ class ConfigurationDialog(
                 activity, CodeAssistTheme.SURFACE_RAISED, CodeAssistTheme.SURFACE,
                 8f, CodeAssistTheme.OUTLINE
             )
-            minHeight = CodeAssistTheme.dp(activity, 36)
-            setPadding(
-                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 6),
-                CodeAssistTheme.dp(activity, 16), CodeAssistTheme.dp(activity, 6)
-            )
+            minHeight = dp(36)
+            setPadding(dp(16), dp(6), dp(16), dp(6))
             setOnClickListener {
                 if (::treeView.isInitialized) treeView.cancelScan()
                 setTreeUiState(TreeUiState.ERROR)
                 treeLoadingText.text = activity.pluginString(R.string.canceled_retry)
             }
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, CodeAssistTheme.dp(activity, 36)
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)
             ).apply {
-                topMargin = CodeAssistTheme.dp(activity, 12)
+                topMargin = dp(12)
                 gravity = Gravity.CENTER_HORIZONTAL
             }
         }
@@ -1634,10 +1965,11 @@ class ConfigurationDialog(
      *
      * ### Why it returns early
      *
-     * The early return on !treeVisible is intentional: the tree section is
-     * hidden, so there is nothing to show a spinner over. Tapping Reload
-     * while the section is collapsed should not start a scan that has
-     * nowhere to render. reloadTree expands the section first if needed.
+     * The early return on !treeVisible is intentional: the tree section
+     * is hidden, so there is nothing to show a spinner over. Tapping
+     * Reload while the section is collapsed should not start a scan that
+     * has nowhere to render. reloadTree expands the section first if
+     * needed.
      */
     private fun startTreeScan() {
         if (!treeVisible || !::treeView.isInitialized) return
@@ -1680,24 +2012,29 @@ class ConfigurationDialog(
      * cold process, so a placeholder spinner is shown first and the real
      * content is swapped in on the main thread once the background probe
      * finishes.
+     *
+     * Everything git-related lives inside [gitContentContainer], which
+     * is the section body toggled by the "Version control" checkbox. The
+     * branch info, the ref input, the resolved-ref label and the diff
+     * preview button are all part of that body, so toggling the section
+     * off hides all of them at once — matching the shape of the other
+     * section toggles in the dialog.
      */
     private fun setupGitUIAsync() {
         val loading = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, CodeAssistTheme.dp(activity, 8), 0, CodeAssistTheme.dp(activity, 8))
+            setPadding(0, dp(8), 0, dp(8))
         }
         loading.addView(ProgressBar(activity).apply {
             isIndeterminate = true
             indeterminateTintList = ColorStateList.valueOf(CodeAssistTheme.ACCENT)
-            layoutParams = LinearLayout.LayoutParams(
-                CodeAssistTheme.dp(activity, 18), CodeAssistTheme.dp(activity, 18)
-            )
+            layoutParams = LinearLayout.LayoutParams(dp(18), dp(18))
         })
         loading.addView(activity.textView(
             activity.pluginString(R.string.git_resolving), 11f, CodeAssistTheme.TEXT_MUTED
-        ).apply { setPadding(CodeAssistTheme.dp(activity, 8), 0, 0, 0) })
-        layoutGitBox.addView(loading)
+        ).apply { setPadding(dp(8), 0, 0, 0) })
+        gitContentContainer.addView(loading)
 
         Thread({
             val repoInfo = runCatching { GitUtils.getRepoInfo(projectRoot) }.getOrNull()
@@ -1705,8 +2042,8 @@ class ConfigurationDialog(
                 runCatching { GitUtils.countUncommittedChanges(projectRoot) }.getOrDefault(0)
             } else 0
             activity.runOnUiThread {
-                if (!::layoutGitBox.isInitialized || !uiBuilt) return@runOnUiThread
-                layoutGitBox.removeAllViews()
+                if (!::gitContentContainer.isInitialized || !uiBuilt) return@runOnUiThread
+                gitContentContainer.removeAllViews()
                 if (repoInfo == null) {
                     renderNoRepoState()
                 } else {
@@ -1718,20 +2055,24 @@ class ConfigurationDialog(
 
     /** Renders the placeholder text when the selected folder is not a Git repository. */
     private fun renderNoRepoState() {
-        layoutGitBox.addView(activity.textView(
+        gitContentContainer.addView(activity.textView(
             activity.pluginString(R.string.git_not_repo), 11f, CodeAssistTheme.TEXT_MUTED
-        ).apply { setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4)) })
+        ).apply { setPadding(0, dp(4), 0, dp(4)) })
         val parentRoot = GitUtils.findGitRoot(projectRoot.parentFile ?: projectRoot)
         if (parentRoot != null && parentRoot.absolutePath != projectRoot.absolutePath) {
-            layoutGitBox.addView(activity.actionText(
+            gitContentContainer.addView(activity.actionText(
                 activity.pluginString(R.string.git_open_parent_root, parentRoot.name)
             ) { activeDialog?.dismiss(); onChangeRoot(parentRoot) }.apply {
-                setPadding(0, CodeAssistTheme.dp(activity, 6), 0, CodeAssistTheme.dp(activity, 6))
+                setPadding(0, dp(6), 0, dp(6))
             })
         }
     }
 
-    /** Renders the interactive Git controls (branch info, ref picker, diff preview). */
+    /**
+     * Renders the interactive Git controls (branch info, ref picker, diff
+     * preview). Everything is added directly to [gitContentContainer], so
+     * the section toggle hides/shows all of it as a single body.
+     */
     private fun renderGitInfoState(repoInfo: GitUtils.RepoInfo, uncommitted: Int) {
         val headerRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
@@ -1747,38 +2088,27 @@ class ConfigurationDialog(
         headerRow.addView(activity.iconButton(
             R.drawable.ic_tech_refresh, activity.pluginString(R.string.git_refresh)
         ) { refreshGitInfo() })
-        layoutGitBox.addView(headerRow)
+        gitContentContainer.addView(headerRow)
 
         tvGitWarning = activity.textView(
             activity.pluginString(R.string.git_uncommitted_changes, uncommitted),
             10f, CodeAssistTheme.TAG_CONFLICT_TEXT
         ).apply {
-            setPadding(0, CodeAssistTheme.dp(activity, 2), 0, CodeAssistTheme.dp(activity, 2))
+            setPadding(0, dp(2), 0, dp(2))
             visibility = if (repoInfo.hasUncommittedChanges) View.VISIBLE else View.GONE
         }
-        layoutGitBox.addView(tvGitWarning)
-
-        cbUseGit = activity.checkBox(activity.pluginString(R.string.read_from_git)).apply {
-            isChecked = currentConfig.useGit
-            setOnCheckedChangeListener { _, checked ->
-                if (::gitDetailsBox.isInitialized) gitDetailsBox.visibility = if (checked) View.VISIBLE else View.GONE
-                if (checked) updateResolvedRef()
-                if (!isUpdatingUI) markAsCustom()
-            }
-        }
-        layoutGitBox.addView(cbUseGit)
+        gitContentContainer.addView(tvGitWarning)
 
         gitDetailsBox = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            visibility = if (currentConfig.useGit) View.VISIBLE else View.GONE
-            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, 0)
+            setPadding(0, dp(6), 0, 0)
         }
         val refRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
         }
         etGitRef = activity.editText(currentConfig.gitRef ?: "").apply {
             hint = activity.pluginString(R.string.git_ref_hint)
-            layoutParams = LinearLayout.LayoutParams(0, CodeAssistTheme.dp(activity, 42), 1f)
+            layoutParams = LinearLayout.LayoutParams(0, dp(42), 1f)
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -1790,13 +2120,13 @@ class ConfigurationDialog(
             R.drawable.ic_tech_search, activity.pluginString(R.string.git_browse_ref)
         ) { showRefPickerDialog() }.apply {
             layoutParams = (layoutParams as LinearLayout.LayoutParams).apply {
-                marginStart = CodeAssistTheme.dp(activity, 8)
+                marginStart = dp(8)
             }
         })
         gitDetailsBox.addView(refRow)
 
         tvResolvedRef = activity.textView("", 10f, CodeAssistTheme.TEXT_MUTED).apply {
-            setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4))
+            setPadding(0, dp(4), 0, dp(4))
             visibility = View.GONE
         }
         gitDetailsBox.addView(tvResolvedRef)
@@ -1809,14 +2139,14 @@ class ConfigurationDialog(
             background = CodeAssistTheme.selectableBg(
                 activity, CodeAssistTheme.SURFACE_RAISED, CodeAssistTheme.SURFACE, 8f, CodeAssistTheme.OUTLINE
             )
-            minHeight = CodeAssistTheme.dp(activity, 38)
+            minHeight = dp(38)
             setOnClickListener { showDiffPreview() }
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 38)
-            ).apply { topMargin = CodeAssistTheme.dp(activity, 8) }
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(38)
+            ).apply { topMargin = dp(8) }
         })
 
-        layoutGitBox.addView(gitDetailsBox)
+        gitContentContainer.addView(gitDetailsBox)
         updateResolvedRef()
     }
 
@@ -1903,7 +2233,7 @@ class ConfigurationDialog(
         for (i in 0 until root.childCount) {
             val child = root.getChildAt(i)
             child.alpha = 0f
-            child.translationY = CodeAssistTheme.dp(activity, 10).toFloat()
+            child.translationY = dp(10).toFloat()
             child.animate().alpha(1f).translationY(0f)
                 .setStartDelay(i * 30L).setDuration(260)
                 .setInterpolator(DecelerateInterpolator()).start()
@@ -1966,86 +2296,95 @@ class ConfigurationDialog(
     // UI helpers
     // ==================================================================
 
-    /** Creates a standard rounded background panel used for grouping form fields. */
-    private fun panel(): LinearLayout = LinearLayout(activity).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(
-            CodeAssistTheme.dp(activity, 12), CodeAssistTheme.dp(activity, 7),
-            CodeAssistTheme.dp(activity, 12), CodeAssistTheme.dp(activity, 10)
-        )
-        background = CodeAssistTheme.roundedBg(
-            activity, CodeAssistTheme.SURFACE, 10f, CodeAssistTheme.OUTLINE
-        )
-        layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-    }
-
-    /** Creates a horizontal divider line. */
+    /** Creates a horizontal divider line under the header. */
     private fun divider(): View = View(activity).apply {
         setBackgroundColor(CodeAssistTheme.OUTLINE)
         layoutParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 1)
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(1)
         ).apply {
-            topMargin = CodeAssistTheme.dp(activity, 13)
-            bottomMargin = CodeAssistTheme.dp(activity, 3)
+            topMargin = dp(13)
+            bottomMargin = dp(3)
         }
     }
 
     /** Creates a FlowLayout for displaying tag chips. */
     private fun createFlow(): FlowLayout = FlowLayout(activity).apply {
-        setPadding(0, CodeAssistTheme.dp(activity, 2), 0, CodeAssistTheme.dp(activity, 5))
-        minimumHeight = CodeAssistTheme.dp(activity, 16)
+        setPadding(0, dp(2), 0, dp(5))
+        minimumHeight = dp(16)
     }
 
     /**
-     * Creates a section header with an inline add action and help icon.
+     * Applies a FilterConfig to the UI components without triggering
+     * "mark as custom" events.
      *
-     * The help icon uses Gravity.END for the same reason as
-     * sectionTitleWithHelp: the icon should sit flush with the section's
-     * right edge rather than inheriting the frame's extra padding on top
-     * of the section's own.
+     * ### Section toggle sync
+     *
+     * Every section enable flag (inclusions, exclusions, stub patterns,
+     * respectGitignore, useGit) is synced here along with its flow's
+     * visibility and the Add button's visibility. The sync uses
+     * [animateToggle] for the visibility flip so a preset switch that
+     * changes the section state looks like a user toggle, not an abrupt
+     * jump — this matters for the preset-change UX where the user is
+     * switching from "Android (Kotlin) with exclusions on" to a custom
+     * preset that happens to have exclusions off.
+     *
+     * The `cbShowTree` and `treeVisible` state is **not** part of the
+     * preset and is deliberately left untouched: showing or hiding the
+     * tree is a UI preference, not a rule, and switching presets should
+     * not collapse the tree the user is currently working with.
      */
-    private fun tagSectionHeader(
-        title: String,
-        helpTitleRes: Int,
-        helpBodyRes: Int,
-        action: String,
-        onAction: () -> Unit
-    ): LinearLayout = LinearLayout(activity).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, CodeAssistTheme.dp(activity, 8), 0, CodeAssistTheme.dp(activity, 4))
-        addView(activity.textView(title, 13f, CodeAssistTheme.TEXT_PRIMARY, true).apply {
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-        addView(activity.actionText(action, onAction).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply { marginStart = CodeAssistTheme.dp(activity, 8) }
-        })
-        addView(helpIcon(helpTitleRes, helpBodyRes, Gravity.END or Gravity.CENTER_VERTICAL))
-    }
-
-    /** Applies a FilterConfig to the UI components without triggering "mark as custom" events. */
     private fun applyConfigToUI(config: FilterConfig) {
         isUpdatingUI = true
         currentConfig = config
         cbBinaries.isChecked = config.excludeBinaries
-        cbGitignore.isChecked = config.respectGitignore
         cbMaxSize.isChecked = config.useMaxSize
         etMaxSize.setText(config.maxSizeKb.toString())
         etMaxSize.isEnabled = config.useMaxSize
         etMaxSize.alpha = if (config.useMaxSize) 1f else 0.4f
 
+        // Inclusions
+        if (::cbInclusions.isInitialized) {
+            cbInclusions.isChecked = config.enableInclusions
+            if (::flowInclusions.isInitialized) animateToggle(flowInclusions, config.enableInclusions)
+            if (::btnAddInclusion.isInitialized) {
+                btnAddInclusion.visibility = if (config.enableInclusions) View.VISIBLE else View.GONE
+            }
+        }
+
+        // Exclusions
+        if (::cbExclusions.isInitialized) {
+            cbExclusions.isChecked = config.enableExclusions
+            if (::flowExclusions.isInitialized) animateToggle(flowExclusions, config.enableExclusions)
+            if (::btnAddExclusion.isInitialized) {
+                btnAddExclusion.visibility = if (config.enableExclusions) View.VISIBLE else View.GONE
+            }
+        }
+
+        // Reference only
+        if (::cbStubPatterns.isInitialized) {
+            cbStubPatterns.isChecked = config.enableStubPatterns
+            if (::flowStubPatterns.isInitialized) animateToggle(flowStubPatterns, config.enableStubPatterns)
+            if (::btnAddStubPattern.isInitialized) {
+                btnAddStubPattern.visibility = if (config.enableStubPatterns) View.VISIBLE else View.GONE
+            }
+        }
+
+        // Gitignore
+        if (::cbGitignore.isInitialized) {
+            cbGitignore.isChecked = config.respectGitignore
+            if (::flowGitignore.isInitialized) animateToggle(flowGitignore, config.respectGitignore)
+        }
+
+        // Version control
         if (gitEnabledGlobally && ::cbUseGit.isInitialized) {
             cbUseGit.isChecked = config.useGit
-            if (::etGitRef.isInitialized) etGitRef.setText(config.gitRef ?: "")
-            if (::gitDetailsBox.isInitialized) {
-                gitDetailsBox.visibility = if (config.useGit) View.VISIBLE else View.GONE
+            if (::gitContentContainer.isInitialized) {
+                animateToggle(gitContentContainer, config.useGit)
             }
+            if (::etGitRef.isInitialized) etGitRef.setText(config.gitRef ?: "")
             updateResolvedRef()
         }
+
         updateTagsUI(animate = true)
         isUpdatingUI = false
         if (treeVisible) startTreeScan()
@@ -2092,10 +2431,19 @@ class ConfigurationDialog(
      * synchronous disk I/O against the repository, and this method is
      * called from many UI paths, so resolving the ref on every call was a
      * measurable source of UI jank on Git-enabled projects.
+     *
+     * All three section enable flags are read from their checkboxes, and
+     * every checkbox is guaranteed to be initialized by the time
+     * `uiBuilt` is true. The early-return guard covers the only window
+     * where this method can be called before `buildFullUI` has finished
+     * — the dismiss handler on a dialog that the user closed while the
+     * skeleton was still showing.
      */
     private fun readUIValues() {
         if (!::etMaxSize.isInitialized || !::cbBinaries.isInitialized ||
-            !::cbGitignore.isInitialized || !::cbMaxSize.isInitialized) return
+            !::cbMaxSize.isInitialized ||
+            !::cbInclusions.isInitialized || !::cbExclusions.isInitialized ||
+            !::cbStubPatterns.isInitialized || !::cbGitignore.isInitialized) return
         val size = etMaxSize.text.toString().toIntOrNull()?.coerceAtLeast(1) ?: 512
         var useGit = false
         var gitRef: String? = null
@@ -2111,6 +2459,9 @@ class ConfigurationDialog(
             respectGitignore = cbGitignore.isChecked,
             useMaxSize = cbMaxSize.isChecked,
             maxSizeKb = size,
+            enableInclusions = cbInclusions.isChecked,
+            enableExclusions = cbExclusions.isChecked,
+            enableStubPatterns = cbStubPatterns.isChecked,
             useGit = useGit,
             gitRef = gitRef
         )
@@ -2140,11 +2491,20 @@ class ConfigurationDialog(
      *
      * ### Gitignore flow
      *
-     * The .gitignore flow is delegated to [updateGitignoreFlowOnly], which
-     * populates it only when the "Respect .gitignore rules" checkbox is
-     * on. That is what makes the checkbox toggle cheap: the flow is
-     * cleared and repopulated in place, without touching any other part
-     * of the dialog.
+     * The `.gitignore` flow is delegated to [updateGitignoreFlowOnly],
+     * which populates it only when the section is enabled. That is what
+     * makes the section toggle cheap: the flow is cleared and
+     * repopulated in place, without touching any other part of the
+     * dialog.
+     *
+     * ### Section visibility
+     *
+     * This method does **not** touch the flow visibility. That is
+     * handled by [animateToggle] at the call sites that toggle the
+     * section (the checkbox listeners and [applyConfigToUI]). Keeping
+     * the two concerns separate lets the flow contents refresh without
+     * re-triggering the expand/collapse animation, which matters when
+     * the user adds or edits a chip.
      */
     private fun updateTagsUI(animate: Boolean = false) {
         if (!::flowInclusions.isInitialized) return
@@ -2162,16 +2522,13 @@ class ConfigurationDialog(
         if (currentConfig.stubPatterns.isEmpty()) addEmptyLabel(flowStubPatterns, activity.pluginString(R.string.no_stub_patterns))
         else currentConfig.stubPatterns.forEach { addTagToFlow(flowStubPatterns, it, TagKind.STUB) }
 
-        // The .gitignore section is never hidden as a whole: the title and
-        // the checkbox are always visible, and only the flow's content is
-        // controlled by the checkbox. updateGitignoreFlowOnly handles that
-        // without touching the rest of the dialog.
         updateGitignoreFlowOnly(currentConfig.respectGitignore)
 
         if (animate && animationsEnabled) {
             val all = listOf(flowInclusions, flowExclusions, flowStubPatterns, flowGitignore)
             var i = 0
             all.forEach { flow ->
+                if (flow.visibility != View.VISIBLE) return@forEach
                 for (k in 0 until flow.childCount) {
                     val child = flow.getChildAt(k)
                     child.alpha = 0f; child.scaleX = 0.85f; child.scaleY = 0.85f
@@ -2185,28 +2542,34 @@ class ConfigurationDialog(
     }
 
     /**
-     * Rebuilds only the .gitignore flow when the "Respect .gitignore
-     * rules" checkbox is toggled, without tearing down the rest of the
-     * dialog.
+     * Rebuilds only the `.gitignore` flow when the section is toggled,
+     * without tearing down the rest of the dialog.
      *
-     * When [enabled] is false, the flow is cleared and the section is
-     * collapsed to just the title and the checkbox: the user has
-     * explicitly told the plugin to ignore those rules, so showing them
-     * would be misleading.
+     * When [enabled] is `false`, the flow is cleared. The section body
+     * visibility is handled by [animateToggle] at the call site, so this
+     * method does not touch it.
      *
-     * When [enabled] is true, the flow is repopulated from the cached
+     * When [enabled] is `true`, the flow is repopulated from the cached
      * [gitignoreTags] list. The list was read once when the dialog
-     * opened; it is not re-read here, because the .gitignore file itself
-     * has not changed and a second file read would be wasted I/O.
+     * opened; it is not re-read here, because the `.gitignore` file
+     * itself has not changed and a second file read would be wasted
+     * I/O.
+     *
+     * ### No empty state
+     *
+     * Unlike the inclusions / exclusions / stub sections, which show a
+     * muted "No custom rules" placeholder when the corresponding list
+     * is empty, the `.gitignore` section has **no** empty state. An
+     * empty flow simply means "the file has no rules", which is a valid
+     * and common state for projects that rely on the default
+     * `TEXT_EXTENSIONS` set, and showing a placeholder would be more
+     * confusing than leaving the section blank.
      */
     private fun updateGitignoreFlowOnly(enabled: Boolean) {
         if (!::flowGitignore.isInitialized) return
         flowGitignore.removeAllViews()
         if (!enabled) return
-        if (gitignoreTags.isEmpty()) {
-            addEmptyLabel(flowGitignore, activity.pluginString(R.string.no_gitignore_rules))
-            return
-        }
+        if (gitignoreTags.isEmpty()) return
         gitignoreTags.forEach { rawTag ->
             val isNegation = rawTag.startsWith("!")
             val cleanTag = if (isNegation) rawTag.removePrefix("!") else rawTag
@@ -2229,10 +2592,7 @@ class ConfigurationDialog(
     /** Adds a muted placeholder label to an empty FlowLayout. */
     private fun addEmptyLabel(flow: FlowLayout, label: String) {
         flow.addView(activity.textView(label, 11f, CodeAssistTheme.TEXT_MUTED).apply {
-            setPadding(
-                CodeAssistTheme.dp(activity, 2), CodeAssistTheme.dp(activity, 5),
-                CodeAssistTheme.dp(activity, 2), CodeAssistTheme.dp(activity, 5)
-            )
+            setPadding(dp(2), dp(5), dp(2), dp(5))
         })
     }
 
@@ -2334,10 +2694,7 @@ class ConfigurationDialog(
     /** Creates a styled TextView used as a tag chip. */
     private fun createTagView(label: String, bg: Int, fg: Int, onClick: (() -> Unit)?): TextView =
         activity.textView(label, 11f, fg, true).apply {
-            setPadding(
-                CodeAssistTheme.dp(activity, 10), CodeAssistTheme.dp(activity, 7),
-                CodeAssistTheme.dp(activity, 10), CodeAssistTheme.dp(activity, 7)
-            )
+            setPadding(dp(10), dp(7), dp(10), dp(7))
             background = CodeAssistTheme.roundedBg(activity, bg, 7f)
             if (onClick != null) {
                 isClickable = true; isFocusable = true
