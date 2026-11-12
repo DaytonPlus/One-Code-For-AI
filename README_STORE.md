@@ -15,8 +15,8 @@ One Code For AI is a plugin for the CodeAssist IDE that scans a project or selec
 - **Reference-only files.** List a file by name and size in the dump without reading its content. Ideal for lockfiles, generated code, and machine-local configuration.
 - **Smart filtering.** Exclude binaries and generated output automatically, respect `.gitignore`, or write your own glob rules.
 - **Git-aware.** Export from any branch, tag, or commit, or preview what changed before generating.
-- **Light and dark themes.** A dedicated selector lets you follow the device theme, or force the plugin to always use light or dark.
-- **Multi-language UI.** 18 languages, selectable independently of the IDE language.
+- **Dark by default.** A dedicated theme selector lets you follow the device theme, or force the plugin to always use light or dark.
+- **Multi-language UI.** 27 languages, selectable independently of the IDE language.
 - **100% offline.** No internet permission, no telemetry, no cloud upload.
 
 ---
@@ -29,9 +29,9 @@ The project tree is the source of truth for what goes into the dump. Every entry
 - **Reference only** — the file's name and size are listed, but its content is not read.
 - **Excluded** — the file is not written to the dump.
 
-Tap any row to cycle between the three states. Tap a folder to apply the next state to its whole subtree, preserving any manual overrides already present on individual files. Parent and child states stay consistent both ways: marking the last included child of a folder unchecks the folder, and marking a folder re-checks its children.
+Click a row to cycle through the three states. Click a folder to **force the next state onto everything inside it** — folders and files, at every depth — so the folder's tri-state indicator never disagrees with its children. Marking a deep file updates every ancestor's aggregate all the way to the root, without ever touching the ancestors' other children. Parent and child states stay consistent in both directions.
 
-Hard-excluded folders (`node_modules`, `build`, `.git`, …) and binary files appear as **locked** nodes: visible in the tree but not interactive until you enable "Show locked". Locking is per-session and safe — unlocking a folder does not automatically include anything inside it; you still have to mark files explicitly.
+Hard-excluded folders (`node_modules`, `build`, `.git`, …) and binary files appear as **locked** nodes: visible in the tree but not interactive until you enable "Show locked". Enabling the toggle makes them interactive and scans a newly-unlocked folder's contents on demand, showing every child — including build outputs such as APKs, `.dex` files and binaries. The toggle survives filter changes and manual reloads, so a rescan with "Show locked" on leaves the new tree interactive. Disabling it re-locks every originally-locked node and discards anything that was included while unlocked, so Generate never exports a file you can no longer see.
 
 Your manual tree decisions are stored per project in `.platform/plugins/com.devdayton.onecodeforai/config.json`, so each project keeps its own selection independent of the preset. Closing the dialog without pressing Generate discards the manual changes, matching the standard "commit on Generate" model.
 
@@ -49,6 +49,18 @@ Your manual tree decisions are stored per project in `.platform/plugins/com.devd
 
 ---
 
+## ⚙️ Section toggles
+
+Every rule list is a **toggleable section**: a checkbox with an uppercase title, an optional Clear button, an optional "+ Add" button, a "?" help icon, and a body that appears only when the checkbox is checked.
+
+Unchecking Inclusions, Exclusions, or Reference only disables that list **without deleting it** — the rules stay in the profile and are reapplied the moment you check the box again. No re-typing required.
+
+A **Clear** button next to Add empties an editable flow in one tap. Emptying a flow counts as a rule change and switches the profile to Custom. Gitignore has no Clear button: the flow is read-only.
+
+Base flags (Exclude binary files, Maximum size) live under their own **General** section at the top of the form. The uppercase section titles are the only block boundaries — no hairlines between rule sections — so the panel stays short enough to fit on a phone screen without scrolling past chrome.
+
+---
+
 ## 🌿 Git integration
 
 - Browse local and remote branches, tags, and recent commits.
@@ -61,26 +73,26 @@ Your manual tree decisions are stored per project in `.platform/plugins/com.devd
 
 ## 🎨 Light and dark themes
 
-The plugin UI ships with a light and a dark palette. The dark palette preserves the original hand-tuned colors; the light palette keeps the same visual identity (warm accent, muted text hierarchy, soft outlines) on a light background.
+The plugin UI ships with a light and a dark palette. The dark palette is the default and preserves the original hand-tuned colors; the light palette keeps the same visual identity (warm accent, muted text hierarchy, soft outlines) on a light background.
 
-- The theme can be set to **System** (follow the device's light/dark mode — the default), **Light**, or **Dark** from the settings page.
+- The theme can be set to **Dark** (the default), **System** (follow the device's light/dark mode), or **Light** from the settings page.
 - Only newly opened dialogs and screens pick up a change; already-open windows keep their palette until reopened, matching the standard Android behavior for runtime theme changes.
 
 ---
 
 ## 📱 Built-in presets and settings
 
-- Professional presets for Android (Kotlin), Android (source only), Android (resources only), Web, Python, and Plain text.
+- Professional presets for Android (Kotlin), Android (source only), Android (Resources), Web, Python, and Plain text.
 - Built-in presets use reference-only entries for generated files and lockfiles, so the dump stays structurally complete without paying the token cost of those files' contents.
 - Save and restore your own custom profiles.
 - Configure Git, animations, notifications, UI language, UI theme, export limits, and the parent folder search limit from a native settings page.
-- Use contextual help inside the UI: Export profile, Version control, Inclusions, Exclusions, Reference only, Gitignore rules, Binary exclusion, Project tree, Locked nodes, and Per-file size limit all expose a "?" affordance with an inline explanation.
+- Use contextual help inside the UI: Export profile, Version control, Inclusions, Exclusions, Reference only, Gitignore, Binary exclusion, Project tree, Locked nodes, and Per-file size limit all expose a "?" affordance with an inline explanation.
 
 ---
 
 ## 🌍 Multi-language interface
 
-The plugin UI is available in **18 languages**, selectable from a dedicated dropdown in the settings page. Each language is listed by its native name (Español, Français, Deutsch, 日本語, 中文, …) so users can find theirs without reading English.
+The plugin UI is available in **27 languages**, selectable from a dedicated dropdown in the settings page. Each language is listed by its native name (Español, Français, Deutsch, 日本語, 中文, …) so users can find theirs without reading English.
 
 - **Auto (follow IDE)** is the default: the plugin uses whatever language CodeAssist is running in.
 - A specific language can be forced for the plugin only, independently of the IDE language.
@@ -107,8 +119,16 @@ Supported languages:
 - 日本語 (Japanese)
 - 한국어 (Korean)
 - 中文 (Chinese, Simplified)
+- বাংলা (Bengali)
+- Català (Catalan)
+- فارسی (Persian)
+- עברית (Hebrew)
+- Nederlands (Dutch)
+- Svenska (Swedish)
+- ไทย (Thai)
+- Українська (Ukrainian)
 
-> **Coverage note:** The primary user flow (configuration dialog, project tree, result panel, settings page, error and notification strings) is fully translated in every language listed above. The "What's New" screen, the installation guide, and the help/FAQ section currently fall back to English in some of the newer translations; a follow-up translation pass is planned.
+> **Coverage note:** The primary user flow (configuration dialog, project tree, result panel, settings page, error and notification strings) is fully translated in every language listed above. The "What's New" screen, the installation guide, and the help/FAQ section currently fall back to English in the newest additions (Bengali, Catalan, Persian, Hebrew, Dutch, Swedish, Thai, Ukrainian); a follow-up translation pass is planned.
 
 ---
 
@@ -120,7 +140,7 @@ Supported languages:
 - Save, share, or regenerate the final output.
 - Clear warnings for unreadable files or incomplete exports.
 - Persistent recovery behavior for previous valid output.
-- Robust tree loading: cancelling a scan, superseding it with a filter change, or hitting an error always restores the correct panel state, with no orphan spinners and no stale Cancel button.
+- Robust tree loading: cancelling a scan, superseding it with a filter change, or hitting an error always restores the correct panel state. No orphan "Analyzing…" spinners, and the Cancel button is only shown while a scan is running.
 - Project root is resolved by a three-step heuristic (`.gitignore` search, CodeAssist project boundary, fallback to the selected folder), bounded by a user-configurable parent folder search limit (default 10, range 0–50). Set it to 0 to keep the plugin strictly scoped to the folder you selected.
 
 ---
@@ -130,7 +150,7 @@ Supported languages:
 The generated file is a readable `.txt` document that includes:
 
 1. A directory tree of the included files, with a `[ref]` suffix next to reference-only entries.
-2. Clearly separated file sections, each headed by the file's relative path, containing either the file's content or a `[content omitted: N B - reference only]` marker.
+2. Clearly separated file sections, each headed by the file's relative path, containing either the file's content or a `[content omitted: N B — reference only]` marker.
 3. Final stats for file count, total size, and estimated token count.
 
 Generated files are saved under the public **Download** folder on your device:
@@ -176,25 +196,32 @@ The plugin is organized into a few main areas:
 
 ---
 
+🆕 What's new in 1.2.0
+
+· Eight new languages: Bengali, Catalan, Persian, Hebrew, Dutch, Swedish, Thai and Ukrainian. The plugin now speaks 27 languages (26 translations plus English), selectable independently of the IDE language from the settings page.
+
+· Right-to-left support for Arabic, Persian and Hebrew comes from Android's automatic layout mirroring, so no extra configuration is needed and the visual identity of the plugin is preserved in every direction.
+
+· No behavioral changes to the export pipeline, the filtering logic, the Git integration, or the storage layer. This release is a pure i18n expansion plus the documentation needed to keep the new languages maintainable.
+
+---
+
 🆕 What's new in 1.1.0
 
-· Tree v2: the project tree is now the source of truth for what goes into the dump. Mark each file as Included, Reference-only, or Excluded from the tree itself. Parent and child states stay consistent both ways, and manual overrides are preserved when you cycle a folder.
-· Reference-only files: a new third inclusion state lets you list a file in the dump — name and size — without reading its content. Ideal for lockfiles, generated code, and machine-local configuration. Configured both by pattern (in the new Reference only section of the dialog) and per file (in the tree). The dump marks them with a [ref] suffix in the tree header and a [content omitted: N B - reference only] marker in the body.
-· Per-project tree config: your tree selection is saved to .platform/plugins/com.devdayton.onecodeforai/config.json inside the project, so each project keeps its own decisions independent of the preset. Only written on Generate; closing the dialog without generating discards manual changes.
-· Show locked toggle: hard-excluded folders (node_modules, build, .git, …) and binary files appear as locked nodes. Enabling "Show locked" makes them interactive. Locking is per-session and safe: unlocking does not automatically include anything inside the folder.
-· Tri-state indicator: every row shows its state with a custom tri-state glyph (checkmark for Included, dash for Reference only, empty for Excluded). The indicator is visible from the first frame, without waiting for a user interaction.
-· Built-in presets updated: Android, Web, and Python presets now use reference-only entries for R.java, BuildConfig.java, local.properties, package-lock.json, pnpm-lock.yaml, poetry.lock, and Pipfile.lock. The dump stays structurally complete without paying the token cost of those files' contents.
-· Tree loading robustness: cancelling a scan, superseding it with a filter change, or hitting an error always restores the correct panel state. The Cancel button and the Reload action both work reliably, and the Cancel button is only shown while a scan is running.
-· Preset restoration: the preset spinner now reads its initial selection from the project's config.json instead of SharedPreferences, so the correct preset is always shown for the correct project.
-· Theme selector: the plugin UI now supports a light and a dark palette, resolved at every UI entry point. A new Theme selector in the settings page offers System (follow device), Light, and Dark; the default is System.
-· Dark and light palettes: the dark palette preserves the original hand-tuned colors; the light palette introduces a lighter background, softer outlines, and a slightly darker accent for legibility on light backgrounds.
-· Help icons for every section: Export profile, Version control, Inclusions, Exclusions, Reference only, Gitignore rules, Binary exclusion, Project tree, Locked nodes, and Per-file size limit now all expose a "?" affordance with an inline explanation.
-· Help icon alignment: the "?" icon now sits flush with the right edge of its section title or panel, without losing the 40 dp touch target.
-· Gitignore section redesign: the "Respect .gitignore rules" checkbox is now inside the .gitignore section, directly below the title and above the flow of chips. Toggling it off clears the flow in place (no dialog reload, no tree re-scan); toggling it back on repopulates the chips from the cached rules.
-· Configurable parent folder search limit: the plugin used to walk exactly 5 parent folders looking for a .gitignore. The limit is now a user setting (default 10, clamped to 0–50), exposed in the settings page as "Parent folder search limit". A value of 0 keeps the plugin strictly scoped to the selected folder.
-· Project root resolution: new three-step heuristic (.gitignore search, CodeAssist project boundary detection, fallback to the selected folder). Used both when Git is disabled and as the fallback when JGit cannot find a repository.
-· .platform excluded from the dump: the plugin's own per-project config directory (.platform/plugins/com.devdayton.onecodeforai/) is now hard-excluded from the dump, alongside .git, .gradle, and .idea. Users who need to inspect it can enable "Show locked" and mark it explicitly.
-· Tree opening fix: the tree section no longer stays on "Analyzing…" forever on first open.
+· Tree v2: the project tree is now the authoritative source of truth for what goes into the dump. Files can be marked Included, Reference-only, or Excluded from the tree itself, and the selection is preserved per project.
+· Reference-only files: a new third inclusion state lets you list a file in the dump — name and size — without reading its content. Ideal for lockfiles, generated code, and machine-local configuration. Configured both by pattern (in the Reference only section of the dialog) and per file (in the tree). The dump marks them with a [ref] suffix in the tree header and a [content omitted: N B — reference only] marker in the body.
+· Uniform folder cycling: clicking a folder forces the next state onto every non-locked descendant at every depth, so the folder's tri-state indicator never disagrees with its children. Marking a deep file updates every ancestor's aggregate all the way to the root, without touching the ancestors' other children.
+· Show locked: hard-excluded folders and binary files appear as locked nodes; enabling "Show locked" makes them interactive and scans a newly-unlocked folder's contents on demand, showing every child including APKs, .dex and binaries. The toggle survives filter changes and reloads: a rescan with "Show locked" on leaves the tree interactive. Disabling it re-locks everything and discards what was included while unlocked.
+· New General section: "Exclude binary files" and "Maximum size" now live under their own uppercase title at the top of the form.
+· Section toggles: Inclusions, Exclusions, Reference only, Gitignore, Version control, and File tree all follow the same checkbox + uppercase title + help pattern. Unchecking Inclusions, Exclusions, or Reference only disables the list without deleting it. A Clear button next to Add empties an editable flow in one tap and switches the profile to Custom; Gitignore has no Clear because its flow is read-only.
+· Uppercase section headers and a single hairline separator below the preset spinner, with no dividers between rule sections, so the panel stays short and minimalist on a phone screen.
+· Dark theme is now the default. A fresh install opens on the plugin's original hand-tuned palette; existing users who explicitly picked a theme keep their stored choice.
+· Info screen redesigned: features grouped into four categories, per-row icon count cut from roughly 25 to 10, and a hero block with a version and status chip row.
+· Project root resolution: three-step heuristic (.gitignore search, CodeAssist project boundary, fallback to the selected folder), bounded by the new "Parent folder search limit" setting.
+· .platform directory hard-excluded from the dump, alongside .git, .gradle, and .idea, so the plugin's own tracking file cannot end up in the model's context.
+· Tree loading and cancellation are robust: no orphan "Analyzing…" spinners, Cancel only shown while a scan is running, and Reload expands the section first if it was collapsed.
+· Contextual help on every section, and every toggle section's help body now explains that unchecking the box disables the list without deleting it.
+· Built-in presets use reference-only entries for generated files and lockfiles, keeping the dump structurally complete without paying the token cost of their contents.
 
 ---
 

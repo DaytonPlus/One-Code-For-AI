@@ -53,8 +53,8 @@ compileSdk = 36
 minSdk = 26
 targetSdk = 36
 manifest = "src/main/AndroidManifest.xml"
-versionCode = 100
-versionName = "1.1.0"
+versionCode = 120
+versionName = "1.2.0"
 isApplication = true
 manifestPlaceholders = []
 buildConfigFields = ["MIN_SDK_VERSION = 26", "TARGET_SDK_VERSION = 36"]
