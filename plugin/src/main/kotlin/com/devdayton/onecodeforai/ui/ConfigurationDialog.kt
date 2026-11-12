@@ -9,7 +9,10 @@ import com.devdayton.onecodeforai.android.PluginSettings
 import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.GitUtils
 import com.devdayton.onecodeforai.core.FilterConfig
+import com.devdayton.onecodeforai.core.NodeState
 import com.devdayton.onecodeforai.core.PresetManager
+import com.devdayton.onecodeforai.core.TreeConfigStore
+import com.devdayton.onecodeforai.core.TreeOverrides
 import com.devdayton.onecodeforai.ui.FlowLayout
 import com.devdayton.onecodeforai.ui.UiFactory
 import com.devdayton.onecodeforai.ui.CodeAssistTheme
@@ -65,101 +68,83 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
 /**
  * Configuration screen for the dump generator.
  *
- * Opening flow
- * ------------
- * The dialog deliberately shows a lightweight skeleton first, then swaps to the
- * real form once the slow inputs are ready — that way it appears instantly even
- * on devices where JGit class-loading, `.gitignore` parsing, or the last-saved
- * state read take a few hundred milliseconds:
+ * ### Opening flow
+ *
+ * The dialog deliberately shows a lightweight skeleton first, then swaps
+ * to the real form once the slow inputs are ready — that way it appears
+ * instantly even on devices where JGit class-loading, `.gitignore`
+ * parsing, or the project's `config.json` read take a few hundred
+ * milliseconds:
  *
  *  1. [show] displays the skeleton screen and requests the legacy storage
- *     permission (API 26–28 only) so the system prompt has time to appear
+ *     permission (API 26-28 only) so the system prompt has time to appear
  *     while the UI is still loading.
- *  2. `.gitignore` rules and the last saved state are read on a background
- *     thread (`OneCode-dialog-init`).
- *  3. [buildFullUI] is invoked on the main thread once that data is available.
+ *  2. `.gitignore` rules and the project's [TreeConfigStore] config are
+ *     read on a background thread.
+ *  3. [buildFullUI] is invoked on the main thread once that data is
+ *     available.
  *  4. The Git section (JGit access) is rendered with its own loading
- *     placeholder and resolved asynchronously on `OneCode-git-info`, so the
- *     dialog is never blocked by repository I/O.
+ *     placeholder and resolved asynchronously, so the dialog is never
+ *     blocked by repository I/O.
  *
- * Legacy storage permission
- * -------------------------
- * On API 26–28 the export writes to `Download/OneCodeForAI` through the
- * legacy public-Downloads path, which requires `WRITE_EXTERNAL_STORAGE`. API
- * 29+ uses MediaStore and needs no permission at all.
- * [requestLegacyStoragePermissionIfNeeded] fires the system prompt on the
- * first dialog open; the OS records the decision, and
- * [com.devdayton.onecodeforai.android.ExportCoordinator.writeToDownloadsLegacy]
- * re-checks it at write time.
+ * ### Tree v2: the tree is the export source of truth
  *
- * If the user denied the permission, the export **fails visibly** with
- * [R.string.error_storage_permission] — there is no cache fallback and no
- * `ContentProvider`. Users on API 26–28 can grant the permission once in
- * system settings and retry. Shipping `androidx.core` purely to expose a
- * fallback cache file was not considered a good trade-off for a plugin that
- * otherwise has no AndroidX dependency.
+ * This dialog is where the export's inclusion decisions actually live.
+ * Before Tree v2 the dialog held a [FilterConfig] and the tree was a
+ * preview. Now the dialog:
  *
- * Stale URIs
- * ----------
- * The result state ([ExportStateHolder]) is a process-wide singleton and
- * survives for the lifetime of the CodeAssist process. Its `Snapshot.uri`
- * points to the file the last export produced. If the user deletes or moves
- * that file from a system file manager while the dialog is still open, the
- * URI becomes stale: the underlying MediaStore entry no longer exists.
+ *  - builds a [FilterConfig] from the preset's rules and its own UI
+ *    controls (binaries, gitignore, per-file size, inclusions,
+ *    exclusions, stub patterns),
+ *  - loads the project's persisted [TreeOverrides] from
+ *    [TreeConfigStore.load],
+ *  - asks [ProjectTreeView.scanAsync] to build the tree using those
+ *    inputs,
+ *  - lets the user adjust individual nodes (INCLUDE / STUB / EXCLUDE
+ *    cycle, plus the LOCKED unlock toggle for hard-excluded folders),
+ *  - and, on Generate, takes a snapshot of the tree's states via
+ *    [ProjectTreeView.currentStates] and forwards it to the
+ *    [ExportCoordinator].
  *
- * The "Share" and "Save" chips therefore validate the URI via
- * [isSnapshotUriReadable] before using it. A stale URI is handled by
- * [handleStaleResult], which resets the state to [ExportStateHolder.State.IDLE]
- * (restoring the configuration form so the user can regenerate) and shows
- * [R.string.error_source_file_missing] instead of a misleading write error.
+ * ### Tree config persistence
  *
- * Git master switch
- * -----------------
- * [gitEnabledGlobally] mirrors `PluginSettings.isGitEnabled`. When `false`,
- * the Git section still renders but displays a static "disabled globally"
- * notice instead of the interactive branch/commit controls. This explains
- * to the user why Git features are missing, regardless of whether the
- * selected folder is a repository or not.
+ * The project's tree state is stored under
+ * `.platform/plugins/com.devdayton.onecodeforai/config.json`. Only two
+ * events write it:
  *
- * Git ref validation
- * ------------------
- * The Git ref typed into the ref field is validated **asynchronously** at
- * the moment the user clicks "Generate" (see [startExport]). The previous
- * implementation called `GitUtils.refExists` synchronously from
- * [readUIValues], which meant every filter change on a Git-enabled project
- * triggered a JGit `Repository.resolve` on the UI thread — up to several
- * hundred milliseconds of jank on network-mounted repositories. The new
- * flow captures the config at click time, validates the ref on a background
- * thread, and only then starts the export. `readUIValues` no longer
- * validates the ref, so it is now cheap enough to call on every UI event.
+ *  - Generate (before the export launches), which saves only the diff
+ *    between the tree's current states and the filter-derived states,
+ *    tagged with the currently selected preset so a mismatched preset
+ *    cannot be restored on the next open.
+ *  - Never in any other path. Closing the dialog discards manual changes
+ *    on purpose.
  *
- * Tree preview
- * ------------
- * The interactive file-tree preview is always rendered. A previous version
- * exposed a `treeEnabledGlobally` flag that was always `true` because the
- * corresponding preference was never exposed in the settings page; the flag
- * has been removed to keep the code honest. See
- * [com.devdayton.onecodeforai.OneCodeForAIPlugin] for the matching cleanup
- * on the plugin entry point.
+ * ### Tree loading panel
  *
- * `.gitignore` negations
- * ----------------------
- * `FileFilter.loadGitignoreRules()` returns negated rules (`!foo`) with the
- * `!` prefix preserved, so the UI can render them with a distinct style and
- * the user can see that their `.gitignore` is force-including a file. The
- * helper functions that compare user rules against `.gitignore` tags strip
- * the `!` defensively before matching, because the negation prefix is not
- * part of the pattern itself.
+ * The tree section has three visual states, managed by [TreeUiState]:
  *
- * Total export size limit
- * -----------------------
- * The total export size limit is configured on the plugin settings page (see
- * [com.devdayton.onecodeforai.OneCodeForAISettingsPage]) and enforced by
- * [com.devdayton.onecodeforai.core.CodeDumpGenerator]. This dialog does not
- * expose it: the value is read fresh by
- * [com.devdayton.onecodeforai.android.ExportCoordinator] at the start of
- * every export, so the user can change it from Settings while the dialog is
- * minimized and the next export will already respect the new cap.
+ *  - LOADING: the spinner is visible and the tree is hidden. Entered by
+ *    [startTreeScan] before the scan is dispatched.
+ *  - TREE: the spinner is hidden and the tree is visible. Entered by the
+ *    scan's `onComplete` and by collapsing the tree section.
+ *  - ERROR: the spinner is visible with an error / cancel message and
+ *    the tree is hidden. Entered by the scan's `onError` and by the
+ *    Cancel button.
+ *
+ * The state machine is the single writer of the loading panel's
+ * visibility, so the "Analizando…" spinner can never end up orphaned when
+ * the underlying scan is cancelled, superseded or fails.
+ *
+ * @param activity          Host activity used to build the dialog.
+ * @param projectRoot       Root of the project being exported.
+ * @param gitEnabledGlobally Whether the global Git master switch is on.
+ * @param initialConfig     The config the dialog starts with when the
+ *                          project has no saved config.
+ * @param logInfo           Callback used to forward lifecycle logs to the
+ *                          host IDE console.
+ * @param onDismiss         Invoked when the dialog is dismissed.
+ * @param onChangeRoot      Invoked when the user taps the "go to project
+ *                          root" affordance in the Git section.
  */
 class ConfigurationDialog(
     private val activity: Activity,
@@ -173,12 +158,21 @@ class ConfigurationDialog(
     private val presetManager = PresetManager(activity)
     private var activeDialog: Dialog? = null
     private var currentConfig = FilterConfig()
+    private var currentOverrides = TreeOverrides()
+    private var currentPresetName: String = ""
     private var isCustomMode = false
     private var isUpdatingUI = false
     private var gitignoreTags: List<String> = emptyList()
 
-    // [PERF] Distinguishes "UI built" from "still loading", so the dismiss handler
-    // can safely skip readUIValues()/saveLastState() when the user closes the
+    /**
+     * Cached snapshot of the tree's states, kept up to date by the
+     * [ProjectTreeView.onStatesChanged] callback. Read on Generate to
+     * hand the map to [ExportCoordinator].
+     */
+    private var currentStatesCache: Map<String, NodeState> = emptyMap()
+
+    // [PERF] Distinguishes "UI built" from "still loading", so the dismiss
+    // handler can safely skip readUIValues() when the user closes the
     // dialog while the initial data is still being loaded.
     private var uiBuilt = false
 
@@ -186,11 +180,8 @@ class ConfigurationDialog(
     private var rescanScheduled = false
 
     /**
-     * Master gate for every fade / scale / rotation animation in this dialog.
-     *
-     * Uses a custom getter instead of `by lazy` so that if the user disables
-     * animations in the global settings while this dialog is open, the change
-     * is picked up immediately for subsequent animations.
+     * Master gate for every fade / scale / rotation animation in this
+     * dialog.
      */
     private val animationsEnabled: Boolean
         get() = PluginSettings.areAnimationsEnabled(activity)
@@ -205,6 +196,7 @@ class ConfigurationDialog(
     private lateinit var etMaxSize: EditText
     private lateinit var flowInclusions: FlowLayout
     private lateinit var flowExclusions: FlowLayout
+    private lateinit var flowStubPatterns: FlowLayout
     private lateinit var flowGitignore: FlowLayout
     private lateinit var gitignoreSection: LinearLayout
     private lateinit var layoutGitBox: LinearLayout
@@ -222,6 +214,7 @@ class ConfigurationDialog(
     // ---- Tree ----
     private var treeVisible = false
     private lateinit var cbShowTree: CheckBox
+    private lateinit var cbShowLocked: CheckBox
     private lateinit var treeActionsRow: LinearLayout
     private lateinit var treeWrapper: FrameLayout
     private lateinit var treeView: ProjectTreeView
@@ -243,7 +236,8 @@ class ConfigurationDialog(
     private lateinit var progressBackLink: TextView
     private var stateUnsubscribe: (() -> Unit)? = null
 
-    // [PERF] Lazy: avoids loading JGit/MediaStore-related classes at dialog-open time.
+    // [PERF] Lazy: avoids loading JGit/MediaStore-related classes at
+    // dialog-open time.
     private val exportCoordinator: ExportCoordinator by lazy {
         ExportCoordinator(
             contextProvider = com.devdayton.onecodeforai.android.HostEnvironment::applicationContext,
@@ -253,6 +247,16 @@ class ConfigurationDialog(
 
     private val tagViews = mutableMapOf<String, TextView>()
 
+    /**
+     * Visual state of the tree section. Managed exclusively through
+     * [setTreeUiState] so the loading panel, the tree container and the
+     * Cancel button can never end up in an inconsistent combination.
+     *
+     * See the class-level "Tree loading panel" note for the full
+     * contract of each state.
+     */
+    private enum class TreeUiState { LOADING, TREE, ERROR }
+
     // ------------------------------------------------------------------
 
     private fun customPresetLabel(): String = activity.pluginString(R.string.custom_preset)
@@ -261,26 +265,18 @@ class ConfigurationDialog(
      * Picks the initial spinner position from the last-saved preset name.
      *
      * `lastStatePreset` is the string that was stored in
-     * `PresetManager.saveLastState`, which today comes from the spinner's
-     * currently-selected item. That means it is already the *localized* custom
-     * label — hence the `lastStatePreset == customLabel` branch — but two
-     * literal values ("Personalizado" and "Custom") are kept for backward
-     * compatibility: they were the hardcoded custom label before it was moved
-     * into `R.string.custom_preset`, so profiles saved by earlier plugin
-     * versions would otherwise silently fall through to index 0 anyway. A
-     * future cleanup can drop the two literals once the migration window is
-     * closed.
-     *
-     * An empty string (the new fallback returned by
-     * `PresetManager.loadLastState` when no preset has ever been saved) also
-     * resolves to index 0 through the `getPosition("") == -1` path.
+     * `TreeConfigStore.load(projectRoot)?.presetName`. That value comes
+     * from the spinner's selected item at the moment the user pressed
+     * Generate, so it is already the localized custom label. The two
+     * literal values ("Personalizado" and "Custom") are kept for
+     * backward compatibility with profiles saved by earlier plugin
+     * versions.
      */
     private fun resolveInitialPresetIndex(lastStatePreset: String?): Int {
         val customLabel = customPresetLabel()
         return when {
             lastStatePreset == null -> 0
             lastStatePreset == customLabel -> 0
-            // Legacy hardcoded custom labels kept for backward compatibility.
             lastStatePreset == "Personalizado" -> 0
             lastStatePreset == "Custom" -> 0
             else -> presetAdapter.getPosition(lastStatePreset).takeIf { it >= 0 } ?: 0
@@ -288,20 +284,21 @@ class ConfigurationDialog(
     }
 
     // ==================================================================
-    // [PERF] Public entry — shows loading immediately, then builds the UI.
+    // Public entry — shows loading immediately, then builds the UI.
     // ==================================================================
 
     /**
-     * Opens the dialog. See the class-level *Opening flow* note for the
+     * Opens the dialog. See the class-level "Opening flow" note for the
      * reasoning behind the skeleton-first approach.
      *
-     * The legacy storage permission is requested before the dialog is shown
-     * (API 26–28 only) so the system prompt can appear while the skeleton is
-     * still on screen. The permission decision is not awaited: the export
-     * coordinator re-checks at write time. If the permission is still
-     * missing, the export fails visibly with [R.string.error_storage_permission]
-     * instead of silently falling back to a cache copy — see the class-level
-     * *Legacy storage permission* note.
+     * ### Tree v2: no last-state fallback
+     *
+     * The project's [TreeConfigStore] config is the only source of the
+     * initial config and preset. The previous "last state" pair that
+     * `PresetManager` used to persist has been removed in Tree v2: the
+     * preset is now stored per project in `config.json` alongside the
+     * tree overrides, so a fresh install or a project that has never
+     * generated falls back to [initialConfig] and the "Custom" preset.
      */
     fun show() {
         requestLegacyStoragePermissionIfNeeded()
@@ -320,37 +317,18 @@ class ConfigurationDialog(
         Thread({
             val gitignore = runCatching { FileFilter(projectRoot).loadGitignoreRules() }
                 .getOrDefault(emptyList())
-            val lastState = runCatching { presetManager.loadLastState() }.getOrNull()
+            val projectConfig = runCatching { TreeConfigStore.load(projectRoot) }.getOrNull()
             activity.runOnUiThread {
                 if (!dialog.isShowing || activity.isFinishing || activity.isDestroyed) return@runOnUiThread
                 gitignoreTags = gitignore
-                buildFullUI(dialog, lastState)
+                buildFullUI(dialog, projectConfig)
             }
         }, "OneCode-dialog-init").apply { isDaemon = true; start() }
     }
 
     /**
-     * Requests `WRITE_EXTERNAL_STORAGE` on the API range that still needs it
-     * (26–28). No-op on API 29+ (MediaStore handles Downloads without any
-     * permission) and on API < 23 (implicit at install time).
-     *
-     * The request is intentionally fire-and-forget: the host Activity does not
-     * override `onRequestPermissionsResult`, so we cannot await the answer
-     * here. That is fine — the OS records the decision, and
-     * [com.devdayton.onecodeforai.android.ExportCoordinator.writeToDownloadsLegacy]
-     * re-checks the current permission state at write time. If it is still
-     * missing, the coordinator reports a localized error through
-     * [com.devdayton.onecodeforai.android.ExportStateHolder.fail] and no
-     * output file is produced. The user can grant the permission once and
-     * retry.
-     *
-     * Uses the native `Activity.checkSelfPermission(...)` (API 23+, and the
-     * plugin's minSdk is 26) instead of `ContextCompat` so the plugin does
-     * not need `androidx.core` for this single call.
-     *
-     * The manifest declares the permission with `android:maxSdkVersion="28"`,
-     * so on API 29+ the system will not even offer it — this guard just makes
-     * the intent explicit at the call site.
+     * Requests `WRITE_EXTERNAL_STORAGE` on the API range that still needs
+     * it (26-28). No-op on API 29+.
      */
     private fun requestLegacyStoragePermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
@@ -368,10 +346,8 @@ class ConfigurationDialog(
     }
 
     /**
-     * Skeleton shown while `.gitignore` + last state are read on the background
-     * thread. Layout intentionally mirrors the shape of the real form (header,
-     * two medium panels, one flexible panel) so the swap in [buildFullUI] does
-     * not cause a visible reflow.
+     * Skeleton shown while `.gitignore` + project config are read on the
+     * background thread.
      */
     private fun buildLoadingView(): View {
         val outer = FrameLayout(activity).apply {
@@ -417,8 +393,6 @@ class ConfigurationDialog(
             }
         })
 
-        // Two fixed-height skeleton panels + one flexible panel, to match the
-        // real form's proportions.
         repeat(2) {
             content.addView(skeletonBar(dp(110), dp(10), radius = 3f, topMargin = dp(18)))
             val panel = LinearLayout(activity).apply {
@@ -476,9 +450,12 @@ class ConfigurationDialog(
     }
 
     /**
-     * Cleans up resources and saves the current UI state when the dialog is dismissed.
-     * This handler guarantees that even if the user closes the dialog mid-export,
-     * the correct callbacks are triggered and observers are unregistered.
+     * Cleans up resources when the dialog is dismissed.
+     *
+     * Manual tree changes are not persisted on dismiss. Writing them here
+     * would silently pollute the project with decisions the user has not
+     * committed to — Generate is the only operation that writes the
+     * config, and only after the dump has been successfully published.
      */
     private fun handleDismiss(dialog: Dialog) {
         if (activeDialog === dialog) activeDialog = null
@@ -488,16 +465,8 @@ class ConfigurationDialog(
             pendingResolve?.let { resolveHandler.removeCallbacks(it) }
             resolveHandler.removeCallbacksAndMessages(null)
             if (::treeView.isInitialized) treeView.cancelScan()
-            // Only persist the current form values if the UI was actually built:
-            // otherwise the lateinit fields are not initialized yet and the
-            // saved state would overwrite the user's previous choices with
-            // defaults.
             if (uiBuilt && ::spinnerPresets.isInitialized) {
                 readUIValues()
-                presetManager.saveLastState(
-                    currentConfig,
-                    spinnerPresets.selectedItem?.toString() ?: customPresetLabel()
-                )
             }
         } finally {
             onDismiss()
@@ -505,24 +474,50 @@ class ConfigurationDialog(
     }
 
     // ==================================================================
-    // [PERF] Full UI construction.
+    // Full UI construction.
     // ==================================================================
 
     /**
      * Constructs the main configuration form.
      *
-     * This method is called on the main thread once the slow initial data
-     * (gitignore rules, last saved state) is ready. It assembles the header,
-     * the preset spinner, the base filter checkboxes, tag sections, the Git
-     * interactive section, the file tree preview, and the inline progress/result
-     * container.
+     * ### Preset resolution (Tree v2)
+     *
+     * The project's [TreeConfigStore] is consulted first. If it has a
+     * saved config, its `presetName` determines which preset the spinner
+     * should land on:
+     *
+     *  - The named preset still exists in [PresetManager] -> use its rules.
+     *  - The named preset was deleted or is "Custom" -> use the saved
+     *    `filterConfig` from the config.
+     *  - No config exists -> use [initialConfig] and the "Custom" preset.
+     *
+     * The tree overrides from the config are then loaded into
+     * [currentOverrides] so [ProjectTreeView.scanAsync] can apply them
+     * while scanning.
      */
-    private fun buildFullUI(dialog: Dialog, lastState: Pair<FilterConfig, String>?) {
-        currentConfig = lastState?.first ?: initialConfig.normalized()
-        val lastPresetName = lastState?.second
-        isCustomMode = lastPresetName.isNullOrBlank() ||
-            lastPresetName == customPresetLabel() ||
-            presetManager.loadPreset(lastPresetName) == null
+    private fun buildFullUI(
+        dialog: Dialog,
+        projectConfig: TreeConfigStore.LoadedConfig?
+    ) {
+        val savedPresetName = projectConfig?.presetName
+        val savedFilterConfig = projectConfig?.filterConfig
+        val savedOverrides = projectConfig?.overrides ?: TreeOverrides()
+
+        currentOverrides = savedOverrides
+
+        val resolvedPresetConfig = savedPresetName?.let { presetManager.loadPreset(it) }
+        currentConfig = when {
+            resolvedPresetConfig != null -> resolvedPresetConfig
+            savedFilterConfig != null -> savedFilterConfig.normalized()
+            else -> initialConfig.normalized()
+        }
+
+        isCustomMode = resolvedPresetConfig == null
+        currentPresetName = when {
+            savedPresetName != null && resolvedPresetConfig != null -> savedPresetName
+            savedFilterConfig != null -> savedPresetName.orEmpty().ifBlank { customPresetLabel() }
+            else -> customPresetLabel()
+        }
 
         val scroll = ScrollView(activity).apply {
             isFillViewport = true
@@ -573,7 +568,6 @@ class ConfigurationDialog(
 
         // ============ FORM ============
 
-        // Presets
         configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_presets)))
         val presetRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
@@ -609,7 +603,6 @@ class ConfigurationDialog(
         presetRow.addView(btnDeletePreset)
         configContainer.addView(presetRow)
 
-        // Base filters
         configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_base_filters)))
         val basePanel = panel()
         cbBinaries = activity.checkBox(activity.pluginString(R.string.exclude_binaries)).apply {
@@ -622,15 +615,9 @@ class ConfigurationDialog(
                 if (!isUpdatingUI) { markAsCustom(); updateTagsUI(animate = true) }
             }
         }
-        // Binary exclusion ships with a dedicated help icon so the fixed
-        // extension list and its override rules are discoverable without
-        // opening the FAQ. The checkbox is wrapped in a horizontal row
-        // because the help icon must sit outside the checkbox's touch target
-        // to avoid toggling the value when the user taps the "?" icon.
         basePanel.addView(rowWithHelp(cbBinaries, R.string.help_binaries_title, R.string.help_binaries_body))
         basePanel.addView(cbGitignore)
 
-        // Max size row
         val sizeRow = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -670,13 +657,12 @@ class ConfigurationDialog(
         basePanel.addView(sizeRow)
         configContainer.addView(basePanel)
 
-        // Tags — Inclusions / Exclusions.
         configContainer.addView(tagSectionHeader(
             activity.pluginString(R.string.section_inclusions),
             R.string.help_inclusions_title,
             R.string.help_inclusions_body,
             activity.pluginString(R.string.action_add)
-        ) { showAddTagDialog(activity.pluginString(R.string.add_inclusion_title)) { addTag(it, true) } })
+        ) { showAddTagDialog(activity.pluginString(R.string.add_inclusion_title)) { addTag(it, TagKind.INCLUSION) } })
         flowInclusions = createFlow()
         configContainer.addView(flowInclusions)
 
@@ -685,9 +671,18 @@ class ConfigurationDialog(
             R.string.help_exclusions_title,
             R.string.help_exclusions_body,
             activity.pluginString(R.string.action_add)
-        ) { showAddTagDialog(activity.pluginString(R.string.add_exclusion_title)) { addTag(it, false) } })
+        ) { showAddTagDialog(activity.pluginString(R.string.add_exclusion_title)) { addTag(it, TagKind.EXCLUSION) } })
         flowExclusions = createFlow()
         configContainer.addView(flowExclusions)
+
+        configContainer.addView(tagSectionHeader(
+            activity.pluginString(R.string.section_stub_patterns),
+            R.string.help_stub_title,
+            R.string.help_stub_body,
+            activity.pluginString(R.string.action_add)
+        ) { showAddTagDialog(activity.pluginString(R.string.add_stub_title)) { addTag(it, TagKind.STUB) } })
+        flowStubPatterns = createFlow()
+        configContainer.addView(flowStubPatterns)
 
         gitignoreSection = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         gitignoreSection.addView(sectionTitleWithHelp(
@@ -699,12 +694,6 @@ class ConfigurationDialog(
         gitignoreSection.addView(flowGitignore)
         configContainer.addView(gitignoreSection)
 
-        // Git
-        //
-        // If Git is enabled globally, we render the interactive UI.
-        // If Git is disabled, we still render the section but show a static
-        // "disabled globally" notice. This informs the user why branch/tag
-        // controls are missing, regardless of whether the folder is a repo.
         if (gitEnabledGlobally) {
             configContainer.addView(activity.sectionTitle(activity.pluginString(R.string.section_version_control)))
             layoutGitBox = panel()
@@ -718,26 +707,10 @@ class ConfigurationDialog(
                 activity.pluginString(R.string.git_disabled_globally),
                 11f, CodeAssistTheme.TEXT_MUTED
             ).apply {
-                setPadding(
-                    0,
-                    CodeAssistTheme.dp(activity, 4),
-                    0,
-                    CodeAssistTheme.dp(activity, 4)
-                )
+                setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4))
             })
         }
 
-        // Tree
-        //
-        // The tree preview is always rendered. A previous version gated it
-        // behind a `treeEnabledGlobally` flag that was always `true` because
-        // the corresponding preference was never exposed in the settings
-        // page; the flag has been removed and the section is now
-        // unconditional. See the class-level *Tree preview* note.
-        //
-        // The tree section ships with a help icon (same "?" affordance as
-        // the filter sections) so the include/exclude semantics of the
-        // checkboxes are discoverable without leaving the dialog.
         configContainer.addView(sectionTitleWithHelp(
             R.string.section_tree,
             R.string.help_tree_title,
@@ -745,7 +718,7 @@ class ConfigurationDialog(
         ))
         val treeTogglePanel = panel()
         cbShowTree = activity.checkBox(activity.pluginString(R.string.show_tree)).apply {
-            isChecked = false
+            isChecked = true
             setOnCheckedChangeListener { _, checked -> setTreeVisibility(checked) }
         }
         treeTogglePanel.addView(cbShowTree)
@@ -755,8 +728,16 @@ class ConfigurationDialog(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, CodeAssistTheme.dp(activity, 4), 0, CodeAssistTheme.dp(activity, 4))
-            visibility = View.GONE
+            visibility = View.VISIBLE
         }
+        cbShowLocked = activity.checkBox(activity.pluginString(R.string.tree_show_locked)).apply {
+            isChecked = PluginSettings.isTreeShowLockedEnabled(activity)
+            minHeight = CodeAssistTheme.dp(activity, 32)
+            setOnCheckedChangeListener { _, checked ->
+                if (::treeView.isInitialized) treeView.toggleShowLocked(checked)
+            }
+        }
+        treeActionsRow.addView(cbShowLocked)
         treeActionsRow.addView(View(activity).apply {
             layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
         })
@@ -775,17 +756,14 @@ class ConfigurationDialog(
             )
             clipToOutline = true
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 280)
+                ViewGroup.LayoutParams.MATCH_PARENT, CodeAssistTheme.dp(activity, 320)
             )
-            visibility = View.GONE
+            visibility = View.VISIBLE
         }
         treeView = ProjectTreeView(
             activity = activity,
             projectRoot = projectRoot,
-            onExcludedPathsChanged = { excluded ->
-                currentConfig = currentConfig.copy(excludedPaths = excluded)
-                markAsCustomOnly()
-            },
+            onStatesChanged = { states -> currentStatesCache = states },
             onStatsChanged = { /* Stats are displayed in the result panel after generation. */ }
         )
         treeViewContainer = treeView.getView().apply { visibility = View.GONE }
@@ -798,7 +776,6 @@ class ConfigurationDialog(
         ))
         configContainer.addView(treeWrapper)
 
-        // Single "Generate" button
         val generateButton = Button(activity).apply {
             text = activity.pluginString(R.string.action_generate)
             textSize = 13f
@@ -812,10 +789,6 @@ class ConfigurationDialog(
             minHeight = CodeAssistTheme.dp(activity, 46)
             setOnClickListener {
                 readUIValues()
-                presetManager.saveLastState(
-                    currentConfig,
-                    spinnerPresets.selectedItem?.toString() ?: customPresetLabel()
-                )
                 startExport(ExportAction.GENERATE)
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -848,7 +821,7 @@ class ConfigurationDialog(
             applyState(snapshot)
         }
 
-        val initialIndex = resolveInitialPresetIndex(lastPresetName)
+        val initialIndex = resolveInitialPresetIndex(currentPresetName)
         spinnerPresets.setSelection(initialIndex, false)
         updateTagsUI(animate = false)
 
@@ -860,12 +833,25 @@ class ConfigurationDialog(
                 btnSavePreset.visibility = if (isCustomMode) View.VISIBLE else View.GONE
                 btnDeletePreset.visibility = if (presetManager.isUserPreset(selected)) View.VISIBLE else View.GONE
                 if (!isCustomMode) presetManager.loadPreset(selected)?.let { applyConfigToUI(it) }
+                currentPresetName = selected
+                // Tree v2: the project config only applies to its own
+                // preset. Switching presets re-scans the tree with the
+                // new rules; the previous project config is not applied.
+                currentOverrides = TreeOverrides()
+                if (treeVisible) startTreeScan()
             }
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
 
         uiBuilt = true
         scroll.post { playEntrance(configContainer) }
+
+        // Kick off the initial tree scan. Deferred until the form has been
+        // laid out so the loading placeholder has a measured height and the
+        // scan can report progress into the right views.
+        if (treeVisible) {
+            treeWrapper.post { startTreeScan() }
+        }
     }
 
     // ==================================================================
@@ -873,26 +859,8 @@ class ConfigurationDialog(
     // ==================================================================
 
     /**
-     * Creates an inline help icon ("?") with a moderate visual footprint and
-     * a touch-friendly hit area.
-     *
-     * The icon is an 18 dp vector centered inside a 40 dp transparent
-     * [FrameLayout]. The frame (not the icon itself) owns the click handler,
-     * so the user can reliably tap the affordance without accidentally
-     * triggering the adjacent section title or checkbox. This matches the
-     * plugin's minimum tap-target rule while keeping the visual weight low
-     * enough that it does not compete with the section title.
-     *
-     * 18 dp is the sweet spot between the previous 14 dp (which was reported
-     * as visually too small against bold section titles) and the underlying
-     * 24 dp vector (which would dominate the row). It also leaves a 2 dp
-     * breathing room on every side inside the 40 dp frame, which keeps the
-     * icon comfortably centered even when the container gets a stroke or
-     * background in a future iteration.
-     *
-     * `FIT_CENTER` (rather than `CENTER`) is used because the underlying
-     * vector is 24 dp and must be scaled down inside the 18 dp frame; using
-     * `CENTER` would crop it.
+     * Creates an inline help icon ("?") with a moderate visual footprint
+     * and a touch-friendly hit area.
      */
     private fun helpIcon(helpTitleRes: Int, helpBodyRes: Int): View {
         val touchSize = CodeAssistTheme.dp(activity, 40)
@@ -920,13 +888,6 @@ class ConfigurationDialog(
 
     /**
      * Wraps a [CheckBox] in a horizontal row with a trailing help icon.
-     *
-     * Used for checkboxes that benefit from an inline "?" affordance (binary
-     * exclusion today, potentially others in the future). The checkbox is
-     * given `weight = 1` so its touch target fills the remaining width, and
-     * the help icon sits at the far right without overlapping the checkbox's
-     * own hit area — that isolation is what prevents a tap on the "?" from
-     * also toggling the value.
      */
     private fun rowWithHelp(cb: CheckBox, helpTitleRes: Int, helpBodyRes: Int): LinearLayout {
         val row = LinearLayout(activity).apply {
@@ -955,10 +916,6 @@ class ConfigurationDialog(
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, CodeAssistTheme.dp(activity, 18), 0, CodeAssistTheme.dp(activity, 9))
         addView(activity.textView(
-            // See UiFactory.sectionTitle for the rationale: `Locale.getDefault()`
-            // diverges from the IDE locale on non-Latin-script systems, and
-            // `LanguageHelper.detectIdeLocale` keeps the uppercase consistent
-            // with the localized content and the force-English toggle.
             activity.pluginString(titleRes).uppercase(LanguageHelper.detectIdeLocale(activity)),
             11f, CodeAssistTheme.TEXT_SECONDARY, true
         ).apply {
@@ -972,8 +929,9 @@ class ConfigurationDialog(
     // ==================================================================
 
     /**
-     * Constructs the panel shown during `RUNNING`, `SUCCESS`, and `ERROR` states.
-     * It replaces the configuration form via visibility toggles handled by [applyState].
+     * Constructs the panel shown during RUNNING, SUCCESS, and ERROR states.
+     * It replaces the configuration form via visibility toggles handled by
+     * [applyState].
      */
     private fun buildProgressContainer(): LinearLayout {
         val panel = LinearLayout(activity).apply {
@@ -1136,11 +1094,7 @@ class ConfigurationDialog(
      * Renders the snapshot published by [ExportStateHolder].
      *
      * The guard that skips snapshots belonging to another project exists
-     * because [ExportStateHolder] is a process-wide singleton: a background
-     * export started from a *different* project (e.g. a second dialog that
-     * was opened after this one) would otherwise hijack this dialog's UI and
-     * show its progress here. In that case we simply keep showing the config
-     * form — the other dialog is already displaying the correct state.
+     * because [ExportStateHolder] is a process-wide singleton.
      */
     private fun applyState(snapshot: ExportStateHolder.Snapshot) {
         if (!::configContainer.isInitialized || !::progressContainer.isInitialized) return
@@ -1230,13 +1184,7 @@ class ConfigurationDialog(
     /**
      * Error state. The three action chips remain visible for layout
      * stability, but "Share" and "Save" early-return when
-     * [ExportStateHolder.Snapshot.uri] is null, which is always the case
-     * after [com.devdayton.onecodeforai.android.ExportStateHolder.fail]
-     * (there is no cache fallback any more, see the class-level
-     * *Legacy storage permission* note). In practice only "Regenerate" and
-     * the "Edit settings" link are functional in this state — which is
-     * exactly what the user needs to either retry with the permission
-     * granted or adjust the filters.
+     * [ExportStateHolder.Snapshot.uri] is null.
      */
     private fun showErrorInline(snapshot: ExportStateHolder.Snapshot) {
         configContainer.visibility = View.GONE
@@ -1255,15 +1203,8 @@ class ConfigurationDialog(
     }
 
     /**
-     * Formats the final file count, estimated tokens, and total size into a
-     * single summary line.
-     *
-     * The file-count label goes through [pluginQuantityString] so the
-     * correct CLDR plural form is selected for the current locale. This
-     * replaces the previous `if (count == 1) one else many` hack, which
-     * only worked for two-form languages (English, Spanish, Portuguese)
-     * and silently produced the wrong form for languages that need
-     * `few`/`many` (Russian, Polish, Czech) or `zero`/`two` (Arabic).
+     * Formats the final file count, reference count, and estimated token
+     * count into a single summary line.
      */
     private fun formatResultStats(snapshot: ExportStateHolder.Snapshot): String? {
         if (snapshot.filesCount <= 0 && snapshot.totalBytes <= 0L) return null
@@ -1275,39 +1216,13 @@ class ConfigurationDialog(
         val tokensLabel = activity.pluginString(
             R.string.stats_tokens, formatNumber(snapshot.estimatedTokens)
         )
-        return "$filesLabel  ·  $tokensLabel  ·  ${formatSize(snapshot.totalBytes)}"
+        val sizeLabel = formatSize(snapshot.totalBytes)
+        return "$filesLabel  ·  $tokensLabel  ·  $sizeLabel"
     }
 
     /**
-     * Verifies that the URI stored in the last success snapshot can still be
-     * opened for reading.
-     *
-     * MediaStore URIs (and, on API 26–28, the `file://` URI of a registered
-     * entry) can both become invalid if the user deletes or moves the file from
-     * a file manager while the dialog is open. In that case the "Share" and
-     * "Save" actions must not try to use the stale URI:
-     *
-     *  - Share would launch the chooser with a URI the receiving app cannot
-     *    read, so the app would fail silently from the user's perspective.
-     *  - Save would hit `copyFromUri`'s `openInputStream` → `IOException` and
-     *    surface a misleading "File write failed" error, even though the
-     *    problem is a missing source file, not a failed write.
-     *
-     * ### Implementation note
-     * The check uses a `query` for the `_ID` column rather than opening the
-     * input stream. A query is a pure metadata round-trip that never touches
-     * the file data, so it returns in ~1 ms even on slow eMMC storage where
-     * `openInputStream` can block for 50-100 ms while the filesystem
-     * resolves the URI and permissions.
-     *
-     * The trade-off is that an extremely rare edge case — a MediaStore row
-     * that still exists but whose backing file was deleted by a non-MediaStore
-     * path on API 26–28 — is not caught here. If that happens, the subsequent
-     * `shareFile` call fails gracefully with a localized toast, which is an
-     * acceptable outcome for a case that requires two separate mutations of
-     * the same file while the dialog is open.
-     *
-     * @return `true` when [ExportStateHolder.Snapshot.uri] is still readable.
+     * Verifies that the URI stored in the last success snapshot can still
+     * be opened for reading.
      */
     private fun isSnapshotUriReadable(snap: ExportStateHolder.Snapshot): Boolean {
         val uri = snap.uri ?: return false
@@ -1322,17 +1237,7 @@ class ConfigurationDialog(
 
     /**
      * Called when the URI stored in the last success snapshot is no longer
-     * readable — typically because the user deleted or moved the file from a
-     * system file manager while the dialog was open.
-     *
-     * [ExportStateHolder.reset] is the right response here: it returns the
-     * dialog to `IDLE`, which restores the configuration form and makes the
-     * "Generate" button available again. The user does not need a separate
-     * "Regenerate" CTA because the normal flow already leads there.
-     *
-     * The toast is deliberately long (`LENGTH_LONG`) and explains the cause
-     * ("may have been deleted or moved") rather than the symptom, so the
-     * user understands what actually happened.
+     * readable.
      */
     private fun handleStaleResult(messageRes: Int) {
         Toast.makeText(activity, activity.pluginString(messageRes), Toast.LENGTH_LONG).show()
@@ -1340,39 +1245,15 @@ class ConfigurationDialog(
     }
 
     /**
-     * Starts an export after asynchronously validating the Git reference, if
-     * one is configured.
-     *
-     * ### Why this is asynchronous
-     * `GitUtils.refExists` opens a JGit repository and resolves a reference,
-     * which is a synchronous filesystem operation that can take hundreds of
-     * milliseconds on a network mount or a very large repository. The
-     * previous implementation called it from [readUIValues], which meant
-     * every filter change on a Git-enabled export triggered disk I/O on the
-     * UI thread and produced visible jank.
-     *
-     * ### Config snapshot
-     * `currentConfig` is captured **once**, before the thread is spawned, so
-     * the eventual export uses exactly the state the user saw when they
-     * pressed Generate. If the user changes a filter while validation is
-     * running, the change applies to the *next* export, not the current one.
-     * Capturing the reference also guarantees that the main-thread callback
-     * does not read `currentConfig` from a different point in time than the
-     * one that was validated.
-     *
-     * ### Short-circuit
-     * When Git is disabled or no ref is set, the validation is skipped
-     * entirely and the export starts on the calling thread, so the common
-     * case has no extra thread hop.
-     *
-     * @param action the export action to start once the ref (if any) is
-     *   validated.
+     * Starts an export after asynchronously validating the Git reference,
+     * if one is configured.
      */
     private fun startExport(action: ExportAction) {
         val configSnapshot = currentConfig
+        val statesSnapshot = currentStatesCache
         val ref = configSnapshot.gitRef?.trim().orEmpty()
         if (!configSnapshot.useGit || ref.isEmpty()) {
-            launchExport(configSnapshot, action)
+            launchExport(configSnapshot, statesSnapshot, action)
             return
         }
         Toast.makeText(
@@ -1393,23 +1274,32 @@ class ConfigurationDialog(
                     ).show()
                     return@runOnUiThread
                 }
-                launchExport(configSnapshot, action)
+                launchExport(configSnapshot, statesSnapshot, action)
             }
         }.apply { isDaemon = true; name = "OneCode-ref-validate"; start() }
     }
 
     /**
-     * Delegates the export start to the coordinator and shows a toast if
-     * another export is already running.
-     *
-     * Extracted so both [startExport] branches (the synchronous one and the
-     * async Git-validation callback) funnel through the same coordinator
-     * call. The `config` parameter is captured by the caller and is
-     * deliberately **not** read from `currentConfig` here, so the reference
-     * that was validated is exactly the one that gets exported.
+     * Persists the tree config (preset + overrides diff) before launching
+     * the export, then delegates to the coordinator.
      */
-    private fun launchExport(config: FilterConfig, action: ExportAction) {
-        if (!exportCoordinator.export(projectRoot, config, action)) {
+    private fun launchExport(
+        config: FilterConfig,
+        states: Map<String, NodeState>,
+        action: ExportAction
+    ) {
+        runCatching {
+            TreeConfigStore.saveDiff(
+                projectRoot = projectRoot,
+                currentStates = states,
+                filter = FileFilter(projectRoot, config),
+                presetName = currentPresetName
+            )
+        }.onFailure {
+            logInfo("[WARN] Failed to persist tree config: ${it.message}")
+        }
+
+        if (!exportCoordinator.export(projectRoot, states, action)) {
             Toast.makeText(
                 activity, activity.pluginString(R.string.export_already_running), Toast.LENGTH_SHORT
             ).show()
@@ -1417,14 +1307,8 @@ class ConfigurationDialog(
     }
 
     /**
-     * Shares the current success URI through the plugin's static share helper.
-     *
-     * Before launching the chooser, verifies that the URI is still readable.
-     * A MediaStore URI can become invalid if the user deleted or moved the
-     * file while the dialog was open; in that case launching the chooser
-     * would give the receiving app a URI it cannot read, and the failure
-     * would be silent from the user's perspective. See
-     * [isSnapshotUriReadable] for the full rationale.
+     * Shares the current success URI through the plugin's static share
+     * helper.
      */
     private fun onShareResultClicked() {
         val snap = ExportStateHolder.snapshot
@@ -1445,16 +1329,8 @@ class ConfigurationDialog(
     }
 
     /**
-     * Re-runs the export with a timestamped filename, reusing the current dump
-     * as the source so the project does not have to be scanned again.
-     *
-     * Before starting the SAVE run, verifies that the source URI is still
-     * readable. If the file was deleted or moved while the dialog was open,
-     * the coordinator's `copyFromUri` would hit `openInputStream` → `null`,
-     * throw `IOException("Could not open source URI.")`, and the user would
-     * see a misleading "File write failed" message. The pre-check turns that
-     * into an accurate "file missing" message and resets the state. See
-     * [isSnapshotUriReadable] for the full rationale.
+     * Re-runs the export with a timestamped filename, reusing the current
+     * dump as the source.
      */
     private fun onSaveResultClicked() {
         val snap = ExportStateHolder.snapshot
@@ -1465,7 +1341,7 @@ class ConfigurationDialog(
         val uri = snap.uri ?: return
         if (!exportCoordinator.export(
                 root = projectRoot,
-                config = currentConfig,
+                states = currentStatesCache,
                 action = ExportAction.SAVE,
                 sourceUri = uri,
                 sourceFilesCount = snap.filesCount,
@@ -1480,10 +1356,6 @@ class ConfigurationDialog(
 
     /**
      * Triggers a fresh export run from the current configuration.
-     *
-     * Calls [readUIValues] to refresh `currentConfig` from the UI, then
-     * delegates to [startExport], which performs the (possibly asynchronous)
-     * Git-ref validation before actually starting the export.
      */
     private fun onRegenerateClicked() {
         readUIValues()
@@ -1494,16 +1366,58 @@ class ConfigurationDialog(
     // Tree
     // ==================================================================
 
+    /**
+     * Sets the tree section's visual state in a single place, so the
+     * loading panel, the tree view and the cancel button can never end up
+     * in an inconsistent combination.
+     */
+    private fun setTreeUiState(state: TreeUiState) {
+        if (!::treeLoadingPanel.isInitialized || !::treeViewContainer.isInitialized) return
+        when (state) {
+            TreeUiState.LOADING -> {
+                treeLoadingPanel.visibility = View.VISIBLE
+                treeViewContainer.visibility = View.GONE
+                treeLoadingText.text = activity.pluginString(R.string.analyzing)
+            }
+            TreeUiState.TREE -> {
+                treeLoadingPanel.visibility = View.GONE
+                treeViewContainer.visibility = View.VISIBLE
+            }
+            TreeUiState.ERROR -> {
+                treeLoadingPanel.visibility = View.VISIBLE
+                treeViewContainer.visibility = View.GONE
+            }
+        }
+    }
+
     /** Manages the expansion and scanning of the project tree preview. */
     private fun setTreeVisibility(visible: Boolean) {
         treeVisible = visible
-        if (::treeActionsRow.isInitialized) treeActionsRow.visibility = if (visible) View.VISIBLE else View.GONE
-        if (::treeWrapper.isInitialized) treeWrapper.visibility = if (visible) View.VISIBLE else View.GONE
-        if (visible) startTreeScan() else if (::treeView.isInitialized) treeView.cancelScan()
+        if (::treeActionsRow.isInitialized) {
+            treeActionsRow.visibility = if (visible) View.VISIBLE else View.GONE
+        }
+        if (::treeWrapper.isInitialized) {
+            treeWrapper.visibility = if (visible) View.VISIBLE else View.GONE
+        }
+        if (visible) {
+            startTreeScan()
+        } else if (::treeView.isInitialized) {
+            treeView.cancelScan()
+            setTreeUiState(TreeUiState.TREE)
+        }
     }
 
-    /** Re-triggers the tree scan if the tree is currently visible. */
-    private fun reloadTree() { if (treeVisible) startTreeScan() }
+    /**
+     * Reloads the tree. If the section is collapsed, expands it first so
+     * the reload has somewhere to render into.
+     */
+    private fun reloadTree() {
+        if (!treeVisible) {
+            setTreeVisibility(true)
+            return
+        }
+        startTreeScan()
+    }
 
     /** Builds the loading panel shown while the project tree is being scanned. */
     private fun buildTreeLoadingPanel(): LinearLayout {
@@ -1551,6 +1465,7 @@ class ConfigurationDialog(
             )
             setOnClickListener {
                 if (::treeView.isInitialized) treeView.cancelScan()
+                setTreeUiState(TreeUiState.ERROR)
                 treeLoadingText.text = activity.pluginString(R.string.canceled_retry)
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -1563,49 +1478,71 @@ class ConfigurationDialog(
         return panel
     }
 
-    /** Triggers the asynchronous project tree scan with current filters applied. */
+    /**
+     * Triggers the asynchronous project tree scan with current filters and
+     * the project's persisted overrides applied.
+     *
+     * ### Cancellation safety
+     *
+     * `ProjectTreeView.scanAsync` cancels any previous scan silently: the
+     * previous worker sees a stale token and returns without calling
+     * `onComplete` / `onError`. That means the loading panel this method
+     * shows can only be hidden by the callbacks of the scan it just
+     * launched, which is exactly what we want — a superseded scan must
+     * not flip the UI back to a tree that no longer matches the current
+     * filters. The [setTreeUiState] call below is what guarantees the
+     * panel is shown before the scan is dispatched, so there is never a
+     * window in which the scan is running but the panel is hidden.
+     *
+     * ### Why it returns early
+     *
+     * The early return on `!treeVisible` is intentional: the tree section
+     * is hidden, so there is nothing to show a spinner over. Tapping
+     * Reload while the section is collapsed should not start a scan that
+     * has nowhere to render. [reloadTree] expands the section first if
+     * needed.
+     */
     private fun startTreeScan() {
         if (!treeVisible || !::treeView.isInitialized) return
         readUIValues()
-        treeLoadingPanel.visibility = View.VISIBLE
-        treeViewContainer.visibility = View.GONE
-        treeLoadingText.text = activity.pluginString(R.string.analyzing)
+        setTreeUiState(TreeUiState.LOADING)
         treeView.scanAsync(
             config = currentConfig,
+            overrides = currentOverrides,
             onProgress = { count ->
                 if (::treeLoadingText.isInitialized) {
                     treeLoadingText.text = activity.pluginString(R.string.analyzing_files, count)
                 }
             },
             onComplete = { root ->
-                treeLoadingPanel.visibility = View.GONE
-                treeViewContainer.visibility = View.VISIBLE
+                setTreeUiState(TreeUiState.TREE)
                 treeView.renderTree(root)
+                // Seed the cache as soon as the tree is rendered so an
+                // immediate Generate without further interaction still
+                // uses the correct state map.
+                currentStatesCache = treeView.currentStates()
             },
             onError = { error ->
-                treeLoadingPanel.visibility = View.GONE
-                treeViewContainer.visibility = View.VISIBLE
-                Toast.makeText(
-                    activity,
-                    activity.pluginString(R.string.tree_scan_error, error.message ?: error.javaClass.simpleName),
-                    Toast.LENGTH_LONG
-                ).show()
+                setTreeUiState(TreeUiState.ERROR)
+                treeLoadingText.text = activity.pluginString(
+                    R.string.tree_scan_error,
+                    error.message ?: error.javaClass.simpleName
+                )
             }
         )
     }
 
     // ==================================================================
-    // [PERF] Git — async first load + async refresh
+    // Git
     // ==================================================================
 
     /**
      * Renders the Git section without blocking the dialog.
      *
-     * JGit class-loading and `Repository.status()` are measurable costs on a
-     * cold process, so a placeholder spinner is shown first and the real
-     * content is swapped in from `OneCode-git-info` on the main thread once
-     * the background probe finishes. The `uiBuilt` guard prevents the swap
-     * from touching views after the dialog was dismissed mid-load.
+     * JGit class-loading and `Repository.status()` are measurable costs on
+     * a cold process, so a placeholder spinner is shown first and the
+     * real content is swapped in from `OneCode-git-info` on the main
+     * thread once the background probe finishes.
      */
     private fun setupGitUIAsync() {
         val loading = LinearLayout(activity).apply {
@@ -1769,10 +1706,8 @@ class ConfigurationDialog(
     }
 
     /**
-     * Debounces ref resolution so every keystroke in the ref field does not
-     * spin up a JGit `Repository.resolve` call. The 300 ms window matches the
-     * typical typing cadence; a slower user still gets the same responsiveness
-     * as a fast one because the previous runnable is always cancelled.
+     * Debounces ref resolution so every keystroke in the ref field does
+     * not spin up a JGit `Repository.resolve` call.
      */
     private fun scheduleResolve() {
         pendingResolve?.let { resolveHandler.removeCallbacks(it) }
@@ -1784,11 +1719,6 @@ class ConfigurationDialog(
     /**
      * Resolves the ref field's current text to a short commit hash on a
      * background thread and writes the result back to [tvResolvedRef].
-     *
-     * The `etGitRef.text.toString().trim() != ref` guard discards the result
-     * if the user kept typing while the background resolve was in flight,
-     * so a stale "Resolved: abc1234" can never be shown against a newer
-     * value in the field.
      */
     private fun updateResolvedRef() {
         if (!::tvResolvedRef.isInitialized || !::etGitRef.isInitialized) return
@@ -1981,6 +1911,7 @@ class ConfigurationDialog(
     private fun markAsCustomOnly() {
         if (!isCustomMode) {
             isCustomMode = true
+            currentPresetName = customPresetLabel()
             btnSavePreset.visibility = View.VISIBLE
             val customLabel = customPresetLabel()
             val customIndex = presetAdapter.getPosition(customLabel)
@@ -1996,9 +1927,9 @@ class ConfigurationDialog(
     private fun markAsCustom() { markAsCustomOnly(); scheduleRescan() }
 
     /**
-     * Debounces tree re-scans triggered by filter changes so a burst of edits
-     * (e.g. adding several tags in a row) does not queue a full project walk
-     * per keystroke.
+     * Debounces tree re-scans triggered by filter changes so a burst of
+     * edits (e.g. adding several tags in a row) does not queue a full
+     * project walk per keystroke.
      */
     private fun scheduleRescan() {
         if (rescanScheduled) return
@@ -2010,18 +1941,13 @@ class ConfigurationDialog(
     }
 
     /**
-     * Reads the current values from the UI controls and updates the internal
-     * configuration state.
+     * Reads the current values from the UI controls and updates the
+     * internal configuration state.
      *
-     * The Git ref is **not** validated here. `GitUtils.refExists` performs
-     * synchronous disk I/O against the repository, and this method is called
-     * from many UI paths (filter changes, tree scans, dialog dismissal), so
-     * resolving the ref on every call was a measurable source of UI jank on
-     * Git-enabled projects. Validation is deferred to [startExport], which
-     * runs it on a background thread and only proceeds with the export after
-     * a positive result. The ref is stored verbatim here; the export
-     * coordinator re-reads it from the captured `config` and a failed
-     * resolution is reported as a normal `GitRefUnresolvedException`.
+     * The Git ref is not validated here. `GitUtils.refExists` performs
+     * synchronous disk I/O against the repository, and this method is
+     * called from many UI paths, so resolving the ref on every call was
+     * a measurable source of UI jank on Git-enabled projects.
      */
     private fun readUIValues() {
         if (!::etMaxSize.isInitialized || !::cbBinaries.isInitialized ||
@@ -2046,41 +1972,44 @@ class ConfigurationDialog(
         )
     }
 
-    /** Creates a unique identifier for a tag view, distinguishing between inclusions and exclusions. */
-    private fun tagKey(tag: String, isInclusion: Boolean) = "${if (isInclusion) "I" else "E"}:$tag"
+    /** Creates a unique identifier for a tag view, distinguishing between tag kinds. */
+    private fun tagKey(tag: String, kind: TagKind) = "${kind.prefix}:$tag"
 
     /**
-     * Rebuilds the flow layouts (inclusions, exclusions, gitignore) based on
-     * the current configuration.
+     * The three editable rule lists in the dialog: inclusions,
+     * exclusions, and stub patterns.
      *
-     * ### `.gitignore` negations
-     * `FileFilter.loadGitignoreRules()` returns negated rules with their `!`
-     * prefix intact, so this method can render them with a distinct visual
-     * style and the user can see that a `!foo` rule in their `.gitignore` is
-     * force-including a file. Negated rules use the raised-surface palette
-     * rather than the exclude-red palette to signal that their effect is the
-     * opposite of a normal ignore rule.
-     *
-     * ### Conflict highlighting
-     * Positive rules are highlighted in amber when a user inclusion or
-     * exclusion overrides them. Negated rules are not checked for overrides
-     * because the override logic compares rule text against a clean tag, and
-     * the negation prefix would defeat the comparison. This is intentional:
-     * the "overridden by user rule" badge is meaningless for a rule that
-     * already expresses "include this anyway".
+     * Encoded as an enum so the tag rendering, editing, and removal
+     * helpers can be shared across all three lists with a single
+     * parameter, instead of having three near-identical copies of the
+     * same code.
+     */
+    private enum class TagKind(val prefix: String) {
+        INCLUSION("I"),
+        EXCLUSION("E"),
+        STUB("S")
+    }
+
+    /**
+     * Rebuilds the flow layouts (inclusions, exclusions, stub patterns,
+     * gitignore) based on the current configuration.
      */
     private fun updateTagsUI(animate: Boolean = false) {
         if (!::flowInclusions.isInitialized) return
         flowInclusions.removeAllViews()
         flowExclusions.removeAllViews()
+        flowStubPatterns.removeAllViews()
         flowGitignore.removeAllViews()
         tagViews.clear()
 
         if (currentConfig.inclusions.isEmpty()) addEmptyLabel(flowInclusions, activity.pluginString(R.string.no_inclusions))
-        else currentConfig.inclusions.forEach { addTagToFlow(flowInclusions, it, true) }
+        else currentConfig.inclusions.forEach { addTagToFlow(flowInclusions, it, TagKind.INCLUSION) }
 
         if (currentConfig.exclusions.isEmpty()) addEmptyLabel(flowExclusions, activity.pluginString(R.string.no_exclusions))
-        else currentConfig.exclusions.forEach { addTagToFlow(flowExclusions, it, false) }
+        else currentConfig.exclusions.forEach { addTagToFlow(flowExclusions, it, TagKind.EXCLUSION) }
+
+        if (currentConfig.stubPatterns.isEmpty()) addEmptyLabel(flowStubPatterns, activity.pluginString(R.string.no_stub_patterns))
+        else currentConfig.stubPatterns.forEach { addTagToFlow(flowStubPatterns, it, TagKind.STUB) }
 
         gitignoreSection.visibility = if (currentConfig.respectGitignore) View.VISIBLE else View.GONE
         if (currentConfig.respectGitignore) {
@@ -2108,7 +2037,7 @@ class ConfigurationDialog(
         }
 
         if (animate && animationsEnabled) {
-            val all = listOf(flowInclusions, flowExclusions, flowGitignore)
+            val all = listOf(flowInclusions, flowExclusions, flowStubPatterns, flowGitignore)
             var i = 0
             all.forEach { flow ->
                 for (k in 0 until flow.childCount) {
@@ -2133,35 +2062,47 @@ class ConfigurationDialog(
         })
     }
 
-    /** Creates and adds a tag chip to a FlowLayout, determining its color based on conflicts. */
-    private fun addTagToFlow(flow: FlowLayout, tag: String, isInclusion: Boolean) {
+    /**
+     * Creates and adds a tag chip to a FlowLayout, determining its color
+     * based on the tag kind and conflicts.
+     */
+    private fun addTagToFlow(flow: FlowLayout, tag: String, kind: TagKind) {
+        val isInclusion = kind == TagKind.INCLUSION
+        val isStub = kind == TagKind.STUB
         val gitignoreOverride = userRuleOverridesGitignore(tag)
-        val listConflict = if (isInclusion) currentConfig.exclusions.any { it.equals(tag, ignoreCase = true) }
-                           else currentConfig.inclusions.any { it.equals(tag, ignoreCase = true) }
+        val listConflict = when (kind) {
+            TagKind.INCLUSION -> currentConfig.exclusions.any { it.equals(tag, ignoreCase = true) }
+            TagKind.EXCLUSION -> currentConfig.inclusions.any { it.equals(tag, ignoreCase = true) }
+            TagKind.STUB -> false
+        }
         val conflict = gitignoreOverride || listConflict
-        val bg = when { conflict -> CodeAssistTheme.TAG_CONFLICT; isInclusion -> CodeAssistTheme.TAG_INCLUDE; else -> CodeAssistTheme.TAG_EXCLUDE }
-        val fg = when { conflict -> CodeAssistTheme.TAG_CONFLICT_TEXT; isInclusion -> CodeAssistTheme.TAG_INCLUDE_TEXT; else -> CodeAssistTheme.TAG_EXCLUDE_TEXT }
-        val view = createTagView(tag, bg, fg) { showTagOptions(tag, isInclusion) }
+        val bg = when {
+            conflict -> CodeAssistTheme.TAG_CONFLICT
+            isInclusion -> CodeAssistTheme.TAG_INCLUDE
+            isStub -> CodeAssistTheme.SURFACE_RAISED
+            else -> CodeAssistTheme.TAG_EXCLUDE
+        }
+        val fg = when {
+            conflict -> CodeAssistTheme.TAG_CONFLICT_TEXT
+            isInclusion -> CodeAssistTheme.TAG_INCLUDE_TEXT
+            isStub -> CodeAssistTheme.TEXT_SECONDARY
+            else -> CodeAssistTheme.TAG_EXCLUDE_TEXT
+        }
+        val view = createTagView(tag, bg, fg) { showTagOptions(tag, kind) }
         flow.addView(view)
-        tagViews[tagKey(tag, isInclusion)] = view
+        tagViews[tagKey(tag, kind)] = view
     }
 
     // ==================================================================
     // Gitignore vs user rule matching (help highlighters)
-    //
-    // The two helpers below compare a user rule (an extension, a path, or
-    // a glob) against the raw `.gitignore` tags shown in the UI. Since
-    // `loadGitignoreRules` now preserves the `!` negation prefix for
-    // display, both helpers strip that prefix before matching so a
-    // `!important.txt` rule can still be compared against a user rule
-    // that targets `important.txt`.
     // ==================================================================
 
-    /** Checks if a specific .gitignore rule is visually overridden by a user inclusion or exclusion. */
+    /** Checks if a specific .gitignore rule is visually overridden by a user rule. */
     private fun isGitignoreRuleOverridden(gitignoreRule: String): Boolean {
         val cleanTag = gitignoreRule.removePrefix("!")
         return currentConfig.inclusions.any { ruleMatchesGitignoreTag(it, cleanTag) } ||
-            currentConfig.exclusions.any { ruleMatchesGitignoreTag(it, cleanTag) }
+            currentConfig.exclusions.any { ruleMatchesGitignoreTag(it, cleanTag) } ||
+            currentConfig.stubPatterns.any { ruleMatchesGitignoreTag(it, cleanTag) }
     }
 
     /** Checks if a user rule overrides any of the loaded .gitignore rules. */
@@ -2185,13 +2126,8 @@ class ConfigurationDialog(
     }
 
     /**
-     * Minimal glob matcher that mirrors the wildcard support of [FileFilter]:
-     * single-char `?`, single-segment `*`, and the cross-segment double-star
-     * wildcard (including its directory-prefix form).
-     *
-     * Only invoked from the UI thread on small rule strings (one per chip), so
-     * the cost of recompiling a [Regex] per call is negligible and not worth
-     * caching.
+     * Minimal glob matcher that mirrors the wildcard support of
+     * [FileFilter].
      */
     private fun globMatchTag(pattern: String, value: String): Boolean {
         if (!pattern.contains('*') && !pattern.contains('?')) return false
@@ -2236,31 +2172,29 @@ class ConfigurationDialog(
         }
 
     /** Validates and adds a new tag to the configuration, then updates the UI. */
-    private fun addTag(value: String, isInclusion: Boolean) {
+    private fun addTag(value: String, kind: TagKind) {
         val tag = value.trim().lowercase()
         if (tag.isEmpty()) return
-        val existing = if (isInclusion) currentConfig.inclusions else currentConfig.exclusions
+        val existing = when (kind) {
+            TagKind.INCLUSION -> currentConfig.inclusions
+            TagKind.EXCLUSION -> currentConfig.exclusions
+            TagKind.STUB -> currentConfig.stubPatterns
+        }
         if (existing.any { it.equals(tag, ignoreCase = true) }) return
-        currentConfig = if (isInclusion) currentConfig.copy(inclusions = currentConfig.inclusions + tag)
-                        else currentConfig.copy(exclusions = currentConfig.exclusions + tag)
+        currentConfig = when (kind) {
+            TagKind.INCLUSION -> currentConfig.copy(inclusions = currentConfig.inclusions + tag)
+            TagKind.EXCLUSION -> currentConfig.copy(exclusions = currentConfig.exclusions + tag)
+            TagKind.STUB -> currentConfig.copy(stubPatterns = currentConfig.stubPatterns + tag)
+        }
         markAsCustom()
         updateTagsUI(animate = false)
-        tagViews[tagKey(tag, isInclusion)]?.let { animateTagIn(it) }
+        tagViews[tagKey(tag, kind)]?.let { animateTagIn(it) }
     }
 
     /**
      * Shows the edit/delete context menu when a tag is tapped.
-     *
-     * The rename branch uses `distinctBy { it.lowercase() }` rather than the
-     * plain `distinct()`, because the latter is case-sensitive. Renaming
-     * `"kt"` to `"Kt"` would otherwise produce a list containing both
-     * entries (the two strings differ), and both would be rendered as
-     * separate chips even though the normalizer in
-     * `FilterConfig.normalized()` would have collapsed them into one on the
-     * next export. Applying the case-insensitive dedup here keeps the
-     * intermediate state consistent with what the exporter will see.
      */
-    private fun showTagOptions(tag: String, isInclusion: Boolean) {
+    private fun showTagOptions(tag: String, kind: TagKind) {
         AlertDialog.Builder(activity)
             .setTitle(tag)
             .setItems(arrayOf(
@@ -2271,25 +2205,36 @@ class ConfigurationDialog(
                     showAddTagDialog(activity.pluginString(R.string.edit_extension), tag) { updated ->
                         val normalized = updated.trim().lowercase()
                         if (normalized.isNotEmpty() && normalized != tag) {
-                            currentConfig = if (isInclusion) currentConfig.copy(
-                                inclusions = currentConfig.inclusions
-                                    .map { if (it == tag) normalized else it }
-                                    .distinctBy { it.lowercase() }
-                            ) else currentConfig.copy(
-                                exclusions = currentConfig.exclusions
-                                    .map { if (it == tag) normalized else it }
-                                    .distinctBy { it.lowercase() }
-                            )
+                            currentConfig = when (kind) {
+                                TagKind.INCLUSION -> currentConfig.copy(
+                                    inclusions = currentConfig.inclusions
+                                        .map { if (it == tag) normalized else it }
+                                        .distinctBy { it.lowercase() }
+                                )
+                                TagKind.EXCLUSION -> currentConfig.copy(
+                                    exclusions = currentConfig.exclusions
+                                        .map { if (it == tag) normalized else it }
+                                        .distinctBy { it.lowercase() }
+                                )
+                                TagKind.STUB -> currentConfig.copy(
+                                    stubPatterns = currentConfig.stubPatterns
+                                        .map { if (it == tag) normalized else it }
+                                        .distinctBy { it.lowercase() }
+                                )
+                            }
                             markAsCustom()
                             updateTagsUI(animate = false)
-                            tagViews[tagKey(normalized, isInclusion)]?.let { animateTagIn(it) }
+                            tagViews[tagKey(normalized, kind)]?.let { animateTagIn(it) }
                         }
                     }
                 } else {
-                    val view = tagViews[tagKey(tag, isInclusion)]
+                    val view = tagViews[tagKey(tag, kind)]
                     val applyDelete = {
-                        currentConfig = if (isInclusion) currentConfig.copy(inclusions = currentConfig.inclusions - tag)
-                                        else currentConfig.copy(exclusions = currentConfig.exclusions - tag)
+                        currentConfig = when (kind) {
+                            TagKind.INCLUSION -> currentConfig.copy(inclusions = currentConfig.inclusions - tag)
+                            TagKind.EXCLUSION -> currentConfig.copy(exclusions = currentConfig.exclusions - tag)
+                            TagKind.STUB -> currentConfig.copy(stubPatterns = currentConfig.stubPatterns - tag)
+                        }
                         markAsCustom()
                         updateTagsUI(animate = false)
                     }
@@ -2344,7 +2289,6 @@ class ConfigurationDialog(
                     else -> runCatching {
                         readUIValues()
                         presetManager.savePreset(name, currentConfig)
-                        presetManager.saveLastState(currentConfig, name)
                     }.onSuccess {
                         presetAdapter = activity.spinnerAdapter(getPresetList())
                         spinnerPresets.adapter = presetAdapter
@@ -2352,6 +2296,7 @@ class ConfigurationDialog(
                         spinnerPresets.setSelection(presetAdapter.getPosition(name))
                         isUpdatingUI = false
                         isCustomMode = false
+                        currentPresetName = name
                         btnSavePreset.visibility = View.GONE
                         btnDeletePreset.visibility = if (presetManager.isUserPreset(name)) View.VISIBLE else View.GONE
                         animatePresetRow(saved = true)
@@ -2382,6 +2327,7 @@ class ConfigurationDialog(
                     spinnerPresets.setSelection(0, false)
                     isUpdatingUI = false
                     isCustomMode = true
+                    currentPresetName = customPresetLabel()
                     btnSavePreset.visibility = View.VISIBLE
                     btnDeletePreset.visibility = View.GONE
                 }
@@ -2419,10 +2365,9 @@ class ConfigurationDialog(
 
     private companion object {
         /**
-         * Request code for `WRITE_EXTERNAL_STORAGE` on API 26–28. Distinctive
-         * value (hex `0x0C0DE` = "code") so it cannot collide with a request
-         * code the host CodeAssist app might use, in case it ever starts
-         * overriding `onRequestPermissionsResult`.
+         * Request code for `WRITE_EXTERNAL_STORAGE` on API 26-28.
+         * Distinctive value (hex 0x0C0DE = "code") so it cannot collide
+         * with a request code the host CodeAssist app might use.
          */
         const val REQUEST_STORAGE_PERMISSION = 0x0C0DE
     }

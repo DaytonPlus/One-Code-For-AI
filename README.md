@@ -10,7 +10,7 @@ One Code For AI is a robust Android plugin for the CodeAssist IDE that scans a p
 [![Java](https://img.shields.io/badge/Java-17-orange.svg?style=for-the-badge)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-JVM-purple.svg?style=for-the-badge)]()
 [![CodeAssist Plugin API](https://img.shields.io/badge/Plugin_API-4-lightgrey.svg?style=for-the-badge)]()
-[![Version](https://img.shields.io/badge/Version-1.0.90-success.svg?style=for-the-badge)]()
+[![Version](https://img.shields.io/badge/Version-1.1.0-success.svg?style=for-the-badge)]()
 
 > Stop copy-pasting files. Share a clean, reviewable project context with ChatGPT, Claude, Gemini, or any other AI tool.
 
@@ -42,6 +42,19 @@ No cloud upload. No telemetry. Just clean AI context.
 - Manually include or exclude individual files or folders.
 - Configure per-file and total export size limits.
 
+### 🌳 Interactive project tree (Tree v2)
+The file tree is now the **authoritative source of truth** for what goes into the dump, not just a preview. Every entry can be set to one of three states:
+
+- **Included** — the file's full content is written to the dump.
+- **Reference only** — the file's name and size are listed, but its content is not read. Ideal for lockfiles, generated code, and machine-local configuration.
+- **Excluded** — the file is not written to the dump.
+
+Click any row to cycle through the three states. Click a folder to apply the next state to its whole subtree — but only to children whose current state matches the folder's aggregate, so your manual exclusions are preserved. Parent and child states stay consistent both ways: marking the last included child of a folder unchecks the folder, and marking a folder re-checks its children.
+
+Hard-excluded folders (`node_modules`, `build`, `.git`, …) and binary files appear as **locked** nodes: visible in the tree but not interactive until you enable "Show locked". Locking is per-session and safe — unlocking a folder does not automatically include anything inside it; you still have to mark files explicitly.
+
+Your manual tree decisions are stored per project in `.platform/plugins/com.devdayton.onecodeforai/config.json`, so each project keeps its own selection independent of the preset. Closing the dialog without pressing Generate discards the manual changes, matching the standard "commit on Generate" model.
+
 ### 🌿 Git integration
 - Browse local and remote branches, tags, and recent commits.
 - Export a Git snapshot without modifying the working tree.
@@ -60,6 +73,7 @@ No cloud upload. No telemetry. Just clean AI context.
 - Save and restore custom profiles.
 - Configure Git, animations, notifications, filtering behavior, and export limits.
 - Use contextual help inside the UI for filters and `.gitignore` rules.
+- Built-in presets now use **reference-only** entries for generated files and lockfiles — `R.java`, `BuildConfig.java`, `local.properties`, `package-lock.json`, `pnpm-lock.yaml`, `poetry.lock`, `Pipfile.lock`. The dump stays structurally complete without paying the token cost of those files' contents.
 
 ### 🌍 Multi-language interface
 - The plugin UI is available in **18 languages**, selectable from a dedicated dropdown in the settings page. Each language is listed by its native name (Español, Français, Deutsch, 日本語, 中文, …) so users can find theirs without reading English.
@@ -75,6 +89,7 @@ No cloud upload. No telemetry. Just clean AI context.
 - Save, share, or regenerate the final output.
 - Clear warnings for unreadable files or incomplete exports.
 - Persistent recovery behavior for previous valid output.
+- The tree's loading state is now robust: cancelling a scan, superseding it with a filter change, or hitting an error always restores the correct panel state. No orphan spinners.
 
 ---
 
@@ -110,8 +125,8 @@ No cloud upload. No telemetry. Just clean AI context.
 ## 📦 Output format
 
 The generated file is a readable `.txt` document that includes:
-1. a directory tree,
-2. clearly separated file sections with relative paths,
+1. a directory tree (with a `[ref]` suffix next to reference-only entries),
+2. clearly separated file sections with relative paths, each section being either the file's content or a `[content omitted: N B - reference only]` marker,
 3. final stats for file count, total size, and estimated token count.
 
 Generated files are saved under the public **Download** folder on your device:
@@ -127,9 +142,12 @@ Download/OneCodeForAI/
 1. Open CodeAssist.
 2. Select the project or folder you want to include.
 3. Launch the plugin.
-4. Choose filters, presets, and Git options.
-5. Export the final .txt file.
-6. Share it with your AI tool of choice.
+4. Choose a preset or custom filters. The tree shows exactly what the preset selects.
+5. Adjust the tree manually if needed: cycle files between included, reference-only, and excluded; enable "Show locked" to unlock hard-excluded folders.
+6. Export the final .txt file.
+7. Share it with your AI tool of choice.
+
+The tree selection is saved to the project so the next open restores your previous decisions. Pressing Generate is what commits the current tree to the project's config, matching the standard commit-on-generate model.
 
 ---
 
@@ -147,25 +165,24 @@ Download/OneCodeForAI/
 
 The plugin is organized into a few main areas:
 
-· core/ — filtering, Git handling, dump generation, file scanning, and profile logic
+· core/ — filtering, Git handling, dump generation, file scanning, profile logic, tree overrides, and the per-project tree config store
 · android/ — host integration, file access, notifications, and export coordination
-· ui/ — configuration dialog, project tree UI, settings, help, and result panels
+· ui/ — configuration dialog, project tree UI, settings, help, result panels, and the tree's custom scroll views
 · root package — plugin entry point and info screen
 
 ---
 
-🆕 What's new in 1.0.90
+🆕 What's new in 1.1.0
 
-· Language selector replaces the previous "Force English UI" toggle. Pick any of 18 languages from the settings page; "Auto" follows the IDE.
-· 17 new translations: Arabic, Czech, German, Greek, French, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese (Brazil), Romanian, Russian, Turkish, Vietnamese, and Chinese.
-· Automatic migration for existing "Force English UI" users: their preference becomes ui_language = "en" the first time the settings page is opened.
-· Context-menu label refresh when the language changes. On builds that support in-place action updates the label switches instantly; on builds that cache action labels, the new label appears after the next IDE restart.
-· Critical fix for Android 8-12 runtime crashes caused by JGit 7.x depending on InputStream.readAllBytes() (API 33+); downgraded to JGit 5.13.3, the last series that runs on API 26+.
-· .gitignore fixes: patterns starting with **/ now match files at the project root, and character-class patterns like [abc] / [!abc] are no longer treated as literals.
-· Binary detection fixes: svg is no longer classified as binary, and lockfiles can be force-included via Inclusions.
-· Tree traversal safety: five recursive walks converted to iterative ones, preventing StackOverflowError on pathological directory trees.
-· Performance: Git reference validation moved off the UI thread; the Generate button no longer freezes on large repositories.
-· UX consistency: the share action and the result-panel chip now go through a single entry point, so they behave identically.
+· Tree v2: the project tree is now the authoritative source of truth for what goes into the dump. Files can be marked Included, Reference-only, or Excluded from the tree itself, and the selection is preserved per project.
+· Reference-only files: a new third inclusion state lets you list a file in the dump — name and size — without reading its content. Ideal for lockfiles, generated code, and machine-local configuration. Configured both by pattern (in the new Reference only section of the dialog) and per file (in the tree).
+· Per-project tree config: the tree selection is saved to .platform/plugins/com.devdayton.onecodeforai/config.json inside the project, so each project keeps its own decisions independent of the preset. Only written on Generate; closing the dialog without generating discards manual changes.
+· Show locked toggle: hard-excluded folders (node_modules, build, .git, …) and binary files appear as locked nodes in the tree. Enabling "Show locked" makes them interactive. Locking is per-session and safe — unlocking does not automatically include anything inside the folder.
+· Tri-state checkbox: every row shows its state with a custom tri-state indicator (checkmark, dash, empty). Cycling a folder advances its whole subtree, but only touches descendants whose current state matches the folder's aggregate, preserving manual overrides.
+· Built-in presets updated: Android, Web, and Python presets now use reference-only entries for R.java, BuildConfig.java, local.properties, package-lock.json, pnpm-lock.yaml, poetry.lock, and Pipfile.lock. The dump stays structurally complete without paying the token cost of those files' contents.
+· Tree loading robustness: cancelling a scan, superseding it with a filter change, or hitting an error now always restores the correct panel state. No orphan "Analyzing…" spinners; the Cancel button and the Reload action both work reliably.
+· Improved initial render: the tri-state indicator and lock glyphs are visible from the first frame, without waiting for a user interaction to trigger a refresh.
+· Preset spinner no longer restores the last state from SharedPreferences. The preset name and its tree overrides are read from the project's config.json, so the correct preset is always shown for the correct project.
 
 ---
 

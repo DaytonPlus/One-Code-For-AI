@@ -6,37 +6,107 @@ import java.nio.file.Files
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Single source of truth for deciding which project entries are part of an export.
+ * Single source of truth for deciding which project entries are part of
+ * an export and in what role.
  *
- * Both the project-tree preview and the dump generator use this class so that
- * the preview cannot silently apply different filtering rules from the export.
+ * Both the project-tree preview and the dump generator use this class so
+ * that the preview cannot silently apply different filtering rules from
+ * the export.
  *
  * The implementation is deliberately filesystem-based and does not follow
- * symbolic links. This prevents cycles and avoids exporting data outside the
- * selected project root.
+ * symbolic links. This prevents cycles and avoids exporting data outside
+ * the selected project root.
  *
- * [PERF] The `.gitignore` file is read and parsed at most once per
+ * ### Tree v2: from "included or not" to a four-state model
+ *
+ * Prior to Tree v2 this class answered a single yes/no question —
+ * "should this entry be included?" — and every consumer had to reason
+ * about that boolean. Tree v2 replaced that with an explicit
+ * [NodeState] answer from [resolveMode], so the same object tells the
+ * caller *how* an entry participates in the export:
+ *
+ *  - **[NodeState.INCLUDE]** — the file's full content is written to the
+ *    dump. This is the only state the old boolean API could represent.
+ *  - **[NodeState.STUB]** — the file's header and a size marker are
+ *    written, but its content is not read. Used for lockfiles, generated
+ *    code, and machine-local configuration whose existence matters to
+ *    the consuming model but whose body is noise.
+ *  - **[NodeState.EXCLUDE]** — the file is not written at all.
+ *  - **[NodeState.LOCKED]** — the file is present in the tree as a
+ *    disabled, non-interactive node. Applied by the tree scanner to
+ *    entries that are excluded by structural rules the user has not
+ *    opted to see (the hard-excluded directory names and binary
+ *    extensions). Locking is decided by the tree scanner, not by this
+ *    class; [resolveMode] never returns LOCKED on its own. This class
+ *    only owns the *rule-based* answer for an entry the scanner has
+ *    already decided to show.
+ *
+ * The old boolean entry points — [include] and [includePath] — are
+ * retained as thin wrappers that return `resolveMode(...) == INCLUDE`.
+ * They exist so that legacy call sites keep compiling; new code should
+ * call [resolveMode] (or [walkIncludedAndStubbed]) and inspect the
+ * returned state directly.
+ *
+ * ### Priority order in [resolveMode]
+ *
+ * The rules are evaluated in a fixed order that mirrors the existing
+ * inclusions > exclusions precedence and adds the stub layer on top:
+ *
+ *  1. [FilterConfig.stubPatterns] match → STUB
+ *  2. [FilterConfig.inclusions] match   → INCLUDE
+ *  3. [FilterConfig.exclusions] match   → EXCLUDE
+ *  4. `.gitignore` match                → EXCLUDE (only if respecting)
+ *  5. per-file size overflow             → EXCLUDE (only if limiting)
+ *  6. binary extension                   → EXCLUDE (only if excluding)
+ *  7. hidden file (dot-prefixed)         → EXCLUDE
+ *  8. text extension or no extension     → INCLUDE
+ *  9. otherwise                          → EXCLUDE
+ *
+ * Stub patterns precede inclusions on purpose: a file the user marked as
+ * reference-only must not be silently promoted back to a full include
+ * by a broad inclusion pattern. Per-path overrides in [TreeOverrides]
+ * are applied **before** this whole chain by the caller (see the tree
+ * scanner); this class is not aware of them and must not be, so that a
+ * profile's rules stay independent of any single project's manual
+ * choices.
+ *
+ * ### Hard-excluded directories and binary extensions are the tree's
+ * ### responsibility, not this class's
+ *
+ * The hard-excluded directory set and the binary extension set are used
+ * by the tree scanner to decide which entries become LOCKED. This class
+ * only knows them as exclusions that may be reached through rules (see
+ * [hardExcludedDirectories] and [binaryExtensions]). A caller that wants
+ * to know whether an entry would be locked must ask the scanner, not
+ * this filter.
+ *
+ * ### Performance and caching of `.gitignore`
+ *
+ * The `.gitignore` file is read and parsed at most once per
  * `(absolutePath, lastModified)` pair, shared through [gitignoreCache].
- * Before, every `FileFilter` instance re-read and re-parsed the file, and
- * `ConfigurationDialog` + `ProjectTreeView.scanAsync` both created instances
- * (and rescanned on every filter change). The cache is bounded to
- * [GITIGNORE_CACHE_MAX_ENTRIES] entries to prevent unbounded growth across a
- * long IDE session with many projects; the eviction is approximate (removes
- * the lexicographically first key, not the true LRU) but bounded and O(1).
+ * Before Tree v2, every [FileFilter] instance re-read and re-parsed the
+ * file, and the configuration dialog plus the tree scanner both created
+ * instances (and rescanned on every filter change). The cache is bounded
+ * to [GITIGNORE_CACHE_MAX_ENTRIES] entries to prevent unbounded growth
+ * across a long IDE session with many projects; the eviction is
+ * approximate (removes the lexicographically first key, not the true
+ * LRU) but bounded and O(1).
  *
- * Cancellation
- * ------------
+ * ### Cancellation
+ *
  * The export path is cancellable through the standard `Thread.interrupt`
- * mechanism. [walkIncludedFiles] — and any terminal operator on its sequence,
- * including [countEligibleFiles] — checks the worker thread's interrupt flag
- * between directory entries, so an export that is cancelled mid-walk unwinds
- * within a single entry instead of having to finish scanning the whole tree.
+ * mechanism. [walkIncludedAndStubbed] — and [walkIncludedFiles], which
+ * delegates to it — checks the worker thread's interrupt flag between
+ * directory entries, so an export that is cancelled mid-walk unwinds
+ * within a single entry instead of having to finish scanning the whole
+ * tree.
  *
- * The thrown [InterruptedException] propagates to the caller unchanged; the
- * export coordinator treats it as a user cancellation and never reports it as
- * a failure. The `ConfigurationDialog`'s tree scanner is not affected because
- * it uses its own token-based cancellation and never calls this method while
- * a filter instance is shared with the export worker.
+ * The thrown [InterruptedException] propagates to the caller unchanged;
+ * the export coordinator treats it as a user cancellation and never
+ * reports it as a failure. The tree scanner in the configuration dialog
+ * is not affected because it uses its own token-based cancellation and
+ * never calls these methods while a filter instance is shared with the
+ * export worker.
  */
 class FileFilter(
     root: File,
@@ -45,6 +115,22 @@ class FileFilter(
     val root: File = root.canonicalFile
     val config: FilterConfig = config.normalized()
 
+    /**
+     * Directory names that are always excluded regardless of user
+     * patterns.
+     *
+     * The tree scanner uses this set to decide which directories to
+     * render as LOCKED instead of descending into them. The names are
+     * chosen from the union of common build tools, IDE metadata, and
+     * package-manager caches, so that a fresh profile does not waste
+     * time walking them and a fresh scan does not blow up the tree's
+     * memory on large vendored trees.
+     *
+     * Entries here are unreachable by ordinary patterns by design: the
+     * only way to see them is to enable "Show locked" in the tree, at
+     * which point the user has explicitly opted into the extra scan
+     * cost.
+     */
     private val excludedDirectoryNames = setOf(
         ".git", ".gradle", ".idea", "build", "out", "target",
         "node_modules", "dist", ".next", ".nuxt", "venv", ".venv",
@@ -52,111 +138,229 @@ class FileFilter(
         ".externalNativeBuild"
     )
 
+    /**
+     * Parsed `.gitignore` rules for the project root.
+     *
+     * Lazily loaded because not every caller touches ignore rules
+     * (e.g. a caller that only uses [matchesAny] on inclusions), and
+     * because the parse involves reading a file.
+     *
+     * The lazy is not synchronized (LazyThreadSafetyMode.NONE) because
+     * a [FileFilter] instance is confined to a single consumer at a
+     * time — the export path creates one per run, and the tree scanner
+     * creates one per scan. Sharing a single instance across threads is
+     * therefore a programming error, and the potential double-parse in
+     * a race is harmless: both threads produce the same immutable list.
+     */
     private val ignoreRules: List<IgnoreRule> by lazy(LazyThreadSafetyMode.NONE) {
         if (this.config.respectGitignore) loadIgnoreRules() else emptyList()
     }
 
+    // ------------------------------------------------------------------
+    // Public API
+    // ------------------------------------------------------------------
+
     /**
-     * Evaluates a filesystem entry. `respectExcludedPaths=false` is reserved
-     * for the interactive tree, which must display manually excluded nodes so
-     * that users can include them again.
+     * Returns the set of directory names that are always excluded
+     * regardless of user patterns.
      *
-     * Cancellation is **not** checked here: this method is called once per
-     * entry from the walk loop, which is where the interrupt flag is polled.
-     * Adding a second check per entry would double the cost of the hottest
-     * path in the filter for no benefit.
+     * Exposed so the tree scanner (`ProjectTreeView`) can decide which
+     * directories to render as LOCKED without descending into them.
+     * The set is the same one used by [resolveMode] for its directory
+     * check, so the tree and the filter cannot disagree about which
+     * directories are structurally excluded.
+     *
+     * The returned set is the internal, immutable set; callers must not
+     * mutate it (Kotlin's `Set` interface does not expose mutators, so
+     * this is enforced by the type system).
+     */
+    fun hardExcludedDirectories(): Set<String> = excludedDirectoryNames
+
+    /**
+     * Returns the set of file extensions treated as binary.
+     *
+     * Exposed for the same reason as [hardExcludedDirectories]: the
+     * tree scanner needs it to decide which files to render as LOCKED
+     * leaves. The set is the same one used by [resolveMode] for its
+     * binary-extension check.
+     *
+     * The set contains lowercase extensions without the leading dot,
+     * matching the form the filter compares against internally.
+     */
+    fun binaryExtensions(): Set<String> = BINARY_EXTENSIONS
+
+    /**
+     * Resolves the export role of a filesystem entry.
+     *
+     * Returns [NodeState.INCLUDE], [NodeState.STUB] or [NodeState.EXCLUDE]
+     * according to the priority documented on the class. It never
+     * returns [NodeState.LOCKED] — locking is the tree scanner's
+     * responsibility, because it is the scanner that decides when to
+     * descend into hard-excluded directories.
+     *
+     * ### `respectExcludedPaths` and the tree selector
+     *
+     * The parameter is preserved for API stability even though there is
+     * no longer an `excludedPaths` field in [FilterConfig]: the tree
+     * scanner no longer routes per-file decisions through this method,
+     * because those come from [TreeOverrides] and are applied by the
+     * caller before [resolveMode] runs.
+     *
+     * Semantically, `respectExcludedPaths = false` means "answer as if
+     * the user had made no manual decisions", which is exactly what the
+     * scanner needs to compute the filter-derived *initial* state of a
+     * node before layering the overrides on top. In Tree v2 the two
+     * modes are behaviorally identical — the legacy `excludedPaths`
+     * source has moved out of [FilterConfig] — but the parameter stays
+     * so that out-of-tree callers keep compiling and the intent remains
+     * documented at the call site.
+     *
+     * ### Cancellation
+     *
+     * No interrupt check here: this method is called once per entry from
+     * the walk loop, which is where the flag is polled. Adding a second
+     * check per entry would double the cost of the hottest path in the
+     * filter for no benefit.
+     */
+    fun resolveMode(
+        relativePath: String,
+        isDirectory: Boolean,
+        sizeBytes: Long = 0L,
+        respectExcludedPaths: Boolean = true
+    ): NodeState {
+        val path = FilterConfig.normalizeRelativePath(relativePath)
+        if (path.isEmpty() || path.split('/').any { it == ".." || it == "." }) {
+            return NodeState.EXCLUDE
+        }
+
+        val segments = path.split('/')
+        val name = segments.last()
+
+        if (isDirectory) {
+            if (name in excludedDirectoryNames) return NodeState.EXCLUDE
+            if (matchesAny(config.stubPatterns, path, name, extension = "")) return NodeState.STUB
+            if (matchesAny(config.inclusions, path, name, extension = "")) return NodeState.INCLUDE
+            if (matchesAny(config.exclusions, path, name, extension = "")) return NodeState.EXCLUDE
+            if (isIgnored(path, isDirectory = true)) return NodeState.EXCLUDE
+            return NodeState.INCLUDE
+        }
+
+        if (sizeBytes < 0L || sizeBytes > config.maxFileSizeBytes) return NodeState.EXCLUDE
+        if (segments.dropLast(1).any { it in excludedDirectoryNames }) return NodeState.EXCLUDE
+
+        val extension = name.substringAfterLast('.', "").lowercase()
+
+        if (matchesAny(config.stubPatterns, path, name, extension)) return NodeState.STUB
+        if (matchesAny(config.inclusions, path, name, extension)) return NodeState.INCLUDE
+        if (matchesAny(config.exclusions, path, name, extension)) return NodeState.EXCLUDE
+
+        if (isIgnored(path, isDirectory = false)) return NodeState.EXCLUDE
+        if (config.excludeBinaries && extension in BINARY_EXTENSIONS) return NodeState.EXCLUDE
+        if (name.startsWith('.')) return NodeState.EXCLUDE
+
+        return if (extension.isEmpty() || extension in TEXT_EXTENSIONS) {
+            NodeState.INCLUDE
+        } else {
+            NodeState.EXCLUDE
+        }
+    }
+
+    /**
+     * Legacy boolean entry point retained for source compatibility.
+     *
+     * Equivalent to `resolveMode(...) == NodeState.INCLUDE`. New code
+     * should call [resolveMode] directly and inspect the returned state,
+     * because this wrapper silently discards the distinction between
+     * EXCLUDE and STUB.
+     *
+     * The `respectExcludedPaths` parameter is forwarded unchanged; see
+     * [resolveMode] for its meaning.
      */
     fun include(file: File, respectExcludedPaths: Boolean = true): Boolean {
         if (isSymbolicLink(file) || (!file.isDirectory && !file.isFile)) return false
         val relativePath = relativePathOf(file) ?: return false
-        return includePath(
+        return resolveMode(
             relativePath = relativePath,
             isDirectory = file.isDirectory,
             sizeBytes = if (file.isFile) file.length() else 0L,
             respectExcludedPaths = respectExcludedPaths
-        )
+        ) == NodeState.INCLUDE
     }
 
     /**
-     * Applies the same rules to a path that is not necessarily present on disk.
-     * This is used when exporting a Git tree at a branch, tag or commit.
+     * Legacy path-based boolean entry point retained for source
+     * compatibility.
+     *
+     * Equivalent to `resolveMode(...) == NodeState.INCLUDE`. Used by
+     * callers that enumerate paths from a source other than the
+     * filesystem — for example the Git snapshot path, whose file list
+     * comes from the tree object rather than from a directory walk.
+     *
+     * See [resolveMode] for the priority order and the meaning of
+     * `respectExcludedPaths`.
      */
     fun includePath(
         relativePath: String,
         isDirectory: Boolean,
         sizeBytes: Long = 0L,
         respectExcludedPaths: Boolean = true
-    ): Boolean {
-        val path = FilterConfig.normalizeRelativePath(relativePath)
-        if (path.isEmpty() || path.split('/').any { it == ".." || it == "." }) return false
-
-        val segments = path.split('/')
-        val name = segments.last()
-        if (isDirectory) {
-            if (name in excludedDirectoryNames) return false
-            // User-defined exclusions also apply to directories, so a rule
-            // like `build`, `**/generated` or `src/test` prevents the directory
-            // itself from being walked. Previously the check ran only for files,
-            // which meant `build` as an exclusion was silently a no-op for the
-            // directory (its children were still scanned) and surprised users
-            // expecting .gitignore-like semantics. Extension is passed as empty
-            // because directories have none — only the literal / path / glob
-            // branches of `matchesAny` can match here, which is the intended
-            // behavior (a bare `kt` will still match a directory literally
-            // named `kt`, mirroring .gitignore, and that edge case is accepted).
-            if (matchesAny(config.exclusions, path, name, extension = "")) return false
-            if (isIgnored(path, isDirectory = true)) return false
-            if (respectExcludedPaths && isPathExcluded(path)) return false
-            return true
-        }
-
-        if (sizeBytes < 0L || sizeBytes > config.maxFileSizeBytes) return false
-        if (segments.dropLast(1).any { it in excludedDirectoryNames }) return false
-        if (respectExcludedPaths && isPathExcluded(path)) return false
-
-        val extension = name.substringAfterLast('.', "").lowercase()
-        if (matchesAny(config.exclusions, path, name, extension)) return false
-        if (matchesAny(config.inclusions, path, name, extension)) return true
-
-        if (isIgnored(path, isDirectory = false)) return false
-        if (config.excludeBinaries && extension in BINARY_EXTENSIONS) return false
-        if (name.startsWith('.')) return false
-
-        // Files without an extension remain eligible, matching the old behavior.
-        return extension.isEmpty() || extension in TEXT_EXTENSIONS
-    }
+    ): Boolean = resolveMode(relativePath, isDirectory, sizeBytes, respectExcludedPaths) == NodeState.INCLUDE
 
     /**
-     * Returns included regular files in deterministic depth-first order.
-     * Only one directory's children are materialized at a time.
+     * Returns every included or stubbed file in deterministic
+     * depth-first order, paired with its resolved [NodeState].
      *
-     * Cancellation
-     * ------------
-     * The worker thread's interrupt flag is checked **once per directory entry**,
-     * in two places:
+     * Only one directory's children are materialized at a time, so peak
+     * memory is proportional to the depth of the tree, not to its size.
      *
-     *  - at the top of [walk], before `listFiles()` runs, so a directory that
-     *    was just entered cannot start its scan if the user already pressed
-     *    Cancel between recursion levels, and
-     *  - inside the `for` loop, before dispatching into `include` / `walk` /
-     *    `yield`, so a wide directory with thousands of children unwinds on
-     *    the very next entry.
+     * ### Which states are emitted
      *
-     * `listFiles()` and `sortedWith` themselves are not interruptible — both
-     * are bounded by the number of entries in a single directory and complete
-     * in milliseconds on any realistic project — so adding a check inside them
-     * is not worth the extra branch per iteration.
+     * Both [NodeState.INCLUDE] and [NodeState.STUB] files are returned;
+     * the caller distinguishes them by the second component of the pair.
+     * This is what lets the dump generator write a stub's header and
+     * size marker without ever opening the file. [NodeState.EXCLUDE]
+     * entries are skipped entirely. [NodeState.LOCKED] is never returned
+     * by this method because the filter does not produce that state —
+     * locking is the scanner's decision, and the scanner does not
+     * descend into locked directories anyway.
      *
-     * The thrown [InterruptedException] propagates out of the calling terminal
-     * operator (`toList`, `count`, `forEach`, …) and lands in
-     * [com.devdayton.onecodeforai.android.ExportCoordinator.runExport]'s
-     * dedicated `catch (e: InterruptedException)` block.
+     * ### Directory-level stubs
+     *
+     * A directory that matches a stub pattern is *walked* as if it were
+     * included, because a directory stub is a structural hint rather
+     * than a leaf entry: the dump format has no way to express "this
+     * folder's contents were omitted" as a single block. The children
+     * of such a directory are then resolved individually, so a folder
+     * that matches a stub pattern still contributes per-file stubs for
+     * each of its files, which is exactly the mental model a user has
+     * when they mark a folder as reference-only in the tree selector.
+     *
+     * ### Cancellation
+     *
+     * The worker thread's interrupt flag is checked once per directory
+     * entry, in two places:
+     *
+     *  - at the top of [walk], before `listFiles()` runs, so a
+     *    directory that was just entered cannot start its scan if the
+     *    user already pressed Cancel between recursion levels, and
+     *  - inside the `for` loop, before dispatching into [resolveMode]
+     *    or yielding, so a wide directory with thousands of children
+     *    unwinds on the very next entry.
+     *
+     * `listFiles()` and `sortedWith` themselves are not interruptible —
+     * both are bounded by the number of entries in a single directory
+     * and complete in milliseconds on any realistic project — so adding
+     * a check inside them is not worth the extra branch per iteration.
+     *
+     * The thrown [InterruptedException] propagates out of the calling
+     * terminal operator (`toList`, `count`, `forEach`, …) and lands in
+     * the export coordinator's dedicated cancellation handler.
      */
-    fun walkIncludedFiles(): Sequence<File> = sequence {
+    fun walkIncludedAndStubbed(): Sequence<Pair<File, NodeState>> = sequence {
         require(root.isDirectory) { "Project root is not a directory: ${root.path}" }
         ensureActive()
 
-        suspend fun SequenceScope<File>.walk(directory: File) {
+        suspend fun SequenceScope<Pair<File, NodeState>>.walk(directory: File) {
             ensureActive()
             val children = directory.listFiles()
                 ?.asSequence()
@@ -169,10 +373,18 @@ class FileFilter(
 
             for (child in children) {
                 ensureActive()
+                val relativePath = relativePathOf(child) ?: continue
                 if (child.isDirectory) {
-                    if (include(child)) walk(child)
-                } else if (include(child)) {
-                    yield(child)
+                    when (resolveMode(relativePath, isDirectory = true, sizeBytes = 0L)) {
+                        NodeState.INCLUDE, NodeState.STUB -> walk(child)
+                        NodeState.EXCLUDE, NodeState.LOCKED -> Unit
+                    }
+                } else {
+                    when (resolveMode(relativePath, isDirectory = false, sizeBytes = child.length())) {
+                        NodeState.INCLUDE -> yield(child to NodeState.INCLUDE)
+                        NodeState.STUB -> yield(child to NodeState.STUB)
+                        NodeState.EXCLUDE, NodeState.LOCKED -> Unit
+                    }
                 }
             }
         }
@@ -181,34 +393,60 @@ class FileFilter(
     }
 
     /**
-     * Returns the number of files that would be included with the current
-     * configuration. Used to drive the determinate progress bar in the
-     * generation panel and the notification text.
+     * Legacy convenience wrapper around [walkIncludedAndStubbed] that
+     * returns only the [NodeState.INCLUDE] files.
      *
-     * Because this delegates to [walkIncludedFiles], it also honours the
-     * worker thread's interrupt flag: if the export is cancelled while the
-     * pre-count is running, this throws [InterruptedException] instead of
-     * finishing the traversal.
+     * Retained so that callers that predate Tree v2 keep working
+     * without a source change. New code should call
+     * [walkIncludedAndStubbed] directly, because dropping the stubs
+     * silently changes the dump's shape for a caller that meant "every
+     * file the tree selector shows as included or reference-only".
+     *
+     * Cancellation semantics are identical to
+     * [walkIncludedAndStubbed].
      */
-    fun countEligibleFiles(): Int = walkIncludedFiles().count()
+    fun walkIncludedFiles(): Sequence<File> =
+        walkIncludedAndStubbed().filter { it.second == NodeState.INCLUDE }.map { it.first }
 
     /**
-     * Root `.gitignore` rules available for display in the configuration UI.
+     * Returns the number of files that would be emitted with the
+     * current configuration, counting both [NodeState.INCLUDE] and
+     * [NodeState.STUB] entries.
      *
-     * Negative rules (`!foo`) are included with their `!` prefix preserved so
-     * the UI can show them as negations. Previously they were filtered out,
-     * which hid from the user that a `!important.txt` in their `.gitignore`
-     * was actually overriding a broader exclusion.
+     * Used to drive the determinate progress bar in the generation
+     * panel and the notification text. Stubs count toward the total
+     * because the dump writes a header for each of them, which is a
+     * per-file operation from the user's point of view even though the
+     * file's content is never read.
+     *
+     * Delegates to [walkIncludedAndStubbed], so it also honours the
+     * worker thread's interrupt flag: if the export is cancelled while
+     * the pre-count is running, this throws [InterruptedException]
+     * instead of finishing the traversal.
+     */
+    fun countEligibleFiles(): Int = walkIncludedAndStubbed().count()
+
+    /**
+     * Root `.gitignore` rules available for display in the configuration
+     * UI.
+     *
+     * Negative rules (`!foo`) are included with their `!` prefix
+     * preserved so the UI can show them as negations. Previously they
+     * were filtered out, which hid from the user that a `!important.txt`
+     * in their `.gitignore` was actually overriding a broader exclusion.
      */
     fun loadGitignoreRules(): List<String> =
         readGitignoreEntry()?.displayRules ?: emptyList()
 
     // ------------------------------------------------------------------
+    // Internals
+    // ------------------------------------------------------------------
 
     /**
      * Throws [InterruptedException] when the current thread has been
-     * interrupted. Shared by every loop in this class so the walk responds to
-     * `ExportCoordinator.cancel()` within a single directory entry.
+     * interrupted. Shared by every loop in this class so the walk
+     * responds to `ExportCoordinator.cancel()` within a single directory
+     * entry.
      */
     private fun ensureActive() {
         if (Thread.currentThread().isInterrupted) {
@@ -216,6 +454,16 @@ class FileFilter(
         }
     }
 
+    /**
+     * Returns the path of [file] relative to [root], normalized for
+     * comparison and storage.
+     *
+     * Uses canonical paths on both sides so that symlink aliases inside
+     * the project do not produce duplicate entries with different path
+     * strings. Returns null when canonicalization fails (broken symlink,
+     * permission error) so the caller can skip the entry instead of
+     * crashing the scan.
+     */
     private fun relativePathOf(file: File): String? = runCatching {
         val canonical = file.canonicalFile
         if (canonical == root) "" else {
@@ -224,23 +472,20 @@ class FileFilter(
         }
     }.getOrNull()
 
-    private fun isPathExcluded(relativePath: String): Boolean {
-        return config.excludedPaths.any { excluded ->
-            val normalized = FilterConfig.normalizeRelativePath(excluded)
-            relativePath == normalized || relativePath.startsWith("$normalized/")
-        }
-    }
-
     /**
-     * .gitignore's last matching rule wins. Rules are loaded once per filter
-     * instance, and ignored parent directories prevent traversal into children.
+     * `.gitignore`'s last matching rule wins. Rules are loaded once per
+     * filter instance, and ignored parent directories prevent traversal
+     * into children.
+     *
+     * The ancestor loop is what makes a broad ignore rule like `build/`
+     * propagate into every descendant even when a later rule negates a
+     * specific child: the walk checks each ancestor prefix, so a negated
+     * `build/keep.txt` cannot bypass an ignored `build/`.
      */
     private fun isIgnored(relativePath: String, isDirectory: Boolean): Boolean {
         val segments = relativePath.split('/').filter(String::isNotEmpty)
         if (segments.isEmpty()) return false
 
-        // Check each ancestor first. An ignored directory cannot be bypassed
-        // merely by matching a negated rule on a child path.
         for (index in segments.indices) {
             val candidate = segments.take(index + 1).joinToString("/")
             val candidateIsDirectory = index < segments.lastIndex || isDirectory
@@ -249,6 +494,14 @@ class FileFilter(
         return false
     }
 
+    /**
+     * Evaluates the parsed `.gitignore` rules against a single path.
+     *
+     * Last matching rule wins, matching `.gitignore` semantics. A
+     * negation (`!foo`) therefore re-includes a path that an earlier
+     * rule excluded, but only at the exact level where the negation
+     * applies — the ancestor check in [isIgnored] still runs first.
+     */
     private fun isIgnoredPath(path: String, isDirectory: Boolean): Boolean {
         var ignored = false
         ignoreRules.forEach { rule ->
@@ -257,24 +510,30 @@ class FileFilter(
         return ignored
     }
 
+    /**
+     * Returns the parsed rules from the root `.gitignore`, or an empty
+     * list when the file is missing.
+     */
     private fun loadIgnoreRules(): List<IgnoreRule> =
         readGitignoreEntry()?.parsedRules ?: emptyList()
 
     /**
-     * Reads and parses the root `.gitignore`, reusing the cached entry when the
-     * file's mtime has not changed.
+     * Reads and parses the root `.gitignore`, reusing the cached entry
+     * when the file's mtime has not changed.
      *
-     * The fast path returns the cached entry without touching the filesystem
-     * beyond the `lastModified()` call; the slow path reads and parses the
-     * file once and stores the result. `ConcurrentHashMap` provides the
-     * happens-before guarantee needed for the immutable [GitignoreCacheEntry]
-     * to be safely shared between threads.
+     * The fast path returns the cached entry without touching the
+     * filesystem beyond the `lastModified()` call; the slow path reads
+     * and parses the file once and stores the result.
+     * ConcurrentHashMap provides the happens-before guarantee needed for
+     * the immutable [GitignoreCacheEntry] to be safely shared between
+     * threads.
      *
-     * The cache is bounded: when it exceeds [GITIGNORE_CACHE_MAX_ENTRIES],
-     * the lexicographically-first key is evicted before inserting the new
-     * entry. Approximate-LRU is acceptable here because the working set of
-     * simultaneously open projects in an IDE session is small (typically 1-3)
-     * and the cost of a cache miss is one file read.
+     * The cache is bounded: when it exceeds
+     * [GITIGNORE_CACHE_MAX_ENTRIES], the lexicographically-first key is
+     * evicted before inserting the new entry. Approximate-LRU is
+     * acceptable here because the working set of simultaneously open
+     * projects in an IDE session is small (typically 1-3) and the cost
+     * of a cache miss is one file read.
      */
     private fun readGitignoreEntry(): GitignoreCacheEntry? {
         val gitignore = File(root, ".gitignore")
@@ -283,29 +542,28 @@ class FileFilter(
         val mtime = gitignore.lastModified()
         val key = gitignore.absolutePath
 
-        // Fast path: already cached and the file has not changed.
         gitignoreCache[key]?.let { entry ->
             if (entry.mtime == mtime) return entry
         }
 
-        // Slow path: read and parse in a single pass.
         val lines = runCatching { gitignore.readLines(Charsets.UTF_8) }
             .getOrDefault(emptyList())
         val filtered = lines
             .map(String::trim)
             .filter { it.isNotEmpty() && !it.startsWith('#') }
         val parsedRules = filtered.mapNotNull(IgnoreRule::parse)
-        // `rawRules` keeps the pre-`!` form (used by nothing today, but kept
-        // for backwards compatibility with code that may still read it).
+        // `rawRules` keeps the pre-`!` form (used by nothing today, but
+        // kept for backwards compatibility with code that may still
+        // read it).
         val rawRules = filtered
             .filter { !it.startsWith('!') }
             .map { it.removePrefix("/").removeSuffix("/") }
             .distinct()
-        // `displayRules` keeps the `!` prefix so the UI can render negations.
+        // `displayRules` keeps the `!` prefix so the UI can render
+        // negations.
         val displayRules = filtered.distinct()
 
         val entry = GitignoreCacheEntry(mtime, rawRules, displayRules, parsedRules)
-        // Bounded insertion: evict one entry if we are over the cap.
         if (gitignoreCache.size >= GITIGNORE_CACHE_MAX_ENTRIES) {
             gitignoreCache.keys.firstOrNull()?.let { gitignoreCache.remove(it) }
         }
@@ -313,6 +571,16 @@ class FileFilter(
         return entry
     }
 
+    /**
+     * Tests a path against one of the three user rule lists
+     * (inclusions, exclusions, stub patterns).
+     *
+     * The rule matching is intentionally identical for all three lists
+     * so that a pattern behaves the same wherever the user writes it.
+     * The only difference is the state the caller assigns when a match
+     * is found, which is why this method returns a boolean and the
+     * decision lives in [resolveMode].
+     */
     private fun matchesAny(
         rules: List<String>,
         path: String,
@@ -321,12 +589,13 @@ class FileFilter(
     ): Boolean = rules.any { rawRule ->
         // Strip the .gitignore-style trailing slash before comparing.
         // `build/` in an exclusion should behave the same as `build` —
-        // `fileName` and `path` never carry a trailing slash, so without this
-        // the literal comparison and the glob match both fail. The slash is a
-        // gitignore hint that the rule targets a directory; here the caller
-        // already knows whether the entry is a directory (`isDirectory` branch
-        // in `includePath`), so keeping it on the pattern would only cause the
-        // rule to silently never match.
+        // `fileName` and `path` never carry a trailing slash, so
+        // without this the literal comparison and the glob match both
+        // fail. The slash is a gitignore hint that the rule targets a
+        // directory; here the caller already knows whether the entry is
+        // a directory (`isDirectory` branch in `resolveMode`), so
+        // keeping it on the pattern would only cause the rule to
+        // silently never match.
         val literalRule = rawRule.trim().removeSuffix("/")
         if (literalRule.isEmpty()) return@any false
         val extensionRule = literalRule.removePrefix(".")
@@ -337,9 +606,39 @@ class FileFilter(
             globMatches(literalRule, path)
     }
 
+    /**
+     * Returns true if [file] is a symbolic link, false if it is a
+     * regular file or directory, and false on any error.
+     *
+     * Errors are swallowed and reported as "not a symlink" because the
+     * alternative — treating an error as "is a symlink" — would
+     * silently drop entries the user can see, whereas the reverse only
+     * affects the rare error case where a broken symlink would be
+     * walked. In that case [relativePathOf] returns null and the entry
+     * is skipped anyway.
+     */
     private fun isSymbolicLink(file: File): Boolean =
         runCatching { Files.isSymbolicLink(file.toPath()) }.getOrDefault(false)
 
+    /**
+     * Parsed representation of a single `.gitignore` rule.
+     *
+     * Every field is a direct encoding of one aspect of the gitignore
+     * syntax so that [matches] can reproduce gitignore's semantics
+     * without re-parsing the rule on every evaluation:
+     *
+     *  - [negated] captures the leading `!`, which flips the meaning of
+     *    a match from "ignore" to "re-include".
+     *  - [directoryOnly] captures a trailing `/`, which restricts the
+     *    rule to directories.
+     *  - [anchored] captures a leading `/`, which restricts the rule to
+     *    paths starting at the repository root.
+     *  - [hasSlash] is true when the pattern contains an internal `/`,
+     *    which (per gitignore) makes the rule match against the full
+     *    path rather than just the basename.
+     *  - [regex] is the compiled matcher, precomputed so that the hot
+     *    path in [matches] does not have to parse the glob.
+     */
     private data class IgnoreRule(
         val source: String,
         val negated: Boolean,
@@ -385,7 +684,14 @@ class FileFilter(
         }
     }
 
-    /** [PERF] Cache shared by every instance; invalidated when the mtime changes. */
+    /**
+     * Immutable cache entry for one `.gitignore` file.
+     *
+     * Contains every representation of the parsed file that any
+     * consumer might need, so that a cache hit answers all of them
+     * without a second parse: [mtime] for invalidation, [rawRules] and
+     * [displayRules] for the UI, and [parsedRules] for the matcher.
+     */
     private data class GitignoreCacheEntry(
         val mtime: Long,
         val rawRules: List<String>,
@@ -397,16 +703,17 @@ class FileFilter(
         private val gitignoreCache = ConcurrentHashMap<String, GitignoreCacheEntry>()
 
         /**
-         * Upper bound on cached `.gitignore` entries. Chosen so a typical IDE
-         * session (1-3 open projects) never evicts, while a long-running
-         * session with dozens of projects does not grow without limit.
+         * Upper bound on cached `.gitignore` entries. Chosen so a
+         * typical IDE session (1-3 open projects) never evicts, while a
+         * long-running session with dozens of projects does not grow
+         * without limit.
          */
         private const val GITIGNORE_CACHE_MAX_ENTRIES = 32
 
         /**
-         * [PERF] Forces a reload when the `.gitignore` file was changed outside
-         * the expected mtime window (e.g. a Git checkout that preserves the
-         * previous timestamp on some filesystems).
+         * Forces a reload when the `.gitignore` file was changed
+         * outside the expected mtime window (e.g. a Git checkout that
+         * preserves the previous timestamp on some filesystems).
          */
         fun invalidateGitignoreCache(root: File) {
             val gitignore = File(root.canonicalFile, ".gitignore")
@@ -416,19 +723,23 @@ class FileFilter(
         /**
          * Fixed list of known binary extensions.
          *
-         * `svg` was historically listed here, but it is an XML text format and
-         * an AI consumer can meaningfully reason about it (structure, naming,
-         * path data). Treating it as binary meant that an explicit
-         * `Inclusions += "svg"` had no effect, because the fallback check
-         * `extension in TEXT_EXTENSIONS` is what grants inclusion to files
-         * that are neither binary nor hidden. It is now in [TEXT_EXTENSIONS].
+         * `svg` was historically listed here, but it is an XML text
+         * format and an AI consumer can meaningfully reason about it
+         * (structure, naming, path data). Treating it as binary meant
+         * that an explicit inclusion of `svg` had no effect, because
+         * the fallback check `extension in TEXT_EXTENSIONS` is what
+         * grants inclusion to files that are neither binary nor
+         * hidden. It is now in [TEXT_EXTENSIONS].
          *
          * `lock` was historically listed here too, but modern lockfiles
          * (`Cargo.lock`, `Gemfile.lock`, `poetry.lock`, `yarn.lock`,
-         * `composer.lock`, `pubspec.lock`) are plain text. They are still
-         * excluded by default (they are not in [TEXT_EXTENSIONS] either), but
-         * a user who wants them can now add `lock` to `Inclusions` and the
-         * filter will honour it.
+         * `composer.lock`, `pubspec.lock`) are plain text. They are
+         * still excluded by default (they are not in
+         * [TEXT_EXTENSIONS] either), but a user who wants them can now
+         * add `lock` to inclusions and the filter will honour it, or
+         * add a specific lockfile name to
+         * [FilterConfig.stubPatterns] to include it as a
+         * reference-only entry.
          */
         private val BINARY_EXTENSIONS = setOf(
             "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tiff",
@@ -441,10 +752,11 @@ class FileFilter(
         /**
          * Extensions treated as text by default.
          *
-         * `svg` is here because it is XML. `lock` is deliberately **not**
-         * here: lockfiles are text, but they are typically machine-generated
-         * and multi-megabyte, so they are only included when the user adds
-         * `lock` to `Inclusions` explicitly.
+         * `svg` is here because it is XML. `lock` is deliberately not
+         * here: lockfiles are text, but they are typically machine-
+         * generated and multi-megabyte, so they are only included when
+         * the user adds `lock` to inclusions explicitly, or stubbed via
+         * stub patterns.
          */
         private val TEXT_EXTENSIONS = setOf(
             "kt", "kts", "java", "xml", "toml", "gradle", "properties", "json",
@@ -463,26 +775,28 @@ class FileFilter(
          *  - `*` matches zero or more non-slash characters.
          *  - `?` matches exactly one non-slash character.
          *  - `**` matches across directory separators.
-         *  - A leading double-star followed by a slash matches zero or more
-         *    leading directories, **including none**, so the pattern matches
-         *    a file at the project root as well as in any subdirectory. This
-         *    was previously compiled to an optional prefix group, which when
-         *    anchored at the start of the string did not match the root form.
-         *  - `[abc]` and `[!abc]` are passed through as character classes
-         *    (with `[!` translated to the regex `[^` form), matching the
-         *    `.gitignore` convention. `[` and `]` are no longer escaped,
-         *    which previously disabled character-class matching entirely.
+         *  - A leading double-star followed by a slash matches zero or
+         *    more leading directories, including none, so the pattern
+         *    matches a file at the project root as well as in any
+         *    subdirectory. This was previously compiled to an optional
+         *    prefix group, which when anchored at the start of the
+         *    string did not match the root form.
+         *  - `[abc]` and `[!abc]` are passed through as character
+         *    classes (with `[!` translated to the regex `[^` form),
+         *    matching the `.gitignore` convention. `[` and `]` are no
+         *    longer escaped, which previously disabled character-class
+         *    matching entirely.
          *
-         * Deliberately **not** supported: backslash escapes. Literal `[` in
-         * a filename must be written as `[[]` (a character class containing
-         * `[`), as in `.gitignore` itself.
+         * Deliberately not supported: backslash escapes. A literal `[`
+         * in a filename must be written as `[[]` (a character class
+         * containing `[`), as in `.gitignore` itself.
          *
          * The double-star-plus-slash form is compiled to an alternation
          * between "start of string" and "any prefix ending in a slash",
-         * rather than an optional prefix group. An optional group would not
-         * match "nothing" at the start of the string while still allowing
-         * the pattern to match; the alternation makes the "match nothing"
-         * branch explicit.
+         * rather than an optional prefix group. An optional group would
+         * not match "nothing" at the start of the string while still
+         * allowing the pattern to match; the alternation makes the
+         * "match nothing" branch explicit.
          */
         private fun globToRegex(pattern: String): Regex {
             val out = StringBuilder("^")
@@ -495,11 +809,12 @@ class FileFilter(
                         if (doubleStar) {
                             val followedBySlash = index + 2 < pattern.length && pattern[index + 2] == '/'
                             if (followedBySlash) {
-                                // Git-style `**/` also matches a file at the
-                                // pattern's root. The alternation below makes
-                                // that explicit: either we are at the start
-                                // of the string (so the pattern matches at the
-                                // root) or we consume any prefix ending in a
+                                // Git-style `**/` also matches a file at
+                                // the pattern's root. The alternation
+                                // below makes that explicit: either we
+                                // are at the start of the string (so
+                                // the pattern matches at the root) or
+                                // we consume any prefix ending in a
                                 // slash.
                                 out.append("(?:^|.*/)")
                                 index += 2
@@ -513,8 +828,9 @@ class FileFilter(
                     }
                     '?' -> out.append("[^/]")
                     '[' -> {
-                        // Character class start. Translate gitignore's `[!...]`
-                        // negation form to regex's `[^...]` form.
+                        // Character class start. Translate gitignore's
+                        // `[!...]` negation form to regex's `[^...]`
+                        // form.
                         out.append('[')
                         if (index + 1 < pattern.length && pattern[index + 1] == '!') {
                             out.append('^')

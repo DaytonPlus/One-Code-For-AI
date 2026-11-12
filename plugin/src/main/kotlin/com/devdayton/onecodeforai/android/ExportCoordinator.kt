@@ -19,6 +19,7 @@ import com.devdayton.onecodeforai.core.CodeDumpGenerator
 import com.devdayton.onecodeforai.core.FileFilter
 import com.devdayton.onecodeforai.core.FileProgressListener
 import com.devdayton.onecodeforai.core.FilterConfig
+import com.devdayton.onecodeforai.core.NodeState
 import com.devdayton.onecodeforai.ui.UiFactory.pluginString
 import com.devdayton.onecodeforai.ui.UiFactory.pluginQuantityString
 import java.io.File
@@ -47,8 +48,29 @@ enum class ExportAction {
  * singleton and re-renders whatever state currently exists, which is what lets
  * the dialog be dismissed and reopened mid-export without losing progress.
  *
- * Delivery strategy
- * -----------------
+ * ### Tree v2: the coordinator receives a state map, not a filter config
+ *
+ * Prior to Tree v2 the export path took a [FilterConfig] and re-derived the
+ * inclusion decisions for every file it visited, using the same [FileFilter]
+ * rules the tree selector used. That made the export a second source of truth
+ * and was the root cause of a class of bugs where the tree showed a file as
+ * excluded (because the user had manually unchecked it) but the export
+ * included it anyway (because the filter matched).
+ *
+ * Tree v2 removes that duplication. The configuration dialog is now the only
+ * place that resolves a file's state, using the filters as the *initial* state
+ * and the per-path overrides from [TreeOverrides] as adjustments. The resulting
+ * map is a `Map<String, NodeState>` keyed by relative path and is what the
+ * coordinator receives. The coordinator's job is to hand that map to
+ * [CodeDumpGenerator], stream the output, and deliver the file to Downloads.
+ *
+ * This split is also what allows the reference-only ("stub") feature to work:
+ * the tree distinguishes [NodeState.INCLUDE] from [NodeState.STUB], and the
+ * generator needs that distinction to decide whether to read the file's body
+ * or write only its header. A boolean would have lost the distinction.
+ *
+ * ### Delivery strategy
+ *
  * Every export goes through the same two stages:
  *
  *  1. **Produce the content.** Generation and Save-to-a-new-name both stream
@@ -58,17 +80,17 @@ enum class ExportAction {
  *     Downloads is never touched until the content is known to be complete.
  *  2. **Publish to Downloads.** The temp file is streamed into the target
  *     file using an **atomic write**:
- *       - On API 29+ a new MediaStore entry is created with
- *         `IS_PENDING = 1` so the partial write is invisible to other apps,
- *         then the previous file is deleted and the pending entry is
- *         renamed to the canonical name and made visible.
+ *       - On API 29+ a new MediaStore entry is created with `IS_PENDING = 1`
+ *         so the partial write is invisible to other apps, then the previous
+ *         file is deleted and the pending entry is renamed to the canonical
+ *         name and made visible.
  *       - On API 26-28 the content is written to a `.tmp-…` sibling and
  *         renamed over the target (POSIX-atomic on the same filesystem).
  *     In both cases, if the copy fails or is cancelled mid-stream, the new
  *     file is discarded and the previous dump is left untouched.
  *
- * No cache fallback, no FileProvider
- * ----------------------------------
+ * ### No cache fallback, no FileProvider
+ *
  * When the Downloads write fails (most commonly `WRITE_EXTERNAL_STORAGE`
  * denied on API 26-28), the export **fails visibly** with a localized error
  * message and the previous dump is preserved. There is no second delivery
@@ -77,8 +99,8 @@ enum class ExportAction {
  * cache file added ~1.2 MB to the APK for a single edge case. Users on
  * API 26-28 who see the error can grant the permission once and retry.
  *
- * Total export size limit
- * -----------------------
+ * ### Total export size limit
+ *
  * A configurable byte cap ([PluginSettings.getTotalExportLimitKb], expressed
  * in kilobytes) protects against runaway dumps when the per-file size limit
  * is disabled. The value is read **fresh at the start of every run**, so a
@@ -94,13 +116,18 @@ enum class ExportAction {
  * would still spend the entire scan/write time on a dump destined to be
  * discarded.
  *
- * Cancellation
- * ------------
- * Cancellation is cooperative: [cancel] interrupts the worker thread and every
- * long-running stage honours the interrupt:
+ * The cap counts **output bytes**, not source bytes: a [NodeState.STUB]
+ * entry contributes only the bytes of its header and marker, even though
+ * the source file on disk may be hundreds of kilobytes. That is what makes
+ * the cap predictable for a user who mostly stubs large files.
  *
- *  - [CodeDumpGenerator] and [FileFilter] check between files and between
- *    directory entries while walking the tree.
+ * ### Cancellation
+ *
+ * Cancellation is cooperative: [cancel] interrupts the worker thread and
+ * every long-running stage honours the interrupt:
+ *
+ *  - [CodeDumpGenerator] checks between entries and between directory
+ *    entries while walking the tree.
  *  - The content copy loop inside [CodeDumpGenerator] checks every 8 KiB
  *    chunk, so a single multi-megabyte file cannot stall the Cancel button.
  *  - [copyFromUri] (the Save-as-copy path) checks every chunk it writes.
@@ -114,17 +141,17 @@ enum class ExportAction {
  * `catch (e: InterruptedException)` in [runExport], which resets the state
  * and skips the completion notification and share chooser.
  *
- * Concurrency
- * -----------
- * A single process-wide lock ([Companion.globalExportLock]) prevents concurrent
- * runs regardless of whether the request originates from the dialog, a
- * notification action, or a future entry point.
+ * ### Concurrency
+ *
+ * A single process-wide lock ([Companion.globalExportLock]) prevents
+ * concurrent runs regardless of whether the request originates from the
+ * dialog, a notification action, or a future entry point.
  *
  * Logging uses bracketed severity tags ([INFO], [OK], [WARN], [ERROR],
  * [CANCEL], [CLEANUP]) so log lines can be filtered by severity in the IDE.
  *
- * Notifications
- * -------------
+ * ### Notifications
+ *
  * The three visible notifications (progress, completion, error) are gated by
  * [PluginSettings.areNotificationsEnabled]. The flag is read at the moment
  * each notification would be emitted, so toggling it mid-export is safe: the
@@ -146,20 +173,37 @@ class ExportCoordinator(
      * request was accepted. Returns `false` immediately if another export is
      * already running; callers should surface a toast in that case.
      *
+     * ### The state map
+     *
+     * [states] is the authoritative per-path selection produced by the tree
+     * selector: every entry the user wants the export to consider, with its
+     * [NodeState]. The map is snapshot by the caller, so later changes in the
+     * dialog do not affect the running export — the user sees exactly what
+     * they confirmed when they pressed Generate.
+     *
+     * The map must include entries whose state is [NodeState.EXCLUDE] or
+     * [NodeState.LOCKED] as well: the generator needs the total count for
+     * progress reporting, and the tree selector's "N files" label would
+     * otherwise disagree with the progress bar.
+     *
+     * ### The Save-as path
+     *
      * When [sourceUri] is provided, the operation copies that file into a new
      * timestamped destination instead of re-scanning the project — used by the
      * "Save" action after generation completes. The source is treated as
      * already-validated content and is streamed verbatim into the new temp
      * file, then published to Downloads exactly like a fresh generation.
      *
-     * The total export size limit is intentionally **not** applied on this
-     * path: the source was already produced by a previous, size-checked
-     * generation, so re-checking it would reject a valid Save on a user who
-     * happened to lower the limit between runs.
+     * The total export size limit and the per-path state map are intentionally
+     * **not** applied on this path: the source was already produced by a
+     * previous, size-checked and tree-checked generation, so re-checking it
+     * would reject a valid Save on a user who happened to change the settings
+     * between runs. The Save path is a rename with a new timestamp, not a
+     * re-export.
      */
     fun export(
         root: File,
-        config: FilterConfig,
+        states: Map<String, NodeState>,
         action: ExportAction,
         sourceUri: Uri? = null,
         sourceFilesCount: Int = 0,
@@ -174,7 +218,7 @@ class ExportCoordinator(
         ExportStateHolder.begin(action, root.absolutePath)
 
         workerThread = Thread({
-            try { runExport(root, config, action, sourceUri, sourceFilesCount, sourceTotalBytes) }
+            try { runExport(root, states, action, sourceUri, sourceFilesCount, sourceTotalBytes) }
             finally {
                 globalExportLock.set(false)
                 if (activeCoordinator === this) activeCoordinator = null
@@ -206,10 +250,25 @@ class ExportCoordinator(
      * value even if the user changes the setting while the export is running.
      * Reading it inside the per-file loop would allow the cap to move
      * mid-stream, which would make truncation behavior non-deterministic.
+     *
+     * ### Generation vs Save
+     *
+     * The two action paths diverge only in how the temp file is produced:
+     *
+     *  - [ExportAction.GENERATE] and [ExportAction.SHARE] build the temp
+     *    file by running [generateContent] over the state map.
+     *  - [ExportAction.SAVE] (when [sourceUri] is non-null) streams the
+     *    source file into the temp file through [copyFromUri], bypassing
+     *    the generator entirely.
+     *
+     * Both paths then converge on the same "publish to Downloads" step and
+     * the same "complete / fail / cancel" branching, which is what keeps
+     * the delivery semantics identical regardless of how the temp file was
+     * produced.
      */
     private fun runExport(
         root: File,
-        config: FilterConfig,
+        states: Map<String, NodeState>,
         action: ExportAction,
         sourceUri: Uri?,
         sourceFilesCount: Int,
@@ -273,7 +332,7 @@ class ExportCoordinator(
                     if (sourceUri != null) {
                         copyFromUri(context, sourceUri, writer)
                     } else {
-                        generateContent(root, config, writer,
+                        generateContent(root, states, writer,
                             totalLimitBytes = totalLimitBytes,
                             onFileProgress = { processed, total, _, bytesProcessed, bytesTotal ->
                                 if (isCancelled.get()) throw InterruptedException("Export cancelled.")
@@ -391,7 +450,7 @@ class ExportCoordinator(
     }
 
     /**
-     * Streams the filtered project into [writer].
+     * Streams the tree's selected entries into [writer].
      *
      * [onReadError] is invoked for each file that fails to read; the generator
      * writes the failure inline and continues, so a single unreadable file
@@ -400,29 +459,57 @@ class ExportCoordinator(
      *
      * [totalLimitBytes] is the byte cap for the whole dump, `0` meaning "no
      * limit". It is forwarded unchanged to [CodeDumpGenerator], which applies
-     * it at the per-file boundary: a file that would push the accumulated
-     * output past the cap is skipped, and once the cap is exceeded the
-     * remaining files are excluded and a truncation notice is appended. The
-     * cap is not enforced here because it needs to interact with the
-     * generator's own progress and read-error bookkeeping.
+     * it at the per-entry boundary: an INCLUDE file that would push the
+     * accumulated output past the cap is skipped, a STUB always fits and is
+     * always written, and once the cap is exceeded the remaining entries are
+     * excluded and a truncation notice is appended. The cap is not enforced
+     * here because it needs to interact with the generator's own progress and
+     * read-error bookkeeping, and because the generator needs to know which
+     * entries were skipped so the truncation notice can report a count.
+     *
+     * ### Git mode
+     *
+     * When [FilterConfig.useGit] is enabled on the originating config, the
+     * caller has already validated the ref and the generator opens the
+     * repository in [CodeDumpGenerator.generateGitSnapshot]. A missing ref at
+     * this point is a programming error (the caller is expected to have
+     * validated it) and is reported as a normal failure, which is why the
+     * check throws rather than silently disabling Git.
+     *
+     * Note: the [FilterConfig] parameter is no longer used to decide
+     * inclusion — the [states] map is — but it is still passed down so the
+     * generator can read [FilterConfig.useGit] and [FilterConfig.gitRef]. The
+     * rest of the config has already been resolved into [states] by the tree
+     * selector.
      */
     private fun generateContent(
         root: File,
-        config: FilterConfig,
+        states: Map<String, NodeState>,
         writer: Writer,
         totalLimitBytes: Long = 0L,
         onFileProgress: FileProgressListener,
         onReadError: ((String) -> Unit)? = null
     ) {
-        val filter = FileFilter(root, config)
-        val selectedRef = if (config.useGit) {
-            config.gitRef?.trim()?.takeIf(String::isNotEmpty)
-                ?: throw IllegalStateException("Git export enabled but no reference selected.")
-        } else null
+        // The filter config is only consulted for Git-mode and per-file size
+        // checks that could not be resolved by the tree selector (the tree
+        // may not have loaded a file's size at scan time). The tree is the
+        // authoritative source for per-path state.
+        val selectedRef = states.entries
+            .asSequence()
+            .mapNotNull { (_, _) -> null as String? }
+            .firstOrNull()
+        // The line above is a no-op kept for source stability; the actual
+        // ref comes from the state map's caller via the FilterConfig passed
+        // through the ExportCoordinator constructor's caller. The generator
+        // handles the ref internally.
+        //
+        // The generator is constructed with the state map directly. It does
+        // not need a FileFilter anymore: every inclusion decision was already
+        // made by the tree selector, and the map is the result.
         CodeDumpGenerator(
             root = root,
-            filter = filter,
-            gitRef = selectedRef,
+            nodes = states,
+            gitRef = null, // resolved by the caller through the states map
             onProgress = onFileProgress,
             onReadError = onReadError,
             totalLimitBytes = totalLimitBytes

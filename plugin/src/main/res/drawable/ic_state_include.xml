@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Included state: a checkbox with a checkmark. Used by the tri-state
+         indicator of the project tree to represent NodeState.INCLUDE.
+         The accent-orange stroke is applied at usage time via
+         setColorFilter, so the vector itself stays tint-neutral. -->
+    <path android:strokeColor="#D99460" android:strokeWidth="1.8"
+        android:fillColor="#00000000" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M4,4 L20,4 L20,20 L4,20 Z M8,12 L11,15 L16,9" />
+</vector>

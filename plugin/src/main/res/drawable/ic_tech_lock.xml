@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Lock glyph used by the "Show locked" toggle in the tree header.
+         Visually distinct from the per-row ic_state_locked because this
+         one is a UI affordance (something you click to unlock) whereas
+         the row glyph is a state marker (something you see on a locked
+         node). The two are intentionally different sizes and stroke
+         weights so they cannot be confused at a glance. -->
+    <path android:strokeColor="#D99460" android:strokeWidth="1.6"
+        android:fillColor="#00000000" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M5,11 L19,11 L19,21 L5,21 Z M8,11 L8,7 A4,4 0 0,1 16,7 L16,11 M12,15 L12,17" />
+</vector>

@@ -146,9 +146,14 @@ class OneCodeForAIInfoActivity : Activity() {
         cachedMinSdk = readMinSdk()
         cachedTargetSdk = readTargetSdk()
 
-        // Match the system chrome to the screen surface so the activity
-        // reads as a single continuous dark block instead of a white status
-        // bar framing a dark body.
+        // The statusBarColor / navigationBarColor setters were deprecated in
+        // API 35 (Android 15) in favour of edge-to-edge + WindowInsetsController.
+        // The modern replacement requires androidx.activity.enableEdgeToEdge,
+        // which the plugin deliberately does not depend on. The legacy setters
+        // are still the only portable way to colour the system bars on the
+        // plugin's minSdk (26), so the deprecation is intentionally suppressed
+        // rather than worked around.
+        @Suppress("DEPRECATION")
         window?.apply {
             statusBarColor = BG
             navigationBarColor = BG
