@@ -274,6 +274,33 @@ class FileFilter(
      * so that out-of-tree callers keep compiling and the intent remains
      * documented at the call site.
      *
+     * ### `respectHardExcludedAncestors`
+     *
+     * When `true` (the default), a file whose path contains a directory
+     * in [hardExcludedDirectories] — anything inside `build/`,
+     * `node_modules/`, `.git/`, etc. — is always EXCLUDE, regardless
+     * of the other rules. This is what keeps a normal scan fast and
+     * focused: a fresh profile on a real project with hundreds of
+     * thousands of files in `node_modules/` would otherwise flood the
+     * tree with entries the user almost never wants to see.
+     *
+     * When `false`, the ancestor check is skipped and the file's own
+     * rules decide its state. The `ProjectTreeView` passes `false`
+     * when scanning the contents of a folder the user has explicitly
+     * unlocked via "Show locked", so files inside `build/` (including
+     * generated APKs, binaries, and resources) are evaluated by their
+     * own rules instead of being hidden because their ancestor happens
+     * to be in the hard-excluded set. Without this, expanding an
+     * unlocked `build/` folder would produce an empty tree, because
+     * every child would return EXCLUDE purely from its path.
+     *
+     * The parameter only affects the *file* branch. The directory
+     * branch still rejects a directory whose own name is in
+     * [hardExcludedDirectories], so a `build/` nested inside another
+     * unlocked folder stays rejected unless the caller also resolves
+     * it directly (which it does, one level at a time, when the user
+     * expands it).
+     *
      * ### Cancellation
      *
      * No interrupt check here: this method is called once per entry
@@ -285,7 +312,8 @@ class FileFilter(
         relativePath: String,
         isDirectory: Boolean,
         sizeBytes: Long = 0L,
-        respectExcludedPaths: Boolean = true
+        respectExcludedPaths: Boolean = true,
+        respectHardExcludedAncestors: Boolean = true
     ): NodeState {
         val path = FilterConfig.normalizeRelativePath(relativePath)
         if (path.isEmpty() || path.split('/').any { it == ".." || it == "." }) {
@@ -308,7 +336,14 @@ class FileFilter(
         }
 
         if (sizeBytes < 0L || sizeBytes > config.maxFileSizeBytes) return NodeState.EXCLUDE
-        if (segments.dropLast(1).any { it in excludedDirectoryNames }) return NodeState.EXCLUDE
+        // Only inherit the hard-excluded ancestor check when the caller
+        // wants it. Unlocked subtrees (see the KDoc above) pass `false`
+        // so the user can see and interact with files inside
+        // node_modules, build, .git, etc., instead of getting an empty
+        // tree because their ancestor happens to be in the
+        // hard-excluded set.
+        if (respectHardExcludedAncestors &&
+            segments.dropLast(1).any { it in excludedDirectoryNames }) return NodeState.EXCLUDE
 
         val extension = name.substringAfterLast('.', "").lowercase()
 
@@ -344,6 +379,12 @@ class FileFilter(
      * caller that uses this wrapper also gets the "disabled section
      * behaves like empty list" semantics without having to know the
      * flags exist.
+     *
+     * `respectHardExcludedAncestors` is not exposed on this wrapper
+     * because the wrapper is the legacy code path and no caller that
+     * uses it needs the unlocked-subtree behaviour. Callers that want
+     * it must switch to [resolveMode] and pass the parameter
+     * explicitly.
      */
     fun include(file: File, respectExcludedPaths: Boolean = true): Boolean {
         if (isSymbolicLink(file) || (!file.isDirectory && !file.isFile)) return false
@@ -368,6 +409,9 @@ class FileFilter(
      * See [resolveMode] for the priority order and the meaning of
      * `respectExcludedPaths`. The section enable flags are honoured
      * transparently, as in [include].
+     *
+     * `respectHardExcludedAncestors` is not exposed on this wrapper
+     * either; see [include] for the rationale.
      */
     fun includePath(
         relativePath: String,
@@ -413,6 +457,18 @@ class FileFilter(
      * stubs for each of its files, which is exactly the mental model a
      * user has when they mark a folder as reference-only in the tree
      * selector.
+     *
+     * ### Hard-excluded ancestors
+     *
+     * This walk uses the default `respectHardExcludedAncestors = true`
+     * behaviour of [resolveMode], because the walk is used by the
+     * export path, which must never include files inside
+     * `node_modules`, `build`, `.git`, etc., unless the user has
+     * explicitly overridden them via [TreeOverrides] (and those
+     * overrides are applied by the caller, not by this walk). The
+     * unlocked-subtree scan in the configuration dialog uses its own
+     * one-level scan instead of this walk, precisely because it needs
+     * the opposite behaviour.
      *
      * ### Cancellation
      *

@@ -92,24 +92,27 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  * controls "is this rule list / feature active?": a checkbox row
  * labeled with the section name in uppercase (matching the visual
  * language of [sectionTitleWithHelp] and of the info screen's
- * `// NN TITLE` headers), with the optional Add button and the help
- * icon on its right, followed by a body that is shown only when the
- * checkbox is checked. The body is a plain flow container with no
- * surrounding card — the checkbox is what makes it a section, not a
- * decorated panel. This is deliberately closer to a settings list than
- * to a card-based dialog, and it is what the user sees for:
+ * `// NN TITLE` headers), with an optional Clear button, an optional
+ * Add button and the help icon on its right, followed by a body that is
+ * shown only when the checkbox is checked. The body is a plain flow
+ * container with no surrounding card — the checkbox is what makes it a
+ * section, not a decorated panel. This is deliberately closer to a
+ * settings list than to a card-based dialog, and it is what the user
+ * sees for:
  *
  *  - **Inclusions**, **Exclusions**, **Reference only** — checkbox
- *    plus Add button plus a chip flow. When the checkbox is off, the
- *    flow is hidden and the Add button is hidden with it. The rules
- *    themselves are preserved in the config (via
+ *    plus Clear button plus Add button plus a chip flow. When the
+ *    checkbox is off, the flow is hidden and both buttons are hidden
+ *    with it. The rules themselves are preserved in the config (via
  *    `FilterConfig.enableInclusions` / `enableExclusions` /
  *    `enableStubPatterns`), so toggling back on restores the exact same
  *    state.
  *  - **Gitignore** — checkbox plus a chip flow populated from the root
  *    `.gitignore` file. No Add button (the rules come from the file,
- *    not from the UI) and no empty-state text (an empty flow is a valid
- *    state that simply means "the file has no rules").
+ *    not from the UI), no Clear button (the flow is not editable, so
+ *    clearing it would have nothing to act on), and no empty-state text
+ *    (an empty flow is a valid state that simply means "the file has
+ *    no rules").
  *  - **Version control** — checkbox plus a content container that
  *    hosts the branch info, the ref input with its search button, the
  *    resolved-ref label and the diff preview button.
@@ -129,6 +132,28 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  * [animateToggle]) so the expand/collapse feels consistent across the
  * whole dialog. Animations are gated by
  * `PluginSettings.areAnimationsEnabled`.
+ *
+ * ### Clear button
+ *
+ * The Inclusions, Exclusions and Reference only sections expose a
+ * secondary "Clear" action next to the primary "Add" button. Its purpose
+ * is to let the user empty the flow in one tap, without having to tap
+ * each chip's delete option individually. It is deliberately **not**
+ * shown on Gitignore: that flow is read-only (its rules come from the
+ * `.gitignore` file itself), so a Clear button would be a no-op and
+ * offering one would just confuse the user about whether the file was
+ * actually modified.
+ *
+ * Clear is treated as a rule change: emptying a list marks the profile
+ * as custom, exactly like adding or removing an individual chip does.
+ * That is what keeps the "Custom" indicator honest — a user who clears
+ * the built-in Android inclusions does not want the spinner to keep
+ * saying "Android (Kotlin)" while the exported rules differ from what
+ * that preset would produce.
+ *
+ * The button is only visible when the section is enabled and the flow
+ * has at least one entry. Offering it on an empty flow would be a
+ * no-op that looks like a bug the first time a user taps it.
  *
  * ### General section
  *
@@ -204,6 +229,15 @@ import com.devdayton.onecodeforai.ui.UiFactory.textView
  * repopulated from the `gitignoreTags` cache that was read once when
  * the dialog opened.
  *
+ * ### Show-locked is synced before each scan
+ *
+ * [startTreeScan] pushes the current "Show locked" checkbox state into
+ * the [ProjectTreeView] **before** dispatching the scan. Without that
+ * sync, a rescan triggered by a filter change would build the new tree
+ * with all hard-excluded nodes locked, leaving the checkbox visibly
+ * checked while the tree showed nothing interactive. See
+ * [ProjectTreeView.setShowLockedPreference] for the full contract.
+ *
  * @param activity          Host activity used to build the dialog.
  * @param projectRoot       Root of the project being exported.
  * @param gitEnabledGlobally Whether the global Git master switch is on.
@@ -277,6 +311,14 @@ class ConfigurationDialog(
     private lateinit var btnAddInclusion: TextView
     private lateinit var btnAddExclusion: TextView
     private lateinit var btnAddStubPattern: TextView
+
+    // ---- Clear buttons, one per editable rule section. Gitignore has
+    //      none because its flow is read-only (the rules come from the
+    //      .gitignore file, not from the UI), so a Clear action would
+    //      have nothing to clear.
+    private lateinit var btnEmptyInclusions: TextView
+    private lateinit var btnEmptyExclusions: TextView
+    private lateinit var btnEmptyStubPattern: TextView
 
     // ---- Git ----
     private lateinit var cbUseGit: CheckBox
@@ -599,10 +641,11 @@ class ConfigurationDialog(
      *     block. See [sectionSeparator] for why no other section has one.
      *  3. General (Exclude binary files, Maximum size) — flat rows
      *     grouped under a title, without a surrounding panel.
-     *  4. Inclusions (toggle + Add + help + flow).
+     *  4. Inclusions (toggle + Clear + Add + help + flow).
      *  5. Exclusions (same shape).
      *  6. Reference only (same shape).
-     *  7. Gitignore (toggle + help + flow, no Add, no empty state).
+     *  7. Gitignore (toggle + help + flow, no Add, no Clear, no empty
+     *     state).
      *  8. Version control (toggle + help + content), or a static
      *     "disabled globally" notice when the master switch is off.
      *  9. File tree (toggle + help + show-locked row + tree).
@@ -790,17 +833,37 @@ class ConfigurationDialog(
         }.apply {
             visibility = if (currentConfig.enableInclusions) View.VISIBLE else View.GONE
         }
+        btnEmptyInclusions = activity.actionText(activity.pluginString(R.string.action_clear)) {
+            if (isUpdatingUI) return@actionText
+            if (currentConfig.inclusions.isEmpty()) return@actionText
+            // Clearing a rule list is a rule change: mark the profile
+            // custom so the spinner does not keep claiming to be a
+            // preset whose inclusions have just been emptied.
+            currentConfig = currentConfig.copy(inclusions = emptyList())
+            markAsCustom()
+            updateTagsUI(animate = false)
+            // updateTagsUI already calls the visibility sync helper;
+            // doing it again here keeps the intent local and readable.
+            btnEmptyInclusions.visibility = View.GONE
+        }.apply {
+            visibility =
+                if (currentConfig.enableInclusions && currentConfig.inclusions.isNotEmpty())
+                    View.VISIBLE else View.GONE
+        }
         val incRow = sectionToggleRow(
             cb = cbInclusions,
             helpTitleRes = R.string.help_inclusions_title,
             helpBodyRes = R.string.help_inclusions_body,
-            addButton = btnAddInclusion
+            addButton = btnAddInclusion,
+            emptyButton = btnEmptyInclusions
         )
         cbInclusions.setOnCheckedChangeListener { _, checked ->
             if (isUpdatingUI) return@setOnCheckedChangeListener
             currentConfig = currentConfig.copy(enableInclusions = checked)
             animateToggle(flowInclusions, checked)
             btnAddInclusion.visibility = if (checked) View.VISIBLE else View.GONE
+            btnEmptyInclusions.visibility =
+                if (checked && currentConfig.inclusions.isNotEmpty()) View.VISIBLE else View.GONE
             markAsCustom()
         }
         configContainer.addView(incRow)
@@ -820,17 +883,32 @@ class ConfigurationDialog(
         }.apply {
             visibility = if (currentConfig.enableExclusions) View.VISIBLE else View.GONE
         }
+        btnEmptyExclusions = activity.actionText(activity.pluginString(R.string.action_clear)) {
+            if (isUpdatingUI) return@actionText
+            if (currentConfig.exclusions.isEmpty()) return@actionText
+            currentConfig = currentConfig.copy(exclusions = emptyList())
+            markAsCustom()
+            updateTagsUI(animate = false)
+            btnEmptyExclusions.visibility = View.GONE
+        }.apply {
+            visibility =
+                if (currentConfig.enableExclusions && currentConfig.exclusions.isNotEmpty())
+                    View.VISIBLE else View.GONE
+        }
         val excRow = sectionToggleRow(
             cb = cbExclusions,
             helpTitleRes = R.string.help_exclusions_title,
             helpBodyRes = R.string.help_exclusions_body,
-            addButton = btnAddExclusion
+            addButton = btnAddExclusion,
+            emptyButton = btnEmptyExclusions
         )
         cbExclusions.setOnCheckedChangeListener { _, checked ->
             if (isUpdatingUI) return@setOnCheckedChangeListener
             currentConfig = currentConfig.copy(enableExclusions = checked)
             animateToggle(flowExclusions, checked)
             btnAddExclusion.visibility = if (checked) View.VISIBLE else View.GONE
+            btnEmptyExclusions.visibility =
+                if (checked && currentConfig.exclusions.isNotEmpty()) View.VISIBLE else View.GONE
             markAsCustom()
         }
         configContainer.addView(excRow)
@@ -850,17 +928,32 @@ class ConfigurationDialog(
         }.apply {
             visibility = if (currentConfig.enableStubPatterns) View.VISIBLE else View.GONE
         }
+        btnEmptyStubPattern = activity.actionText(activity.pluginString(R.string.action_clear)) {
+            if (isUpdatingUI) return@actionText
+            if (currentConfig.stubPatterns.isEmpty()) return@actionText
+            currentConfig = currentConfig.copy(stubPatterns = emptyList())
+            markAsCustom()
+            updateTagsUI(animate = false)
+            btnEmptyStubPattern.visibility = View.GONE
+        }.apply {
+            visibility =
+                if (currentConfig.enableStubPatterns && currentConfig.stubPatterns.isNotEmpty())
+                    View.VISIBLE else View.GONE
+        }
         val stubRow = sectionToggleRow(
             cb = cbStubPatterns,
             helpTitleRes = R.string.help_stub_title,
             helpBodyRes = R.string.help_stub_body,
-            addButton = btnAddStubPattern
+            addButton = btnAddStubPattern,
+            emptyButton = btnEmptyStubPattern
         )
         cbStubPatterns.setOnCheckedChangeListener { _, checked ->
             if (isUpdatingUI) return@setOnCheckedChangeListener
             currentConfig = currentConfig.copy(enableStubPatterns = checked)
             animateToggle(flowStubPatterns, checked)
             btnAddStubPattern.visibility = if (checked) View.VISIBLE else View.GONE
+            btnEmptyStubPattern.visibility =
+                if (checked && currentConfig.stubPatterns.isNotEmpty()) View.VISIBLE else View.GONE
             markAsCustom()
         }
         configContainer.addView(stubRow)
@@ -871,9 +964,11 @@ class ConfigurationDialog(
 
         // === GITIGNORE ===
         // The checkbox is the section header. No Add button (the rules
-        // come from the file, not from the UI) and no empty-state text
-        // (an empty flow is a valid state that simply means "the file
-        // has no rules"). See the class KDoc for the rationale.
+        // come from the file, not from the UI), no Clear button (the
+        // flow is read-only, so a Clear would have nothing to act on),
+        // and no empty-state text (an empty flow is a valid state that
+        // simply means "the file has no rules"). See the class KDoc for
+        // the rationale.
         cbGitignore = sectionCheckBox(R.string.section_gitignore).apply {
             isChecked = currentConfig.respectGitignore
         }
@@ -881,7 +976,8 @@ class ConfigurationDialog(
             cb = cbGitignore,
             helpTitleRes = R.string.help_gitignore_title,
             helpBodyRes = R.string.help_gitignore_body,
-            addButton = null
+            addButton = null,
+            emptyButton = null
         )
         cbGitignore.setOnCheckedChangeListener { _, checked ->
             if (isUpdatingUI) return@setOnCheckedChangeListener
@@ -909,7 +1005,8 @@ class ConfigurationDialog(
                 cb = cbUseGit,
                 helpTitleRes = R.string.help_version_control_title,
                 helpBodyRes = R.string.help_version_control_body,
-                addButton = null
+                addButton = null,
+                emptyButton = null
             )
             cbUseGit.setOnCheckedChangeListener { _, checked ->
                 if (isUpdatingUI) return@setOnCheckedChangeListener
@@ -963,7 +1060,8 @@ class ConfigurationDialog(
             cb = cbShowTree,
             helpTitleRes = R.string.help_tree_title,
             helpBodyRes = R.string.help_tree_body,
-            addButton = null
+            addButton = null,
+            emptyButton = null
         )
         cbShowTree.setOnCheckedChangeListener { _, checked -> setTreeVisibility(checked) }
         configContainer.addView(treeRow)
@@ -1011,6 +1109,12 @@ class ConfigurationDialog(
             onStatesChanged = { states -> currentStatesCache = states },
             onStatsChanged = { /* Stats are displayed in the result panel after generation. */ }
         )
+        // Seed the tree's show-locked flag from the checkbox before the
+        // first scan. Without this, opening the dialog with the
+        // process-wide preference already on would render a tree whose
+        // hard-excluded nodes were still locked until the user
+        // toggled the checkbox off and back on.
+        treeView.setShowLockedPreference(cbShowLocked.isChecked)
         treeViewContainer = treeView.getView().apply { visibility = View.GONE }
         treeWrapper.addView(treeViewContainer, FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
@@ -1107,39 +1211,56 @@ class ConfigurationDialog(
     // ==================================================================
 
     /**
-     * Builds a section header: a checkbox on the left, an optional Add
-     * button, and a help icon pinned to the right edge.
+     * Builds a section header: a checkbox on the left, an optional Clear
+     * button, an optional Add button, and a help icon pinned to the
+     * right edge.
      *
-     * The checkbox carries the section's enable state and its label; the
-     * optional Add button (built and configured by the caller) sits
-     * between the checkbox and the help icon; the help icon is pinned
-     * to the right edge with `Gravity.END` so it stays flush with the
-     * content margin regardless of the section's own padding.
+     * ### Layout order
      *
-     * The `cb` is expected to be styled by [sectionCheckBox] so its
-     * label reads as a section title (uppercase, 11sp, secondary
-     * color). The checkbox widget itself is preserved because the whole
-     * section can be toggled off without destroying its rules (see
-     * `FilterConfig.enableInclusions` and friends).
+     * `[checkbox] ............ [Clear] [Add] [?]`
      *
-     * Returning the row instead of the individual pieces lets the caller
-     * add it to the layout with the usual `addView(row)` and keeps the
-     * per-section wiring (the checkbox listener, the flow visibility,
-     * the Add-button visibility) inside the caller where the
-     * corresponding field names make it obvious what is being wired.
+     * The Clear button comes before Add on purpose. Clear is a
+     * destructive action on the flow (it empties it); Add is the
+     * primary action of the section. Placing Clear first keeps the
+     * primary action closer to the help icon, where the user's eye
+     * lands after reading the section title, and keeps the destructive
+     * action slightly separated from the primary action to reduce the
+     * chance of a mis-tap. Both are optional so Gitignore, Version
+     * control and File tree can pass `null` and render without them.
      *
-     * The Add button is passed in (rather than built here) because the
-     * caller needs a reference to it in order to hide it when the
-     * section is off. Building it here and returning a Pair would work
-     * too, but the caller would then have to unpack the Pair and the
-     * call site would lose the "this button belongs to this section"
-     * association that a named field provides.
+     * ### Why the buttons are passed in
+     *
+     * The Add and Clear buttons are built and configured by the caller
+     * (not inside this helper) because the caller needs a reference to
+     * each of them in order to hide it when the section is off, and in
+     * the case of Clear, when the flow is empty. Building them here and
+     * returning a Triple would work too, but the caller would then have
+     * to unpack the Triple and the call site would lose the "this
+     * button belongs to this section" association that a named field
+     * provides.
+     *
+     * ### Clear on Gitignore
+     *
+     * Gitignore passes `emptyButton = null` because its flow is
+     * read-only (the rules come from the .gitignore file itself). A
+     * Clear button would have nothing to clear and offering one would
+     * imply the file can be modified from the UI, which it cannot.
+     *
+     * @param cb section checkbox, already styled by [sectionCheckBox].
+     * @param helpTitleRes title of the help dialog.
+     * @param helpBodyRes body of the help dialog.
+     * @param addButton optional primary Add button, or `null` for
+     *   sections that are not edited inline.
+     * @param emptyButton optional secondary Clear button, or `null` for
+     *   sections whose flow is not editable (Gitignore) or that do not
+     *   have a flow at all (Version control, File tree).
      */
     private fun sectionToggleRow(
         cb: CheckBox,
         helpTitleRes: Int,
         helpBodyRes: Int,
-        addButton: TextView?
+        addButton: TextView?,
+        emptyButton: TextView? = null
     ): LinearLayout {
         val row = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1148,6 +1269,13 @@ class ConfigurationDialog(
         }
         cb.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         row.addView(cb)
+        if (emptyButton != null) {
+            emptyButton.layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { marginStart = dp(8); marginEnd = dp(4) }
+            row.addView(emptyButton)
+        }
         if (addButton != null) {
             addButton.layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -1951,6 +2079,17 @@ class ConfigurationDialog(
      * Triggers the asynchronous project tree scan with current filters and
      * the project's persisted overrides applied.
      *
+     * ### Show-locked sync
+     *
+     * The tree's show-locked flag is pushed into the [ProjectTreeView]
+     * **before** the scan is dispatched. Without that sync, a rescan
+     * triggered by a filter change would build the new tree with all
+     * hard-excluded nodes locked, leaving the "Show locked" checkbox
+     * visibly checked while the tree showed nothing interactive. The
+     * checkbox is the user's intent; the tree's internal flag is the
+     * state the scanner reads when it creates new nodes; this method is
+     * what keeps them in lockstep across rescans.
+     *
      * ### Cancellation safety
      *
      * ProjectTreeView.scanAsync cancels any previous scan silently: the
@@ -1974,6 +2113,13 @@ class ConfigurationDialog(
     private fun startTreeScan() {
         if (!treeVisible || !::treeView.isInitialized) return
         readUIValues()
+        // Keep the tree's show-locked state in sync with the checkbox
+        // before scanning. This is what makes a fresh dialog that opens
+        // with the preference enabled render an already-unlocked tree,
+        // and what keeps the checkbox meaningful after a filter change.
+        if (::cbShowLocked.isInitialized) {
+            treeView.setShowLockedPreference(cbShowLocked.isChecked)
+        }
         setTreeUiState(TreeUiState.LOADING)
         treeView.scanAsync(
             config = currentConfig,
@@ -2321,12 +2467,18 @@ class ConfigurationDialog(
      *
      * Every section enable flag (inclusions, exclusions, stub patterns,
      * respectGitignore, useGit) is synced here along with its flow's
-     * visibility and the Add button's visibility. The sync uses
-     * [animateToggle] for the visibility flip so a preset switch that
-     * changes the section state looks like a user toggle, not an abrupt
-     * jump — this matters for the preset-change UX where the user is
-     * switching from "Android (Kotlin) with exclusions on" to a custom
-     * preset that happens to have exclusions off.
+     * visibility, the Add button's visibility, and the Clear button's
+     * visibility. The sync uses [animateToggle] for the visibility flip
+     * so a preset switch that changes the section state looks like a
+     * user toggle, not an abrupt jump.
+     *
+     * ### Clear button visibility
+     *
+     * Each Clear button is visible only when its section is enabled and
+     * its flow has at least one entry. Both conditions are re-evaluated
+     * here because a preset switch can change either one: a config
+     * whose inclusions list is empty disables Clear, and a config whose
+     * inclusions are disabled also disables Clear.
      *
      * The `cbShowTree` and `treeVisible` state is **not** part of the
      * preset and is deliberately left untouched: showing or hiding the
@@ -2349,6 +2501,11 @@ class ConfigurationDialog(
             if (::btnAddInclusion.isInitialized) {
                 btnAddInclusion.visibility = if (config.enableInclusions) View.VISIBLE else View.GONE
             }
+            if (::btnEmptyInclusions.isInitialized) {
+                btnEmptyInclusions.visibility = if (
+                    config.enableInclusions && config.inclusions.isNotEmpty()
+                ) View.VISIBLE else View.GONE
+            }
         }
 
         // Exclusions
@@ -2358,6 +2515,11 @@ class ConfigurationDialog(
             if (::btnAddExclusion.isInitialized) {
                 btnAddExclusion.visibility = if (config.enableExclusions) View.VISIBLE else View.GONE
             }
+            if (::btnEmptyExclusions.isInitialized) {
+                btnEmptyExclusions.visibility = if (
+                    config.enableExclusions && config.exclusions.isNotEmpty()
+                ) View.VISIBLE else View.GONE
+            }
         }
 
         // Reference only
@@ -2366,6 +2528,11 @@ class ConfigurationDialog(
             if (::flowStubPatterns.isInitialized) animateToggle(flowStubPatterns, config.enableStubPatterns)
             if (::btnAddStubPattern.isInitialized) {
                 btnAddStubPattern.visibility = if (config.enableStubPatterns) View.VISIBLE else View.GONE
+            }
+            if (::btnEmptyStubPattern.isInitialized) {
+                btnEmptyStubPattern.visibility = if (
+                    config.enableStubPatterns && config.stubPatterns.isNotEmpty()
+                ) View.VISIBLE else View.GONE
             }
         }
 
@@ -2505,6 +2672,16 @@ class ConfigurationDialog(
      * the two concerns separate lets the flow contents refresh without
      * re-triggering the expand/collapse animation, which matters when
      * the user adds or edits a chip.
+     *
+     * ### Clear button visibility
+     *
+     * After rebuilding the flows, the method re-evaluates the
+     * visibility of each Clear button. This is what makes the button
+     * appear the moment the user adds the first chip to an empty flow
+     * (or after loading a preset whose list is non-empty) and
+     * disappear the moment the last chip is deleted. The button is
+     * shown only when the section is enabled AND the flow has at least
+     * one entry.
      */
     private fun updateTagsUI(animate: Boolean = false) {
         if (!::flowInclusions.isInitialized) return
@@ -2523,6 +2700,26 @@ class ConfigurationDialog(
         else currentConfig.stubPatterns.forEach { addTagToFlow(flowStubPatterns, it, TagKind.STUB) }
 
         updateGitignoreFlowOnly(currentConfig.respectGitignore)
+
+        // Keep the Clear buttons' visibility in sync with the flow
+        // contents. They are only shown when the section is enabled and
+        // the flow has at least one entry, so the user is not offered a
+        // no-op action.
+        if (::btnEmptyInclusions.isInitialized && ::cbInclusions.isInitialized) {
+            btnEmptyInclusions.visibility = if (
+                cbInclusions.isChecked && currentConfig.inclusions.isNotEmpty()
+            ) View.VISIBLE else View.GONE
+        }
+        if (::btnEmptyExclusions.isInitialized && ::cbExclusions.isInitialized) {
+            btnEmptyExclusions.visibility = if (
+                cbExclusions.isChecked && currentConfig.exclusions.isNotEmpty()
+            ) View.VISIBLE else View.GONE
+        }
+        if (::btnEmptyStubPattern.isInitialized && ::cbStubPatterns.isInitialized) {
+            btnEmptyStubPattern.visibility = if (
+                cbStubPatterns.isChecked && currentConfig.stubPatterns.isNotEmpty()
+            ) View.VISIBLE else View.GONE
+        }
 
         if (animate && animationsEnabled) {
             val all = listOf(flowInclusions, flowExclusions, flowStubPatterns, flowGitignore)
@@ -2564,6 +2761,12 @@ class ConfigurationDialog(
      * and common state for projects that rely on the default
      * `TEXT_EXTENSIONS` set, and showing a placeholder would be more
      * confusing than leaving the section blank.
+     *
+     * ### No Clear button
+     *
+     * The `.gitignore` flow is deliberately read-only (the rules come
+     * from the file), so this section is not given a Clear button. See
+     * the class-level "Clear button" note for the rationale.
      */
     private fun updateGitignoreFlowOnly(enabled: Boolean) {
         if (!::flowGitignore.isInitialized) return

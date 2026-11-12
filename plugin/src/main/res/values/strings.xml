@@ -73,10 +73,14 @@
     <string name="delete_rule">Delete rule</string>
     <string name="extension_hint">e.g.: kt, json, *.test.kt</string>
     <string name="action_add">+ Add</string>
+    <!-- Secondary action next to "+ Add" that empties the flow in one tap.
+         Shown on Inclusions, Exclusions and Reference only. Not shown on
+         Gitignore, whose flow is read-only. -->
+    <string name="action_clear">Clear</string>
 
     <!-- > Version control (config dialog) -->
     <string name="help_version_control_title">Version control</string>
-    <string name="help_version_control_body">When this section is enabled and the project is a Git repository, you can export a Git snapshot instead of the current working tree.\n\nPick a branch, tag, or commit using the search icon next to the ref field, or type any expression Git can resolve (HEAD~3, origin/main, v1.2.0). The resolved short hash appears under the field so you can confirm the target before generating.\n\nPreview diff shows what would change between the selected ref and the working tree, without modifying anything. Useful to sanity-check what the export is going to contain.\n\nYou can disable Git entirely from the plugin settings page; the section will then show a \"disabled globally\" notice. .gitignore rules keep working either way.</string>
+    <string name="help_version_control_body">When this section is enabled and the project is a Git repository, you can export a Git snapshot instead of the current working tree.\n\nPick a branch, tag, or commit using the search icon next to the ref field, or type any expression Git can resolve (HEAD~3, origin/main, v1.2.0). The resolved short hash appears under the field so you can confirm the target before generating.\n\nPreview diff shows what would change between the selected ref and the working tree, without modifying anything. Useful to sanity-check what the export is going to contain.\n\nYou can disable Git entirely from the plugin settings page; the section will then show a \"disabled globally\" notice. .gitignore rules keep working either way.\n\nUnchecking the Version control box disables the whole section without losing the configured reference: the ref stays in the profile and is reapplied the next time you check the box.</string>
     <string name="git_info">Branch: %1$s  |  Commit: %2$s</string>
     <string name="no_branch">no branch</string>
     <string name="no_commit">no commit</string>
@@ -221,7 +225,7 @@
     <string name="settings_ui_language">Interface language</string>
     <string name="settings_ui_language_desc">Language used by the plugin UI. \"Auto\" follows the IDE language. Only newly opened dialogs and screens pick up the change; already-open windows keep their current language until reopened.</string>
     <string name="settings_ui_theme">Theme</string>
-    <string name="settings_ui_theme_desc">Color scheme used by the plugin UI. \"System\" follows the device\'s light/dark mode. Only newly opened dialogs and screens pick up the change; already-open windows keep their current theme until reopened.</string>
+    <string name="settings_ui_theme_desc">Color scheme used by the plugin UI. \"Dark\" is the default and preserves the plugin\'s original hand-tuned palette. \"System\" follows the device\'s light/dark mode, and \"Light\" always uses the light palette. Only newly opened dialogs and screens pick up the change; already-open windows keep their current theme until reopened.</string>
     <string name="settings_ui_theme_system">System (follow device)</string>
     <string name="settings_ui_theme_light">Light</string>
     <string name="settings_ui_theme_dark">Dark</string>
@@ -248,16 +252,16 @@
     <!-- > What's New -->
     <string name="whats_new_title">WHAT\'S NEW</string>
     <string name="whats_new_version">Version %1$s</string>
-    <string name="whats_new_item_1">Added a full language selector with 18 built-in translations, replacing the single \"Force English UI\" toggle.</string>
-    <string name="whats_new_item_2">Automatic migration: users who had \"Force English UI\" enabled keep their English UI through the new selector, no action required.</string>
-    <string name="whats_new_item_3">Critical fix for Android 8-12 crashes caused by JGit 7.x depending on InputStream.readAllBytes() (API 33+); now on JGit 5.13.3.</string>
-    <string name="whats_new_item_4">.gitignore fixes: patterns with double-star prefixes now match files at the project root, and [abc] / [!abc] character classes are honored.</string>
-    <string name="whats_new_item_5">svg is no longer classified as binary, and lockfiles can be force-included via Inclusions.</string>
-    <string name="whats_new_item_6">Five recursive tree walks converted to iterative ones, preventing StackOverflowError on pathological directory trees.</string>
-    <string name="whats_new_item_7">Git reference validation moved off the UI thread; the Generate button no longer freezes on large repositories.</string>
-    <string name="whats_new_item_8">The context-menu label now refreshes when the UI language changes, matching the rest of the plugin.</string>
-    <string name="whats_new_item_9">Unified the share helper so the SHARE action and the result-panel chip behave identically.</string>
-    <string name="whats_new_item_10">Removed dead code, fixed the Download/Downloads path mismatch in strings, and various minor reliability improvements.</string>
+    <string name="whats_new_item_1">Tree v2: the project tree is now the authoritative source of what goes into the dump. Every entry can be Included, Reference-only, or Excluded directly from the tree, and the selection is preserved per project.</string>
+    <string name="whats_new_item_2">Reference-only entries: list a file in the dump by name and size without reading its content. Ideal for lockfiles, generated code, and machine-local configuration. Marked with a [ref] suffix in the tree header and a [content omitted: N B — reference only] marker in the body.</string>
+    <string name="whats_new_item_3">Uniform folder cycling: clicking a folder forces the next state onto every non-locked descendant at every depth, so the folder indicator never disagrees with its children. Marking a deep file updates every ancestor up to the root without touching its siblings.</string>
+    <string name="whats_new_item_4">Show locked: hard-excluded folders and binary files appear as locked nodes. Enabling the toggle makes them interactive and scans their contents on demand; disabling it re-locks everything and discards what was included while unlocked.</string>
+    <string name="whats_new_item_5">New General section: \"Exclude binary files\" and \"Maximum size\" now live under their own uppercase title at the top of the form, instead of floating unlabelled between the preset spinner and Inclusions.</string>
+    <string name="whats_new_item_6">Section toggles: Inclusions, Exclusions, Reference only, Gitignore, Version control, and File tree all follow the same checkbox + uppercase title + help pattern. Unchecking Inclusions, Exclusions, or Reference only disables the list without deleting it, and a Clear button next to Add empties the flow in one tap.</string>
+    <string name="whats_new_item_7">Dark theme is now the default. A fresh install opens on the plugin\'s original hand-tuned palette. The theme selector still offers System and Light, and existing users who explicitly picked a theme keep their stored choice.</string>
+    <string name="whats_new_item_8">Info screen redesigned: features grouped into four categories, per-row icon count cut from roughly 25 to 10, and a hero block with a version and status chip row.</string>
+    <string name="whats_new_item_9">Project root resolution: three-step heuristic (.gitignore search, CodeAssist project boundary, fallback to the selected folder), bounded by the new \"Parent folder search limit\" setting.</string>
+    <string name="whats_new_item_10">The plugin\'s own .platform directory is now hard-excluded from the dump, alongside .git, .gradle, and .idea, so the per-project config can never end up in the model\'s context. Contextual help is now available on every section.</string>
 
     <!-- > Installation guide -->
     <string name="guide_header_title">Installation guide</string>
@@ -307,7 +311,7 @@
     <string name="feature_git_3">Global kill switch to disable Git entirely</string>
 
     <!-- Customization -->
-    <string name="feature_customize_1">Light and dark themes</string>
+    <string name="feature_customize_1">Light and dark themes, dark by default</string>
     <string name="feature_customize_2">18 languages, selectable independently of the IDE</string>
     <string name="feature_customize_3">Contextual help on every section</string>
     <string name="feature_customize_4">Configurable per-file and total export limits</string>
@@ -317,7 +321,7 @@
     <string name="feature_privacy_2">Local processing only - no cloud, no uploads</string>
 
     <!-- Legacy flat feature list. Kept for backward compatibility with
-         any older translation; the current dialog groups the same
+         any older translation; the current info screen groups the same
          information under the four category strings above. -->
     <string name="feature_1">Advanced Glob Filters: Use patterns like *.log, build/, or nested generated directories</string>
     <string name="feature_2">Git Integration: Export from branches, tags, commits, or preview diffs</string>
@@ -355,7 +359,7 @@
     <string name="help_a1">Go to CodeAssist Settings, then Plugins, and open the One Code For AI settings. There you will find the \"Git integration\" toggle. When disabled, the plugin treats your folder as plain files.</string>
 
     <string name="help_q2">Why does .gitignore still work when Git is disabled?</string>
-    <string name="help_a2">If Git is disabled, the plugin automatically searches your selected folder and its parent directories (up to 5 levels) for a .gitignore file. This ensures your filtering rules remain intact.</string>
+    <string name="help_a2">If Git is disabled, the plugin automatically searches your selected folder and its parent directories for a .gitignore file. The search is bounded by the \"Parent folder search limit\" setting, which defaults to 10 levels and can be raised from the settings page.</string>
 
     <string name="help_q3">What do the amber .gitignore rules mean?</string>
     <string name="help_a3">A rule is highlighted in amber when one of your manual inclusion, exclusion, or reference-only filters is actively overriding it. Inclusions, exclusions, and reference-only patterns always take priority over .gitignore.</string>
@@ -385,13 +389,13 @@
     <string name="help_icon_description">Section help</string>
 
     <string name="help_inclusions_title">Inclusions</string>
-    <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: kt, json, xml\n- Wildcards: *.log, src/*.kt\n- Directories: build/\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.\n\nUnchecking the Inclusions box disables the list without deleting it: the rules stay in the profile and are reapplied the next time you check the box.</string>
+    <string name="help_inclusions_body">Whitelist of extensions and glob patterns, evaluated before .gitignore.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: kt, json, xml\n- Wildcards: *.log, src/*.kt\n- Directories: build/\n\nAny file matching an inclusion is exported even if .gitignore or exclusions would skip it.\n\nInclusions take priority over exclusions and over .gitignore. Use it to force-include specific files or extensions.\n\nUnchecking the Inclusions box disables the list without deleting it: the rules stay in the profile and are reapplied the next time you check the box. The Clear button next to Add empties the list in one tap.</string>
 
     <string name="help_exclusions_title">Exclusions</string>
-    <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: log, tmp, pyc\n- Wildcards: *.log, src/*.bak\n- Directories: build/\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.\n\nUnchecking the Exclusions box disables the list without deleting it: the rules stay in the profile and are reapplied the next time you check the box.</string>
+    <string name="help_exclusions_body">Blacklist of extensions and glob patterns.\n\nSupported syntax (same as .gitignore patterns):\n- Extensions: log, tmp, pyc\n- Wildcards: *.log, src/*.bak\n- Directories: build/\n\nAny file matching an exclusion is skipped, even if .gitignore would include it. Inclusions take priority over exclusions.\n\nTo exclude a specific folder without writing a pattern, use the file tree below.\n\nUnchecking the Exclusions box disables the list without deleting it: the rules stay in the profile and are reapplied the next time you check the box. The Clear button next to Add empties the list in one tap.</string>
 
     <string name="help_stub_title">Reference only</string>
-    <string name="help_stub_body">Patterns for files that should be listed in the dump but whose content is not read. Useful for lockfiles, generated code, and local configuration.\n\nA reference-only file appears in the directory tree with a [ref] suffix and a size marker, but no content. The AI model learns that the file exists and how large it is, without receiving its body.\n\nSupported syntax (same as inclusions and exclusions):\n- Filenames: package-lock.json, local.properties\n- Wildcards: *.lock\n\nReference-only patterns take priority over inclusions and exclusions. Inclusions take priority over exclusions.\n\nUnchecking the Reference only box disables the list without deleting it: the patterns stay in the profile and are reapplied the next time you check the box.</string>
+    <string name="help_stub_body">Patterns for files that should be listed in the dump but whose content is not read. Useful for lockfiles, generated code, and local configuration.\n\nA reference-only file appears in the directory tree with a [ref] suffix and a size marker, but no content. The AI model learns that the file exists and how large it is, without receiving its body.\n\nSupported syntax (same as inclusions and exclusions):\n- Filenames: package-lock.json, local.properties\n- Wildcards: *.lock\n\nReference-only patterns take priority over inclusions and exclusions. Inclusions take priority over exclusions.\n\nUnchecking the Reference only box disables the list without deleting it: the patterns stay in the profile and are reapplied the next time you check the box. The Clear button next to Add empties the list in one tap.</string>
 
     <string name="help_gitignore_title">Gitignore rules</string>
     <string name="help_gitignore_body">Rules detected in the project\'s .gitignore file.\n\nThis list is read-only - edit .gitignore directly to change it.\n\nInclusions, exclusions, and reference-only patterns take priority over these rules: adding a matching rule forces the file in, out, or into reference-only mode regardless of .gitignore. Overridden rules are highlighted in amber. Negated rules (starting with \'!\') are shown with a distinct background so they can be told apart from positive rules.\n\nUnchecking the Gitignore box disables the .gitignore rules without deleting the file: the rules stay on disk and are reapplied the next time you check the box.</string>
@@ -400,7 +404,7 @@
     <string name="help_binaries_body">Binary files are detected by a fixed list of known binary extensions (images, video, audio, archives, compiled binaries, fonts, databases). Files with these extensions are skipped so the dump stays focused on readable source code.\n\nDetection is extension-based only. To skip an uncommon binary format, add its extension to Exclusions. To force-include one, add it to Inclusions, or to list it as reference-only, add it to Reference only.\n\nDisabling this toggle includes the listed extensions in the export, which is rarely useful for AI context.</string>
 
     <string name="help_tree_title">Project tree preview</string>
-    <string name="help_tree_body">Shows the project tree with every entry the filters have selected. Each entry has three states:\n\n- Included: the file\'s full content is written to the dump.\n- Reference only: the file\'s name, size, and [ref] marker are written, but the content is not read.\n- Excluded: the file is not written to the dump.\n\nClick a row to cycle through the three states. Click a folder to apply the next state to its children, preserving any manual overrides the children had.\n\nHard-excluded folders (like .git, node_modules) and binary files are initially locked: they are visible but disabled. Enable \"Show locked\" to unlock them and interact with them.\n\nExcluding a folder automatically excludes its children. Re-including a single child inside an excluded folder restores only that entry, mirroring the behavior of .gitignore negation.\n\nUnchecking the File tree box hides the tree without losing your manual overrides: the selection is preserved and reapplied the next time you check the box.</string>
+    <string name="help_tree_body">Shows the project tree with every entry the filters have selected. Each entry has three states:\n\n- Included: the file\'s full content is written to the dump.\n- Reference only: the file\'s name, size, and [ref] marker are written, but the content is not read.\n- Excluded: the file is not written to the dump.\n\nClick a row to cycle through the three states. Click a folder to apply the next state to its entire subtree, preserving the folder and its children in the same state.\n\nHard-excluded folders (like .git, node_modules) and binary files are initially locked: they are visible but disabled. Enable \"Show locked\" to unlock them and interact with them. Expanding an unlocked folder scans its contents on demand and shows every child, including the ones the rules would exclude, so you can navigate to build outputs and similar folders the initial scan skips.\n\nUnchecking the File tree box hides the tree without losing your manual overrides: the selection is preserved and reapplied the next time you check the box.</string>
 
     <string name="help_tree_locked_title">Locked nodes</string>
     <string name="help_tree_locked_body">Locked nodes are hard-excluded folders (like .git, node_modules, build) and binary files. They appear in the tree but cannot be interacted with until you enable \"Show locked\".\n\nWhy locked: these entries are excluded by default to keep the tree fast and to avoid accidentally dumping the contents of dependency folders. Enabling \"Show locked\" unlocks them so you can include, stub, or exclude them explicitly.\n\nLocking is per-session. It is not saved to the project, because unlocking node_modules is almost always a one-off action.</string>
