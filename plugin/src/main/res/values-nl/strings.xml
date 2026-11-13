@@ -304,7 +304,7 @@
     <string name="feature_git_3">Algemene kill-switch om Git volledig uit te schakelen</string>
 
     <!-- Customization -->
-    <string name="feature_customize_1">Lichte en donkere thema's, standaard donker</string>
+    <string name="feature_customize_1">Lichte en donkere thema\'s, standaard donker</string>
     <string name="feature_customize_2">19 talen, onafhankelijk van de IDE selecteerbaar</string>
     <string name="feature_customize_3">Contextuele hulp in elke sectie</string>
     <string name="feature_customize_4">Configureerbare limieten per bestand en voor de totale export</string>
@@ -358,10 +358,10 @@
     <string name="help_a3">Een regel wordt amberkleurig gemarkeerd wanneer een van je handmatige inclusie-, exclusie- of alleen-referentie-filters hem actief overschrijft. Inclusies, exclusies en alleen-referentie-patronen hebben altijd voorrang op .gitignore.</string>
 
     <string name="help_q4">Hoe gebruik ik glob-patronen in filters?</string>
-    <string name="help_a4">Gebruik standaard glob-syntaxis: *.log (elk logbestand), build/ (specifieke map) en pad-globs met dubbele asterisk voor elke geneste gegenereerde map. Tik op het \"?\"-pictogram naast de filtersecties voor een korte handleiding.</string>
+    <string name="help_a4">Gebruik standaard glob-syntax: *.log (elk logbestand), build/ (specifieke map) en pad-globs met dubbele asterisk voor elke geneste gegenereerde map. Tik op het \"?\"-pictogram naast de filtersecties voor een korte handleiding.</string>
 
     <string name="help_q5">Wat doen de nieuwe Android-presets?</string>
-    <string name="help_a5">Android (Kotlin) exporteert alles. Android (alleen bron) verwijdert tests en documentatie. Android (Bronnen) exporteert alleen XML's (lay-outs/thema's). Gegenereerde bestanden zoals R.java en local.properties worden standaard als alleen-referentie vermeld.</string>
+    <string name="help_a5">Android (Kotlin) exporteert alles. Android (alleen bron) verwijdert tests en documentatie. Android (Bronnen) exporteert alleen XML\'s (lay-outs/thema\'s). Gegenereerde bestanden zoals R.java en local.properties worden standaard als alleen-referentie vermeld.</string>
 
     <string name="help_q6">Waar bevinden de instellingen voor animaties en meldingen zich?</string>
     <string name="help_a6">Ze staan in de native CodeAssist-instellingen voor deze plug-in. Animaties uitschakelen helpt de prestaties op toestellen met beperkte middelen. Meldingen uitschakelen dempt de voortgangs- en voltooiingswaarschuwingen.</string>
@@ -372,7 +372,7 @@
     <string name="help_q8">Kan ik een export annuleren terwijl deze loopt?</string>
     <string name="help_a8">Ja. Je kunt op \"Annuleren\" in het dialoogvenster tikken, of het dialoogvenster gewoon sluiten. De export loopt veilig op de achtergrond door en je kunt op elk moment terugkeren om de voortgang te controleren.</string>
 
-    <string name="help_q9">Wordt mijn code naar een server geüpload?</string>
+    <string name="help_q9">Is mijn code naar een server geüpload?</string>
     <string name="help_a9">Absoluut niet. De plug-in vereist geen internetmachtiging. Alle scans, filtering en generatie gebeuren 100% lokaal op je toestel.</string>
 
     <string name="help_q10">Waar worden de gegenereerde bestanden opgeslagen?</string>
@@ -391,7 +391,7 @@
     <string name="help_stub_body">Patronen voor bestanden die in de dump moeten worden vermeld maar waarvan de inhoud niet wordt gelezen. Nuttig voor lockfiles, gegenereerde code en lokale configuratie.\n\nEen alleen-referentie-bestand verschijnt in de mappenboom met achtervoegsel [ref] en een groottemarkering, maar zonder inhoud. Het AI-model leert dat het bestand bestaat en hoe groot het is, zonder de inhoud te ontvangen.\n\nOndersteunde syntaxis (zelfde als inclusies en exclusies):\n- Bestandsnamen: package-lock.json, local.properties\n- Jokertekens: *.lock\n\nAlleen-referentie-patronen hebben voorrang op inclusies en exclusies. Inclusies hebben voorrang op exclusies.\n\nHet uitvinken van het vakje Alleen referentie schakelt de lijst uit zonder deze te verwijderen. De knop Wissen naast Toevoegen leegt de lijst met één tik.</string>
 
     <string name="help_gitignore_title">Gitignore-regels</string>
-    <string name="help_gitignore_body">Regels gedetecteerd in het .gitignore-bestand van het project.\n\nDeze lijst is alleen-lezen - bewerk .gitignore rechtstreeks om hem te wijzigen.\n\nInclusies, exclusies en alleen-referentie-patronen hebben voorrang op deze regels: het toevoegen van een overeenkomende regel forceert het bestand binnen, buiten of in alleen-referentie-modus, ongeacht .gitignore. Overschreven regels worden amberkleurig gemarkeerd. Negatieve regels (beginnend met '!') worden weergegeven met een aparte achtergrond zodat ze kunnen worden onderscheiden.\n\nHet uitvinken van het vakje Gitignore schakelt de .gitignore-regels uit zonder het bestand te verwijderen.</string>
+    <string name="help_gitignore_body">Regels gedetecteerd in het .gitignore-bestand van het project.\n\nDeze lijst is alleen-lezen - bewerk .gitignore rechtstreeks om hem te wijzigen.\n\nInclusies, exclusies en alleen-referentie-patronen hebben voorrang op deze regels: het toevoegen van een overeenkomende regel forceert het bestand binnen, buiten of in alleen-referentie-modus, ongeacht .gitignore. Overschreven regels worden amberkleurig gemarkeerd. Negatieve regels (beginnend met \'!\') worden weergegeven met een aparte achtergrond zodat ze kunnen worden onderscheiden.\n\nHet uitvinken van het vakje Gitignore schakelt de .gitignore-regels uit zonder het bestand te verwijderen.</string>
 
     <string name="help_binaries_title">Binaire uitsluiting</string>
     <string name="help_binaries_body">Binaire bestanden worden gedetecteerd via een vaste lijst met bekende binaire extensies (afbeeldingen, video, audio, archieven, gecompileerde binaries, lettertypen, databases). Bestanden met deze extensies worden overgeslagen zodat de dump gericht blijft op leesbare broncode.\n\nDetectie is uitsluitend op basis van extensie. Om een ongebruikelijk binair formaat over te slaan, voeg je de extensie toe aan Exclusies. Om het geforceerd op te nemen, voeg je het toe aan Inclusies, of om het als alleen-referentie te vermelden, voeg je het toe aan Alleen referentie.\n\nHet uitschakelen van deze schakelaar neemt de genoemde extensies op in de export, wat zelden nuttig is voor AI-context.</string>
