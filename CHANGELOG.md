@@ -56,6 +56,8 @@ Version 1.2.0
   are the last three files to touch before tagging; the rest of the release
   is complete once they are bumped.
 
+• Fixed aapt2 compile errors by escaping literal apostrophes (\') in values-ar, values-fa, values-he, values-nl, values-tr and values-uk strings.xml; no user-visible translation changes.
+
 Version 1.1.0
 
 • Tree v2: the project tree is now the authoritative source of what goes into the dump. Every entry can be Included, Reference-only, or Excluded directly from the tree, and the selection is preserved per project in .platform/plugins/com.devdayton.onecodeforai/config.json. Closing the dialog without pressing Generate discards manual changes, matching the standard commit-on-generate model.
