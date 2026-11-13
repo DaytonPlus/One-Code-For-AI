@@ -58,6 +58,28 @@ Version 1.2.0
 
 • Fixed aapt2 compile errors by escaping literal apostrophes (\') in values-ar, values-fa, values-he, values-nl, values-tr and values-uk strings.xml; no user-visible translation changes.
 
+• Built-in presets now declare the three section enable flags
+  (enableInclusions, enableExclusions, enableStubPatterns) explicitly so
+  the configuration dialog's section toggles reflect the rules the profile
+  actually ships. "Android (Kotlin)" opens with the Exclusions section off;
+  "Android (Resources)" and "Plain Text" open with Exclusions and Reference
+  only off. The remaining built-in profiles ("Android (source only)",
+  "Web (JS/TS)", "Python") already ship rules in all three sections and
+  are unchanged. Enabling a section that starts off is still possible and
+  still switches the spinner to Custom, as before. No filtering behaviour
+  change: an empty list and a disabled section produce identical results
+  in FileFilter.resolveMode, so this is purely a UI affordance — the
+  toggle now honestly reflects whether the profile's section has rules to
+  apply.
+
+• Fixed a KDoc termination bug in OneCodeForAISettingsPage.kt that
+  prevented the module from compiling: the literal `values-*/` inside the
+  LANGUAGE_OPTIONS KDoc closed the comment block prematurely, producing a
+  cascade of "Expecting member declaration" syntax errors starting at
+  line 794. The placeholder is now `values-<code>/`. No user-visible
+  effect — the bug never shipped, because it blocked the build that would
+  have produced the APK.
+
 Version 1.1.0
 
 • Tree v2: the project tree is now the authoritative source of what goes into the dump. Every entry can be Included, Reference-only, or Excluded directly from the tree, and the selection is preserved per project in .platform/plugins/com.devdayton.onecodeforai/config.json. Closing the dialog without pressing Generate discards manual changes, matching the standard commit-on-generate model.

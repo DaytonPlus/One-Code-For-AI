@@ -202,7 +202,9 @@ The plugin is organized into a few main areas:
 
 · Right-to-left support for Arabic, Persian and Hebrew comes from Android's automatic layout mirroring, so no extra configuration is needed and the visual identity of the plugin is preserved in every direction.
 
-· No behavioral changes to the export pipeline, the filtering logic, the Git integration, or the storage layer. This release is a pure i18n expansion plus the documentation needed to keep the new languages maintainable.
+· Built-in presets now open with a section toggle off when the preset has no rules in that section. "Android (Kotlin)" opens with Exclusions off; "Android (Resources)" and "Plain Text" open with Exclusions and Reference only off. The remaining built-in profiles already ship rules in every section and are unchanged. Turning a section on by hand still works, and still switches the profile spinner to Custom, as before.
+
+· No behavioral changes to the export pipeline, the filtering logic, the Git integration, or the storage layer. This release is a pure i18n expansion plus the preset toggle initial state and the documentation needed to keep the new languages maintainable.
 
 ---
 
