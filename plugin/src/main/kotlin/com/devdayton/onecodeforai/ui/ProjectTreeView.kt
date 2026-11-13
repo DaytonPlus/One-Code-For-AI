@@ -32,144 +32,6 @@ import java.io.File
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Interactive preview of the project tree shown inside the configuration
- * dialog, and the authoritative source of every export decision.
- *
- * ### Purpose (Tree v2)
- *
- * In Tree v2 the tree is no longer just a preview of what the filters
- * would produce: it **is** the export selection. Every entry that appears
- * in the generated dump — file content or stub marker — is an entry the
- * tree selector decided to include, either because the filter said so
- * (initial state) or because the user overrode it (per-path override).
- *
- * This inversion of responsibility is what makes the three-way cycle
- * (INCLUDE / STUB / EXCLUDE) and the LOCKED concept possible without
- * duplicating filtering logic between the tree and the exporter.
- *
- * ### States and cycles
- *
- * Every rendered node has a [NodeState]:
- *
- *  - **[NodeState.INCLUDE]** — the file's full content is written.
- *  - **[NodeState.STUB]** — the file's header and size marker are written,
- *    content is not read.
- *  - **[NodeState.EXCLUDE]** — the file is not written to the dump.
- *  - **[NodeState.LOCKED]** — the file is present but not interactive:
- *    a hard-excluded directory or a binary extension that the user has
- *    not unlocked. Produced only by the scanner.
- *
- * **Both leaves and folders use the same three-step cycle:**
- *
- *  INCLUDE -> STUB -> EXCLUDE -> INCLUDE
- *
- * Clicking a **file** cycles only that file's own state. Clicking a
- * **folder** cycles the folder's aggregate AND forces every non-locked
- * descendant (folders and files, at every depth) to the same next state.
- * A folder click is therefore a uniform operation: after it, the folder
- * and everything inside it share the same state, with no mixed
- * intermediate values. This is what makes the folder-level tri-state
- * indicator meaningful — it never disagrees with its children.
- *
- * ### Upward propagation
- *
- * When a node's state changes, the change must be reflected not only in
- * that node's row but also in the aggregate indicators of every ancestor.
- * [propagateToAncestors] walks up the parent chain and updates each
- * ancestor's `state` field to the aggregate of its children. It stops as
- * soon as an ancestor's aggregate matches its current `state` (because
- * the higher ancestors read this `state` and therefore cannot change
- * either) and it **never** touches the other children of the ancestors.
- *
- * ### Hard-excluded and binary nodes
- *
- * These are created as LOCKED nodes during the scan and are not descended
- * into, which is what keeps a fresh open on a large project fast. The
- * "Show locked" toggle in the header unlocks them by flipping their state
- * to EXCLUDE and rendering them as normal (but still collapsed) nodes. A
- * subsequent expand of a previously-locked directory triggers a lazy
- * sub-scan of that directory only.
- *
- * When the toggle is turned off, every node that was originally LOCKED
- * goes back to its initial blocked state: children that were loaded while
- * it was unlocked are discarded, the node is collapsed, and it is marked
- * lazy again so the next unlock rebuilds it from scratch. The whole tree
- * is re-aggregated bottom-up (see [recomputeAllAggregates]) and the
- * state-changed callback is fired (see [propagateStateChange]) so the
- * dialog's cached export map is invalidated.
- *
- * ### `showLocked` is persisted across scans
- *
- * [scanAsync] and [scanSubtree] read [showLocked] when they create new
- * nodes. This is what makes the toggle survive a filter change: a rescan
- * that ran with `showLocked = false` in the previous implementation would
- * silently create all hard-excluded nodes as LOCKED, leaving the checkbox
- * visibly on while the tree showed nothing interactive. The dialog now
- * calls [setShowLockedPreference] before dispatching a scan so the new
- * tree is built with the correct initial state.
- *
- * ### Clickability is dynamic
- *
- * Every interactive surface (chevron, tri-state indicator, row-wide tap)
- * is always registered as clickable. The `locked` check happens **inside**
- * the click handler, not at row construction time. This is what makes
- * `toggleShowLocked` take effect immediately on already-rendered rows:
- * flipping `locked` from false to true disables every interaction on the
- * row without needing to rebuild it, and flipping it back re-enables them
- * just as cheaply.
- *
- * ### Lazy directories respond to the first click
- *
- * A directory whose children have never been loaded (a hard-excluded
- * folder that was just unlocked) has an EXCLUDE aggregate by construction,
- * so a naive state-cycle click would be a silent no-op. The first click
- * on such a directory expands it and triggers the sub-scan, giving the
- * user a visible response; subsequent clicks cycle the loaded children
- * normally. Clicks that arrive while the sub-scan is still running are
- * ignored (the children list is empty but `expanded` is already true,
- * so `onParentClick` would otherwise cycle an empty list).
- *
- * ### The unlocked subtree shows everything, not just INCLUDE
- *
- * The initial scan ([scanAsync]) hides EXCLUDE entries so the tree shows
- * only what will be exported. That is fast and useful for a fresh project
- * open, but it would make an unlocked `build/` folder look empty, because
- * every entry inside it resolves to EXCLUDE by extension or by gitignore.
- *
- * The lazy sub-scan ([scanSubtree]) therefore shows **every** child it
- * finds: files that the rules would exclude appear as unchecked EXCLUDE
- * rows the user can click to cycle. Size remains a hard skip (an
- * oversized file would dominate the tree and could not be included
- * anyway); binaries and nested hard-excluded folders appear as EXCLUDE
- * rows but stay unlocked or locked depending on [showLocked]. This is
- * what lets the user navigate to `build/outputs/apk/release/` and see
- * the APK on demand.
- *
- * ### Cancellation
- *
- * Scanning is cancellable through [cancelScan], which increments the
- * [scanToken] generation counter. Every callback the worker dispatches is
- * guarded by a token check, so a superseded scan silently drops its
- * result and never touches the UI.
- *
- * ### Performance
- *
- *  - [refreshVisibleRows] updates only the visible rows in place.
- *  - [refreshNodeRow] guards the state-icon assignment behind a check on
- *    the currently-set **resource ID**, not the Drawable instance.
- *  - Directory children are populated lazily.
- *  - [expandAll] / [collapseAll] toggle existing wrappers in place.
- *  - `cycleState` and `onParentClick` call [propagateStateChange] once.
- *
- * ### `currentStates()` returns files only
- *
- * Directories are containers, not exportable entries. Including them in
- * the state map would make
- * [com.devdayton.onecodeforai.core.CodeDumpGenerator] attempt to read
- * them as files and emit a `[File read error: ...]` marker for every
- * directory in the project.
- */
 class ProjectTreeView(
     private val activity: Activity,
     private val projectRoot: File,
@@ -177,67 +39,28 @@ class ProjectTreeView(
     private val onStatsChanged: (PreviewStats) -> Unit
 ) {
     private companion object {
-        /**
-         * Minimum number of scanned files between two progress callbacks.
-         */
+
         const val PROGRESS_FILE_INTERVAL = 200
 
-        /**
-         * Minimum wall-clock time, in milliseconds, between two progress
-         * callbacks.
-         */
         const val PROGRESS_INTERVAL_MS = 120L
     }
 
-    /** Configuration currently applied to the tree. Updated by [scanAsync]. */
     private var currentConfig: FilterConfig = FilterConfig()
 
-    /** Root of the last successfully scanned tree, or `null` before first scan. */
     private var rootNode: TreeNode? = null
 
-    /**
-     * Per-path overrides layered on top of the filter-derived states.
-     */
     private var currentOverrides: TreeOverrides = TreeOverrides()
 
-    /**
-     * Relative paths of currently-expanded directories. Persisted across
-     * re-renders so a filter change does not collapse the user's manual
-     * expansion state.
-     */
     private val expandedPaths = mutableSetOf<String>()
 
-    /**
-     * Reentrancy guard for the bidirectional scroll synchronization
-     * between [stickyScroll] and [horizontalScroll].
-     */
     private var isSyncingScroll = false
 
-    /**
-     * Whether the "Show locked" toggle is currently active.
-     *
-     * Read by [scanAsync] and [scanSubtree] when creating new nodes so a
-     * rescan preserves the toggle's intent, and flipped by
-     * [toggleShowLocked] when the user toggles it on already-rendered
-     * rows.
-     */
     private var showLocked = false
 
-    /**
-     * Whether animations are enabled according to
-     * [PluginSettings.areAnimationsEnabled].
-     */
     private val animationsEnabled: Boolean
         get() = PluginSettings.areAnimationsEnabled(activity)
 
-    /**
-     * Generation counter used to cancel in-flight scans and sub-scans.
-     */
     private val scanToken = AtomicLong(0L)
-
-    // ------------------------------------------------------------------
-    // View hierarchy
-    // ------------------------------------------------------------------
 
     private val rowsContainer = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
@@ -301,47 +124,12 @@ class ProjectTreeView(
         }
     }
 
-    /** Returns the view to embed in the parent layout. */
     fun getView(): View = outerContainer
 
-    /**
-     * Sets the show-locked preference without triggering any node
-     * transition.
-     *
-     * Called by the configuration dialog before each scan so the new tree
-     * is built with the correct initial locked/unlocked state. Without
-     * this, a fresh dialog whose "Show locked" checkbox is already
-     * checked (because the process-wide preference is on) would render a
-     * tree with all hard-excluded nodes still locked until the user
-     * toggles the checkbox off and back on.
-     *
-     * The method does not walk the tree and does not touch any existing
-     * node. It only updates the flag that [scanAsync] and [scanSubtree]
-     * read to decide whether a new node should start unlocked. All
-     * interactive toggling continues to go through [toggleShowLocked].
-     */
     fun setShowLockedPreference(show: Boolean) {
         showLocked = show
     }
 
-    /**
-     * Returns a snapshot of the current per-file states.
-     *
-     * ### Directories are excluded on purpose
-     *
-     * Directories are containers, not exportable entries. Including them
-     * in the map would make
-     * [com.devdayton.onecodeforai.core.CodeDumpGenerator] attempt to read
-     * them as files and emit a `[File read error: ...]` marker for every
-     * directory in the project.
-     *
-     * ### LOCKED entries are excluded
-     *
-     * LOCKED entries are not part of the export, so including them would
-     * inflate the progress denominator.
-     *
-     * The map is a defensive copy.
-     */
     fun currentStates(): Map<String, NodeState> {
         val out = LinkedHashMap<String, NodeState>()
         val root = rootNode ?: return out
@@ -350,7 +138,7 @@ class ProjectTreeView(
         while (stack.isNotEmpty()) {
             val node = stack.removeLast()
             if (node.locked) continue
-            // Files only. See the KDoc above.
+
             if (node.depth > 0 && !node.isDirectory) {
                 out[node.relativePath] = node.state
             }
@@ -359,47 +147,6 @@ class ProjectTreeView(
         return out
     }
 
-    // ------------------------------------------------------------------
-    // Async scan
-    // ------------------------------------------------------------------
-
-    /**
-     * Walks [projectRoot] on a background thread and delivers the resulting
-     * tree to [onComplete] on the UI thread.
-     *
-     * Cancellation is implicit: calling this method again before the
-     * previous walk has finished invalidates the older worker via
-     * [scanToken].
-     *
-     * ### Hard-excluded nodes
-     *
-     * Directories whose name is in the filter's hard-excluded set, and
-     * files whose extension is in the binary set while `excludeBinaries`
-     * is enabled, are created as LOCKED leaf/directory nodes and are not
-     * descended into. This is the single mechanism that keeps a first scan
-     * of a `node_modules`-heavy project fast.
-     *
-     * ### `showLocked` is respected
-     *
-     * When the "Show locked" toggle is currently ON, hard-excluded and
-     * binary nodes are created **unlocked** (their `locked` flag is
-     * false, their state is EXCLUDE). This is what makes a rescan — for
-     * example after a filter change — leave the tree interactive even
-     * though the "Show locked" checkbox is still checked. Without it, the
-     * new tree would be built with all those nodes locked and the toggle
-     * would appear to have no effect until the user toggled it off and
-     * back on.
-     *
-     * ### Overrides are checked first
-     *
-     * Manual decisions from [TreeOverrides] are checked **before** the
-     * hard-excluded/binary branch, so a file the user has explicitly
-     * included or excluded keeps that state even if its extension is
-     * binary or its parent is a hard-excluded directory. Without this,
-     * including an APK from an unlocked subtree would be lost on the
-     * next rescan, because the binary branch would overwrite the
-     * override with EXCLUDE.
-     */
     fun scanAsync(
         config: FilterConfig,
         overrides: TreeOverrides = TreeOverrides(),
@@ -444,11 +191,6 @@ class ProjectTreeView(
 
                         val extension = file.name.substringAfterLast('.', "").lowercase()
 
-                        // Overrides come first: if the user explicitly
-                        // chose a state for this path, respect it. This
-                        // is what makes "manually include an APK from
-                        // the unlocked build/ folder and have it survive
-                        // the next rescan" work.
                         val overrideState = when {
                             relativePath in overrides.includedPaths -> NodeState.INCLUDE
                             relativePath in overrides.stubPaths -> NodeState.STUB
@@ -466,16 +208,10 @@ class ProjectTreeView(
                             val lockedNode = TreeNode(
                                 file, file.isDirectory, node.depth + 1, relativePath, file.name
                             ).apply {
-                                // Respect the current "Show locked" state:
-                                // if the user has the toggle ON, the new
-                                // node must start unlocked so the
-                                // rescan does not silently break the
-                                // toggle.
+
                                 locked = !showLocked
                                 wasLockedOriginally = true
-                                // If the user explicitly overrode this
-                                // path, keep the override instead of
-                                // forcing EXCLUDE.
+
                                 state = overrideState ?: NodeState.EXCLUDE
                                 lazyDirectory = file.isDirectory
                             }
@@ -558,18 +294,10 @@ class ProjectTreeView(
         }
     }
 
-    /**
-     * Cancels the in-flight scan, if any.
-     */
     fun cancelScan() {
         scanToken.incrementAndGet()
     }
 
-    // ------------------------------------------------------------------
-    // Rendering
-    // ------------------------------------------------------------------
-
-    /** Renders [root] and notifies the caller of the aggregate stats. */
     fun renderTree(root: TreeNode) {
         rootNode = root
         renderInternal(fireStats = true)
@@ -623,36 +351,6 @@ class ProjectTreeView(
         parent.addView(wrapper)
     }
 
-    /**
-     * Renders [node]'s direct children into its [TreeNode.childrenWrapper].
-     *
-     * ### Lazy sub-scan for previously-LOCKED directories
-     *
-     * A node flagged [TreeNode.lazyDirectory] spawns a sub-scan the first
-     * time it is expanded. This is what makes "Show locked" cheap:
-     * unlocking flips every LOCKED node to EXCLUDE at once, but the
-     * subtree is only materialized when the user actually opens a folder.
-     *
-     * The sub-scan reuses [scanToken] for cancellation: collapsing the
-     * node before the sub-scan finishes increments the token implicitly
-     * via [cancelScan], and the sub-scan worker silently drops its result.
-     *
-     * ### Forced-state inheritance
-     *
-     * When the sub-scan completes, the node's current `state` (which may
-     * have been forced by a folder-level click on an ancestor) is applied
-     * to the newly scanned children, unless the node's state is EXCLUDE.
-     * Without this inheritance, expanding a folder that was just forced
-     * to INCLUDE would revert the new children to their filter-derived
-     * (mostly EXCLUDE) states.
-     *
-     * ### Upward propagation
-     *
-     * After the sub-scan populates the children, the node's own `state`
-     * may change (e.g. it was EXCLUDE and the new children are all
-     * INCLUDE). [propagateToAncestors] is called so every ancestor's
-     * `state` is updated to reflect the change.
-     */
     private fun populateChildren(node: TreeNode) {
         val cw = node.childrenWrapper ?: return
         if (cw.childCount > 0) return
@@ -679,9 +377,7 @@ class ProjectTreeView(
                             node.lazyDirectory = false
                             node.children.clear()
                             node.children.addAll(subChildren)
-                            // Re-establish the parent link: the children
-                            // were created on the worker thread without
-                            // a parent reference.
+
                             subChildren.forEach { it.parent = node }
 
                             if (node.state != NodeState.EXCLUDE) {
@@ -695,9 +391,7 @@ class ProjectTreeView(
                         }
                     }
                 } catch (_: Exception) {
-                    // Sub-scan failures are non-fatal: the node stays as an
-                    // empty directory. The user can collapse and re-expand
-                    // to retry.
+
                 }
             }.apply { isDaemon = true; name = "OneCode-subtree-scan"; start() }
             return
@@ -706,70 +400,6 @@ class ProjectTreeView(
         node.children.forEach { child -> renderNode(child, cw) }
     }
 
-    /**
-     * Builds the direct children of [node] by walking its filesystem entry
-     * with [filter] applied, without descending past the first level.
-     *
-     * Used only by the lazy sub-scan path of [populateChildren]. It is
-     * called when the user expands a folder that was previously locked
-     * (unlocked via "Show locked" but never descended into), and its job
-     * is to make the contents of that folder **visible** so the user can
-     * see and pick files. This is why it behaves differently from the
-     * initial [scanAsync] scan:
-     *
-     * ### Priority order
-     *
-     * The rules are evaluated in this exact order:
-     *
-     *  1. **Size.** Files larger than [FilterConfig.maxFileSizeBytes]
-     *     (when [FilterConfig.useMaxSize] is on) are skipped entirely.
-     *     They would dominate the tree and the generator would refuse
-     *     to include them anyway.
-     *  2. **Overrides.** A path present in [TreeOverrides] keeps the
-     *     user's manual state, whatever it is.
-     *  3. **Binaries.** When [FilterConfig.excludeBinaries] is on, a
-     *     known binary extension becomes EXCLUDE. This takes priority
-     *     over reference-only: a binary cannot be promoted to a stub,
-     *     because a stub still writes the file's size marker and a
-     *     binary is not a useful size reference.
-     *  4. **Nested hard-excluded directories.** A directory whose name
-     *     is in [FileFilter.hardExcludedDirectories] becomes EXCLUDE
-     *     (and locked or unlocked depending on [showLocked]).
-     *  5. **Reference only / Inclusions / Exclusions / Gitignore**, in
-     *     [FileFilter.resolveMode]'s standard order.
-     *  6. **Hidden files and unknown extensions** default to EXCLUDE;
-     *     text extensions and extensionless files default to INCLUDE.
-     *
-     * ### The hard-excluded ancestor check is skipped
-     *
-     * A file inside `build/` or `node_modules/` would normally return
-     * EXCLUDE from [FileFilter.resolveMode] because its ancestor is in
-     * the hard-excluded set. Here that check is skipped
-     * (`respectHardExcludedAncestors = false`), so the file's own rules
-     * decide its state. Without it, expanding an unlocked `build/`
-     * folder would produce an empty tree.
-     *
-     * ### EXCLUDE entries are still added to the tree
-     *
-     * The initial scan hides EXCLUDE files so the tree shows only what
-     * will be exported. This method shows them too, as unchecked rows
-     * the user can click to cycle. Without it the user could never
-     * navigate to `build/outputs/apk/release/` and see the APK.
-     *
-     * ### `showLocked` is respected for binaries and nested hard-excluded
-     *
-     * When the "Show locked" toggle is off, binaries and nested
-     * hard-excluded dirs are created as LOCKED nodes (visible but not
-     * interactive), exactly like in the initial scan. When the toggle is
-     * on, they are created unlocked (EXCLUDE) so the user can interact
-     * with them.
-     *
-     * ### Every directory child is lazy
-     *
-     * Sub-directories created here are marked `lazyDirectory = true`
-     * because the sub-scan only reads one level. The next expand will
-     * trigger its own sub-scan.
-     */
     private fun scanSubtree(
         node: TreeNode,
         filter: FileFilter,
@@ -787,15 +417,11 @@ class ProjectTreeView(
             val relativePath = "${node.relativePath}/${file.name}"
             val extension = file.name.substringAfterLast('.', "").lowercase()
 
-            // 1. Size: hard skip. The generator would refuse to include
-            //    an oversized file anyway, and showing it would just
-            //    clutter the unlocked subtree.
             if (!file.isDirectory && currentConfig.useMaxSize &&
                 file.length() > currentConfig.maxFileSizeBytes) {
                 continue
             }
 
-            // 2. Overrides take precedence over everything else.
             val overrideState = when {
                 relativePath in currentOverrides.includedPaths -> NodeState.INCLUDE
                 relativePath in currentOverrides.stubPaths -> NodeState.STUB
@@ -803,10 +429,6 @@ class ProjectTreeView(
                 else -> null
             }
 
-            // 3-4. Binaries and nested hard-excluded dirs are EXCLUDE.
-            //      They stay visible (the user can click them to
-            //      include) but are not stubbable: a binary cannot be
-            //      promoted to a stub by reference-only patterns.
             val isBinary = !file.isDirectory &&
                 currentConfig.excludeBinaries &&
                 extension in filter.binaryExtensions()
@@ -828,9 +450,6 @@ class ProjectTreeView(
                 continue
             }
 
-            // 5. Standard filter resolution. The ancestor check is
-            //    skipped so files inside the unlocked folder are
-            //    evaluated by their own rules.
             val filterState = filter.resolveMode(
                 relativePath = relativePath,
                 isDirectory = file.isDirectory,
@@ -850,10 +469,6 @@ class ProjectTreeView(
         }
         return out
     }
-
-    // ------------------------------------------------------------------
-    // In-place refresh of visible rows
-    // ------------------------------------------------------------------
 
     private fun refreshVisibleRows(fireStats: Boolean = true) {
         val root = rootNode ?: return
@@ -908,10 +523,6 @@ class ProjectTreeView(
             if (tinted) CodeAssistTheme.TEXT_MUTED else CodeAssistTheme.TEXT_PRIMARY
         )
     }
-
-    // ------------------------------------------------------------------
-    // Row construction
-    // ------------------------------------------------------------------
 
     private fun buildRow(node: TreeNode, isSticky: Boolean = false): View {
         val isRoot = node.depth == 0
@@ -1016,10 +627,6 @@ class ProjectTreeView(
         return row
     }
 
-    // ------------------------------------------------------------------
-    // Actions
-    // ------------------------------------------------------------------
-
     private fun cycleState(node: TreeNode) {
         if (node.locked) return
         if (node.isDirectory) {
@@ -1053,7 +660,7 @@ class ProjectTreeView(
             NodeState.INCLUDE -> NodeState.STUB
             NodeState.STUB -> NodeState.EXCLUDE
             NodeState.EXCLUDE -> NodeState.INCLUDE
-            NodeState.LOCKED -> NodeState.EXCLUDE // unreachable
+            NodeState.LOCKED -> NodeState.EXCLUDE
         }
 
         nonLockedChildren.forEach { applyRecursiveForced(it, toState) }
@@ -1074,13 +681,6 @@ class ProjectTreeView(
         }
     }
 
-    /**
-     * Walks up the parent chain of [node] and updates each ancestor's
-     * `state` field to the aggregate of its children.
-     *
-     * Stops as soon as an ancestor's aggregate matches its current
-     * `state`. Never touches the ancestors' other children.
-     */
     private fun propagateToAncestors(node: TreeNode) {
         var current = node.parent
         while (current != null) {
@@ -1159,35 +759,6 @@ class ProjectTreeView(
             }.start()
     }
 
-    /**
-     * Unlocks or re-locks every originally-locked node in the tree.
-     *
-     * ### On unlock (`show = true`)
-     *
-     * Every node marked [TreeNode.wasLockedOriginally] becomes
-     * interactive: `locked` flips to false and its state is reset to
-     * EXCLUDE. Its descendants are **not** touched — they were never
-     * loaded (the node was `lazyDirectory`), so the first expand will
-     * scan them fresh, and the user has to set them explicitly.
-     *
-     * ### On re-lock (`show = false`)
-     *
-     * Every originally-locked node goes back to its initial blocked
-     * state: `state` resets to EXCLUDE, `locked` flips to true,
-     * `lazyDirectory` flips to true again, any children that were loaded
-     * while it was unlocked are discarded, and the node is collapsed.
-     *
-     * ### Bottom-up aggregate recomputation
-     *
-     * After the re-lock, every node's `state` may have changed. The
-     * aggregates of the ancestors of the affected nodes are recomputed
-     * bottom-up via [recomputeAllAggregates].
-     *
-     * ### Cache invalidation
-     *
-     * `onStatesChanged` is fired at the end so the dialog's cached export
-     * map matches the new tree.
-     */
     fun toggleShowLocked(show: Boolean) {
         if (showLocked == show) return
         showLocked = show
@@ -1224,10 +795,6 @@ class ProjectTreeView(
         propagateStateChange()
     }
 
-    /**
-     * Recomputes every non-locked directory's `state` from its children,
-     * bottom-up. Implemented as a post-order iterative traversal.
-     */
     private fun recomputeAllAggregates() {
         val root = rootNode ?: return
         val stack = ArrayDeque<Pair<TreeNode, Boolean>>()
@@ -1249,10 +816,6 @@ class ProjectTreeView(
         onStatesChanged(currentStates())
     }
 
-    // ------------------------------------------------------------------
-    // Aggregate computation
-    // ------------------------------------------------------------------
-
     private fun computeAggregateState(children: List<TreeNode>): NodeState {
         var anyInclude = false
         var anyStub = false
@@ -1273,10 +836,6 @@ class ProjectTreeView(
             else -> NodeState.EXCLUDE
         }
     }
-
-    // ------------------------------------------------------------------
-    // Aggregate statistics
-    // ------------------------------------------------------------------
 
     private fun computeStatsFromTree(root: TreeNode): PreviewStats {
         var totalFiles = 0
@@ -1323,10 +882,6 @@ class ProjectTreeView(
             byExtension = byExt.values.sortedByDescending { it.tokens }
         )
     }
-
-    // ------------------------------------------------------------------
-    // Expand / collapse all
-    // ------------------------------------------------------------------
 
     fun expandAll() {
         val root = rootNode ?: return
@@ -1384,10 +939,6 @@ class ProjectTreeView(
         return out
     }
 
-    // ------------------------------------------------------------------
-    // Utilities
-    // ------------------------------------------------------------------
-
     private fun pulseRow(row: View) {
         if (!animationsEnabled) return
         row.alpha = 0.3f
@@ -1403,10 +954,6 @@ class ProjectTreeView(
     }
 
     private fun dp(value: Int): Int = CodeAssistTheme.dp(activity, value)
-
-    // ------------------------------------------------------------------
-    // Custom scroll views
-    // ------------------------------------------------------------------
 
     private class NestedScrollView(context: Context) : ScrollView(context) {
         private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
@@ -1471,26 +1018,6 @@ class ProjectTreeView(
         }
     }
 
-    // ------------------------------------------------------------------
-
-    /**
-     * One node in the rendered tree.
-     *
-     *  - `state` is the [NodeState] the user has settled on.
-     *  - `locked` marks the node as non-interactive.
-     *  - `wasLockedOriginally` is set once by the scanner and never
-     *    cleared.
-     *  - `lazyDirectory` is true for a directory whose children have never
-     *    been scanned.
-     *  - `expanded` tracks whether the children wrapper is visible.
-     *  - `parent` is the enclosing [TreeNode], set when the node is added
-     *    to its parent's children list. Used by [propagateToAncestors].
-     *  - `stateIconResId` is the resource ID of the drawable currently
-     *    assigned to `stateIcon`. Used by [refreshNodeRow] as a fast
-     *    redundant-setter guard: `UiFactory.loadPluginDrawable` returns a
-     *    fresh Drawable instance on every call, so an identity check on
-     *    the Drawable would always be true and the guard would never fire.
-     */
     class TreeNode(
         val file: File,
         val isDirectory: Boolean,

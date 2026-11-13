@@ -1,15 +1,1 @@
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <!-- Eye glyph, available as an alternative to ic_tech_lock for the
-         "Show locked" toggle. Kept in the drawable set even though the
-         current implementation uses ic_tech_lock, because a fork or a
-         future UI variant may prefer the "reveal" semantics of an eye
-         over the "locked" semantics of a padlock. Both convey the same
-         action (make hidden nodes visible), and the choice is a pure
-         visual style decision, not a behavioral one. -->
-    <path android:strokeColor="#D99460" android:strokeWidth="1.6"
-        android:fillColor="#00000000" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M2,12 Q7,5 12,5 Q17,5 22,12 Q17,19 12,19 Q7,19 2,12 Z M12,9 A3,3 0 1,0 12,15 A3,3 0 1,0 12,9 Z" />
-</vector>
+<?xml version="1.0" encoding="utf-8"?><vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24"><path android:strokeColor="#D99460" android:strokeWidth="1.6" android:fillColor="#00000000" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M2,12 Q7,5 12,5 Q17,5 22,12 Q17,19 12,19 Q7,19 2,12 Z M12,9 A3,3 0 1,0 12,15 A3,3 0 1,0 12,9 Z" /></vector>
