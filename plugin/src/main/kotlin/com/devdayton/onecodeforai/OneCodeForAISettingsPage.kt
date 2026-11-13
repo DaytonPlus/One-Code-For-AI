@@ -791,9 +791,8 @@ internal class OneCodeForAISettingsPage : SettingsPage {
          * ### Right-to-left languages
          *
          * `ar` (Arabic), `fa` (Persian) and `he` (Hebrew) are written
-         * right-to-left. Each resolves to its own `values-*/` folder
-         * through `LanguageHelper.localeForLanguageCode`, and Android's
-         * automatic `layoutDirection` resolution from the applied
+         * right-to-left. Each resolves to its own `values-<code>/` folder
+         * through `LanguageHelper.localeForLanguageCode`, and Android's         * automatic `layoutDirection` resolution from the applied
          * `Configuration` takes care of mirroring the framework widgets.
          * The plugin's own custom views (`FlowLayout`, `ProjectTreeView`)
          * are documented as LTR-only; any user-visible mirroring regression
