@@ -63,12 +63,12 @@ import org.json.JSONObject
  *    per-project decision.
  *
  *    The three flags have a `true` default in both the codec and in
- *    [FilterConfig], so built-in profiles (which do not set them
- *    explicitly) behave exactly as they did before the toggle existed
- *    and every pre-toggle profile keeps applying every rule it
- *    contained. See the [FilterConfig] KDoc, section *Section enable
- *    switches*, for the full rationale of why the flags are separate
- *    from the rule lists.
+ *    [FilterConfig], so profiles saved before the toggle existed keep
+ *    applying every rule they contained. Built-in profiles set them
+ *    explicitly (see [getDefaultPresets]) so the dialog's section
+ *    toggles match the rules the profile actually ships. See the
+ *    [FilterConfig] KDoc, section *Section enable switches*, for the
+ *    full rationale of why the flags are separate from the rule lists.
  *
  * ### Built-in profiles
  *
@@ -77,15 +77,6 @@ import org.json.JSONObject
  * "last preset" keeps pointing at the same profile after the user
  * switches the IDE language, because the spinner stores the name, not
  * the translated label.
- *
- * The built-in profiles do not set the three section enable flags
- * explicitly — they inherit the `true` default. This is intentional:
- * a built-in profile is a curated set of rules that the author wants
- * applied as-is, and silently disabling one of its sections (which is
- * what an explicit `false` would do) would make the profile behave
- * differently from what its name promises. Users who want a variant of
- * a built-in profile with a section disabled can save it as a custom
- * preset once and the flag will be preserved on their copy.
  *
  * Design notes
  * ------------
@@ -179,17 +170,39 @@ class PresetManager(context: Context) {
      * only way to preserve a previous version of a built-in profile is
      * to save it as a custom preset before upgrading.
      *
+     * ### Section enable flags on built-in profiles
+     *
      * The three section enable flags ([FilterConfig.enableInclusions],
      * [FilterConfig.enableExclusions], [FilterConfig.enableStubPatterns])
-     * are **not** set explicitly on any built-in profile. They default
-     * to `true` in [FilterConfig], which is what the plugin has always
-     * done implicitly — a built-in profile is a curated set of rules
-     * that should be applied as-is. Setting any of them to `false` here
-     * would silently change what a user gets when they pick the profile
-     * by name, which defeats the purpose of the flag (it exists so a
-     * user can save a *custom* profile with a section disabled, not so
-     * that built-in profiles can hide sections from their own
-     * contents).
+     * are set **explicitly** on each built-in profile so that the
+     * configuration dialog's section toggles reflect the rules the
+     * profile actually contains. When a built-in profile has no rules
+     * in a section — e.g. "Android (Kotlin)" ships no exclusions,
+     * "Android (Resources)" ships neither exclusions nor stub patterns
+     * — the corresponding flag is `false` so the dialog opens with
+     * that section collapsed and its **+ Add** button hidden. The user
+     * can still enable the section manually, which switches the
+     * spinner to Custom (the profile name no longer describes the
+     * export once the user has added rules the preset did not contain).
+     *
+     * Setting the flag to `false` for an empty list does **not** change
+     * the filtering behavior: an empty list and a disabled section
+     * produce identical results, because
+     * [FileFilter.resolveMode] short-circuits the disabled branch and
+     * an empty list matches nothing anyway. It is a pure UI affordance:
+     * the toggle is a promise to the user that the section's rules
+     * will be applied, and a section with no rules cannot make that
+     * promise honestly.
+     *
+     * This is a deliberate reversal of the earlier rule ("built-in
+     * profiles never set the flags, they inherit the `true` default").
+     * The earlier rule was based on a misunderstanding: it conflated
+     * *disabling a populated section* (which is what the flag was
+     * designed for) with *exposing an empty section as enabled* (which
+     * is what it caused in the UI). The current rule keeps the flag's
+     * original purpose intact — it is still the mechanism a
+     * user-saved Custom profile uses to disable a populated section —
+     * while making the built-in profiles' UI match their contents.
      */
     fun getDefaultPresets(): Map<String, FilterConfig> = linkedMapOf(
         // ------------------------------------------------------------------
@@ -204,6 +217,12 @@ class PresetManager(context: Context) {
         // Generated Android code and local.properties are stubbed instead of
         // excluded. The model benefits from knowing they exist — schema,
         // package, application id — without their generated bodies.
+        //
+        // enableExclusions = false because this profile ships no
+        // exclusions. The section is still available to the user
+        // (enabling it switches the spinner to Custom), but it does
+        // not start enabled, because a section with no rules would be
+        // an empty promise in the UI.
         "Android (Kotlin)" to FilterConfig(
             inclusions = listOf(
                 // Source
@@ -230,7 +249,8 @@ class PresetManager(context: Context) {
                 // TEXT_EXTENSIONS, so the fallback already filters them out.
                 // They also do not need stubbing: a stub of a keystore
                 // would only reveal its size, which is never useful.
-            )
+            ),
+            enableExclusions = false
         ),
 
         // Same as above but with tests and docs stripped. Use when you want
@@ -266,10 +286,14 @@ class PresetManager(context: Context) {
         // file so the model stays focused on the visual layer. No stubs:
         // every generated resource is excluded by the inclusions list
         // (only "xml" is included), so there is nothing worth listing
-        // without its content.
+        // without its content. The exclusions and stub-patterns toggles
+        // are both off because this profile ships no rules for either
+        // section.
         "Android (Resources)" to FilterConfig(
             inclusions = listOf("xml"),
-            exclusions = emptyList()
+            exclusions = emptyList(),
+            enableExclusions = false,
+            enableStubPatterns = false
         ),
 
         // ------------------------------------------------------------------
@@ -333,14 +357,18 @@ class PresetManager(context: Context) {
         // READMEs, changelogs or notes to the model without any source
         // code. No stubs: the whole point of this profile is to include
         // human-readable content, and every included extension is already
-        // small enough that a stub would defeat the purpose.
+        // small enough that a stub would defeat the purpose. Both the
+        // exclusions and stub-patterns toggles are off because this
+        // profile ships no rules for either section.
         TEXT_PRESET to FilterConfig(
             excludeBinaries = true,
             inclusions = listOf(
                 "txt", "md", "rst", "adoc", "org", "tex", "log", "csv",
                 "json", "xml", "yaml", "yml"
             ),
-            exclusions = emptyList()
+            exclusions = emptyList(),
+            enableExclusions = false,
+            enableStubPatterns = false
         )
     )
 
