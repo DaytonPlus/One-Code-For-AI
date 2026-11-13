@@ -171,7 +171,7 @@ class FileFilter(
         ".git", ".gradle", ".idea", "build", "out", "target",
         "node_modules", "dist", ".next", ".nuxt", "venv", ".venv",
         "__pycache__", ".mypy_cache", ".kotlin", ".cxx", "captures",
-        ".externalNativeBuild"
+        ".externalNativeBuild", ".platform"
     )
 
     /**
